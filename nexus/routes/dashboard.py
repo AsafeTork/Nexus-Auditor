@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from datetime import datetime, timedelta, timezone
+
 from flask import Blueprint, render_template
 from flask_login import login_required, current_user
 
@@ -12,7 +14,40 @@ bp = Blueprint("dashboard", __name__)
 @login_required
 def home():
     sites = Site.query.filter_by(org_id=current_user.org_id).order_by(Site.created_utc.desc()).limit(20).all()
-    audits = AuditRun.query.filter_by(org_id=current_user.org_id).order_by(AuditRun.created_utc.desc()).limit(20).all()
+    audits = AuditRun.query.filter_by(org_id=current_user.org_id).order_by(AuditRun.created_utc.desc()).limit(50).all()
     sub = Subscription.query.filter_by(org_id=current_user.org_id).first()
-    return render_template("dashboard/home.html", sites=sites, audits=audits, sub=sub)
 
+    # KPIs
+    sites_count = len(sites)
+    total_audits = len(audits)
+    status_counts = {"queued": 0, "running": 0, "done": 0, "error": 0}
+    for a in audits:
+        status_counts[str(a.status or "queued")] = status_counts.get(str(a.status or "queued"), 0) + 1
+
+    # Simple 7-day trend (based on created_utc ISO strings)
+    today = datetime.now(timezone.utc).date()
+    days = [today - timedelta(days=i) for i in range(6, -1, -1)]
+    labels = [d.strftime("%d/%m") for d in days]
+    counts = [0 for _ in days]
+    for a in audits:
+        try:
+            d = datetime.fromisoformat(a.created_utc).date()
+            if d in days:
+                counts[days.index(d)] += 1
+        except Exception:
+            pass
+
+    return render_template(
+        "dashboard/home.html",
+        sites=sites,
+        audits=audits,
+        sub=sub,
+        kpi={
+            "sites": sites_count,
+            "audits": total_audits,
+            "done": status_counts.get("done", 0),
+            "errors": status_counts.get("error", 0),
+        },
+        trend={"labels": labels, "counts": counts},
+        status_counts=status_counts,
+    )

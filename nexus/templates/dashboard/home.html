@@ -1,37 +1,91 @@
 {% extends "layout.html" %}
 {% block content %}
-<div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
-
-  <!-- Left: Sites + start audit -->
-  <section class="lg:col-span-2 card p-5">
-    <div class="flex items-start justify-between gap-3">
-      <div>
-        <div class="text-sm font-extrabold">Painel de Operações</div>
-        <div class="text-xs text-muted">Tenant: <span class="mono">{{ current_user.org_id }}</span></div>
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
+  <!-- Main -->
+  <section class="lg:col-span-8 space-y-4">
+    <!-- KPI cards -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div class="card2 p-4">
+        <div class="text-[11px] text-muted">Sites</div>
+        <div class="mt-1 text-3xl font-extrabold">{{ kpi.sites }}</div>
       </div>
-      <div class="hidden md:block text-[11px] text-muted">
-        Dica: mantenha <span class="font-bold">1 site</span> por cliente para separar auditorias.
+      <div class="card2 p-4">
+        <div class="text-[11px] text-muted">Auditorias</div>
+        <div class="mt-1 text-3xl font-extrabold">{{ kpi.audits }}</div>
+      </div>
+      <div class="card2 p-4">
+        <div class="text-[11px] text-muted">Concluídas</div>
+        <div class="mt-1 text-3xl font-extrabold text-brand-2">{{ kpi.done }}</div>
+      </div>
+      <div class="card2 p-4">
+        <div class="text-[11px] text-muted">Erros</div>
+        <div class="mt-1 text-3xl font-extrabold" style="color:#fb7185">{{ kpi.errors }}</div>
       </div>
     </div>
 
-    <div class="mt-4 card2 p-4">
-      <div class="text-xs font-extrabold">Adicionar site</div>
-      <form class="mt-3 grid grid-cols-1 md:grid-cols-3 gap-2" method="post" action="{{ url_for('audit.create_site') }}">
+    <!-- Trend + right mini widgets -->
+    <div class="grid grid-cols-1 md:grid-cols-12 gap-4">
+      <div class="md:col-span-8 letterhead p-5">
+        <div class="flex items-center justify-between">
+          <div>
+            <div class="text-sm font-extrabold">Auditorias (últimos 7 dias)</div>
+            <div class="text-[11px] text-muted">Volume e estabilidade do serviço</div>
+          </div>
+          <div class="text-[11px] text-muted mono">tenant {{ current_user.org_id }}</div>
+        </div>
+        <div class="mt-3">
+          <canvas id="trendChart" height="110"></canvas>
+        </div>
+      </div>
+
+      <div class="md:col-span-4 space-y-4">
+        <div class="card p-5">
+          <div class="text-sm font-extrabold">Status</div>
+          <div class="mt-3 grid grid-cols-2 gap-2 text-xs">
+            <div class="bg-surface2 rounded-xl p-3">
+              <div class="text-muted">Queued</div><div class="mt-1 font-extrabold">{{ status_counts.queued }}</div>
+            </div>
+            <div class="bg-surface2 rounded-xl p-3">
+              <div class="text-muted">Running</div><div class="mt-1 font-extrabold">{{ status_counts.running }}</div>
+            </div>
+            <div class="bg-surface2 rounded-xl p-3">
+              <div class="text-muted">Done</div><div class="mt-1 font-extrabold text-brand-2">{{ status_counts.done }}</div>
+            </div>
+            <div class="bg-surface2 rounded-xl p-3">
+              <div class="text-muted">Error</div><div class="mt-1 font-extrabold" style="color:#fb7185">{{ status_counts.error }}</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card p-5">
+          <div class="text-sm font-extrabold">Ações rápidas</div>
+          <div class="mt-3 text-[11px] text-muted">Otimize o fluxo: cadastre um site e rode auditorias.</div>
+          <a href="#addSite" class="mt-3 inline-block btn-primary rounded-xl px-4 py-2 text-xs font-extrabold">Adicionar site</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sites -->
+    <div class="card p-5" id="addSite">
+      <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
+        <div>
+          <div class="text-sm font-extrabold">Sites</div>
+          <div class="text-[11px] text-muted">Cadastre e rode auditoria completa com 1 clique.</div>
+        </div>
+      </div>
+      <form class="mt-4 grid grid-cols-1 md:grid-cols-3 gap-2" method="post" action="{{ url_for('audit.create_site') }}">
         <input name="name" placeholder="Nome (ex.: Loja X)" class="input rounded-xl px-3 py-2 text-sm" />
         <input name="base_url" placeholder="https://exemplo.com" class="input md:col-span-2 rounded-xl px-3 py-2 text-sm" />
         <button class="auditStartBtn btn-primary md:col-span-3 rounded-xl px-4 py-2 font-extrabold">Salvar site</button>
       </form>
-    </div>
 
-    <div class="mt-4">
-      <div class="text-xs font-extrabold">Sites</div>
-      <div class="mt-2 space-y-2">
+      <div class="mt-4 space-y-2">
         {% for s in sites %}
           <div class="card2 p-4">
             <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-              <div>
-                <div class="font-extrabold text-sm">{{ s.name }}</div>
-                <div class="mono text-xs text-muted">{{ s.base_url }}</div>
+              <div class="min-w-0">
+                <div class="font-extrabold text-sm truncate">{{ s.name }}</div>
+                <div class="mono text-xs text-muted truncate">{{ s.base_url }}</div>
               </div>
               <form method="post" action="{{ url_for('audit.start_audit') }}" class="grid grid-cols-1 md:grid-cols-3 gap-2 items-center w-full md:w-auto">
                 <input type="hidden" name="site_id" value="{{ s.id }}"/>
@@ -50,35 +104,50 @@
     </div>
   </section>
 
-  <!-- Right: Billing + recent -->
-  <aside class="lg:col-span-1 space-y-4">
+  <!-- Right column -->
+  <aside class="lg:col-span-4 space-y-4">
     <section class="card p-5">
-      <div class="text-sm font-extrabold">Assinatura</div>
-      <div class="mt-2 text-xs text-muted">Status: <span class="font-bold">{{ sub.status if sub else "inactive" }}</span></div>
+      <div class="flex items-start justify-between gap-3">
+        <div>
+          <div class="text-sm font-extrabold">Assinatura</div>
+          <div class="mt-1 text-xs text-muted">Status: <span class="font-bold">{{ sub.status if sub else "inactive" }}</span></div>
+        </div>
+        <div class="text-[11px] text-muted mono">SaaS</div>
+      </div>
       {% if request.args.get('billing') == 'required' %}
-      <div class="mt-3 text-xs p-3 rounded-xl bg-brand-weak text-brand-2">
+        <div class="mt-3 text-xs p-3 rounded-xl bg-brand-weak text-brand-2">
           Para rodar auditoria completa, ative a assinatura (ou use trial).
         </div>
       {% endif %}
       <form class="mt-4" method="post" action="{{ url_for('billing.create_checkout') }}">
         <button class="btn-primary w-full rounded-xl px-4 py-2 font-extrabold">Ativar/Alterar (Stripe)</button>
       </form>
-      <div class="mt-3 text-[11px] text-muted">
-        Você pode vender por relatório no começo e ativar cobrança recorrente depois.
-      </div>
+      <div class="mt-3 text-[11px] text-muted">Você pode vender por relatório no começo e ativar recorrência depois.</div>
     </section>
 
     <section class="card p-5">
-      <div class="text-sm font-extrabold">Auditorias recentes</div>
+      <div class="flex items-center justify-between">
+        <div class="text-sm font-extrabold">Auditorias recentes</div>
+        <a class="text-xs text-brand-2 underline" href="{{ url_for('admin.admin_audits') if current_user.is_admin else url_for('dashboard.home') }}">ver tudo</a>
+      </div>
       <div class="mt-3 space-y-2">
-        {% for a in audits %}
-          <a href="{{ url_for('audit.view_audit', audit_id=a.id) }}" class="block rounded-xl bg-surface2 p-3 hover:bg-surface">
-            <div class="flex items-center justify-between">
-              <div class="mono text-xs">{{ a.target_domain }}</div>
-              <div class="text-[11px] text-muted">{{ a.status }}</div>
+        {% for a in audits[:10] %}
+          <div class="bg-surface2 rounded-xl p-3">
+            <div class="flex items-center justify-between gap-3">
+              <a href="{{ url_for('audit.view_audit', audit_id=a.id) }}" class="min-w-0 hover:opacity-90">
+                <div class="mono text-xs truncate">{{ a.target_domain or a.id }}</div>
+                <div class="text-[11px] text-muted truncate">{{ a.created_utc }}</div>
+              </a>
+              <div class="text-right shrink-0">
+                <div class="text-[11px] text-muted">{{ a.status }}</div>
+                {% if current_user.is_admin %}
+                  <form method="post" action="{{ url_for('admin.admin_audit_delete', audit_id=a.id) }}" onsubmit="return confirm('Excluir esta auditoria?');">
+                    <button class="mt-1 btn-secondary rounded-lg px-2 py-1 text-[11px] font-extrabold">Excluir</button>
+                  </form>
+                {% endif %}
+              </div>
             </div>
-            <div class="text-[11px] text-muted">{{ a.created_utc }}</div>
-          </a>
+          </div>
         {% else %}
           <div class="text-xs text-muted">Nenhuma auditoria ainda.</div>
         {% endfor %}
@@ -103,5 +172,36 @@
       if(span) span.innerHTML = spinnerSvg() + "Iniciando...";
     });
   });
+
+  // Trend chart (Chart.js)
+  (function(){
+    const labels = {{ trend.labels | tojson }};
+    const data = {{ trend.counts | tojson }};
+    const canvas = document.getElementById("trendChart");
+    if(!canvas) return;
+    const ctx = canvas.getContext("2d");
+    // Load Chart.js on demand
+    const s = document.createElement("script");
+    s.src = "https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js";
+    s.onload = () => {
+      const gradient = ctx.createLinearGradient(0, 0, 0, 220);
+      gradient.addColorStop(0, "rgba(3,169,244,0.55)");
+      gradient.addColorStop(1, "rgba(26,35,126,0.05)");
+      new Chart(ctx, {
+        type: "line",
+        data: { labels, datasets: [{ label: "Auditorias", data, fill: true, tension: 0.35, borderColor: "#03A9F4", backgroundColor: gradient, pointRadius: 3, pointBackgroundColor: "#03A9F4" }]},
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { ticks: { color: "rgba(148,163,184,.9)" }, grid: { color: "rgba(148,163,184,.08)" } },
+            y: { ticks: { color: "rgba(148,163,184,.9)" }, grid: { color: "rgba(148,163,184,.08)" } },
+          }
+        }
+      });
+    };
+    document.head.appendChild(s);
+  })();
 </script>
 {% endblock %}
