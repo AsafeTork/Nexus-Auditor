@@ -11,7 +11,7 @@
   </div>
 
   <div class="mt-4 grid grid-cols-1 md:grid-cols-3 gap-3">
-    <div class="border border-white/10 rounded-2xl bg-slate-950/40 p-4">
+    <div class="card2 p-4">
       <div class="text-[11px] text-slate-400">DB</div>
       <div class="text-lg font-extrabold {% if diag.db.ok %}text-emerald-300{% else %}text-rose-300{% endif %}">
         {{ "OK" if diag.db.ok else "ERRO" }}
@@ -20,7 +20,7 @@
         <div class="mono text-[11px] text-slate-300 mt-2">{{ diag.db.error }}</div>
       {% endif %}
     </div>
-    <div class="border border-white/10 rounded-2xl bg-slate-950/40 p-4">
+    <div class="card2 p-4">
       <div class="text-[11px] text-slate-400">Redis</div>
       <div class="text-lg font-extrabold {% if diag.redis.ok %}text-emerald-300{% else %}text-rose-300{% endif %}">
         {{ "OK" if diag.redis.ok else "ERRO" }}
@@ -30,7 +30,7 @@
         <div class="mono text-[11px] text-slate-300 mt-2">{{ diag.redis.error }}</div>
       {% endif %}
     </div>
-    <div class="border border-white/10 rounded-2xl bg-slate-950/40 p-4">
+    <div class="card2 p-4">
       <div class="text-[11px] text-slate-400">LLM</div>
       <div class="text-lg font-extrabold {% if diag.llm.ok %}text-emerald-300{% else %}text-rose-300{% endif %}">
         {{ "OK" if diag.llm.ok else "ERRO" }}

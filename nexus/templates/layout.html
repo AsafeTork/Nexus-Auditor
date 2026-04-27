@@ -20,7 +20,8 @@
       --app-surface-2: rgba(2, 6, 23, .55);
       --app-text: #e2e8f0;
       --app-muted: #94a3b8;
-      --app-border: rgba(148,163,184,.18);
+      /* keep borders VERY subtle (modern / clean) */
+      --app-border: rgba(148,163,184,.08);
       --brand-1: #1A237E; /* Sapphire */
       --brand-2: #03A9F4; /* Cyan */
       --brand-border: rgba(3,169,244,.28);
@@ -56,27 +57,42 @@
     .btn-primary:hover{ filter: brightness(1.05); }
     .btn-secondary{
       background: var(--app-surface-2);
-      border: 1px solid var(--app-border);
+      border: 0;
       color: var(--app-text);
     }
     .input{
       background: rgba(2,6,23,.55);
-      border: 1px solid var(--app-border);
+      border: 0;
       color: var(--app-text);
       outline: none;
     }
     html.theme-light .input{ background: rgba(255,255,255,.95); }
     .input:focus{
-      border-color: var(--brand-1);
-      box-shadow: 0 0 0 3px rgba(3,169,244,.20);
+      box-shadow: 0 0 0 3px rgba(3,169,244,.18);
+    }
+
+    /* Modern cards (less contours, more depth) */
+    .card{
+      background: var(--app-surface);
+      border: 0;
+      border-radius: 18px;
+      box-shadow: 0 12px 40px rgba(0,0,0,.35);
+    }
+    html.theme-light .card{ box-shadow: 0 14px 40px rgba(2,6,23,.08); }
+    .card2{
+      background: var(--app-surface-2);
+      border: 0;
+      border-radius: 18px;
+      box-shadow: 0 10px 30px rgba(0,0,0,.25);
     }
 
     /* Premium "digital letterhead" */
     .letterhead{
       background: radial-gradient(1200px 600px at 20% 0%, rgba(26,35,126,.16), rgba(2,6,23,0) 60%),
                   radial-gradient(900px 500px at 100% 20%, rgba(3,169,244,.14), rgba(2,6,23,0) 55%);
-      border: 1px solid rgba(3,169,244,.20);
-      box-shadow: 0 0 0 1px rgba(26,35,126,.12), 0 24px 80px rgba(0,0,0,.55);
+      border: 0;
+      border-radius: 18px;
+      box-shadow: 0 24px 80px rgba(0,0,0,.55);
     }
 
     /* Minimal markdown styling (works in dark/light) */
@@ -102,10 +118,10 @@
       <!-- Top bar -->
       <div class="flex items-center justify-between gap-4">
         <div class="flex items-center gap-3">
-          <button id="menuBtn" class="lg:hidden btn-secondary rounded-xl px-3 py-2 text-sm font-extrabold" type="button">
+          <button id="menuBtn" class="lg:hidden btn-secondary rounded-xl px-3 py-2 text-sm font-extrabold bg-surface" type="button">
             ☰
           </button>
-          <div class="h-10 w-10 rounded-2xl bg-surface border border-app flex items-center justify-center overflow-hidden">
+          <div class="h-10 w-10 rounded-2xl bg-surface flex items-center justify-center overflow-hidden">
             <img alt="Nexus" class="h-9 w-9 object-contain" src="{{ url_for('static', filename='logo_mark.png') }}"/>
           </div>
           <div>
@@ -115,13 +131,13 @@
         </div>
 
         <div class="flex items-center gap-2">
-          <button id="themeToggle" class="btn-secondary rounded-xl px-3 py-2 text-[11px] font-extrabold" type="button">
+          <button id="themeToggle" class="btn-secondary rounded-xl px-3 py-2 text-[11px] font-extrabold bg-surface" type="button">
             Alternar tema
           </button>
-          <div class="hidden md:block mono text-[11px] px-3 py-2 rounded-xl border border-app bg-surface">
+          <div class="hidden md:block mono text-[11px] px-3 py-2 rounded-xl bg-surface">
             CPU <span id="cpuPct" class="text-slate-200">—</span> · MEM <span id="memPct" class="text-slate-200">—</span>
           </div>
-          <div class="hidden md:block mono text-[11px] px-3 py-2 rounded-xl border border-app bg-surface">
+          <div class="hidden md:block mono text-[11px] px-3 py-2 rounded-xl bg-surface">
             UTC <span id="utcClock" class="text-slate-200">—</span>
           </div>
         </div>
@@ -130,7 +146,7 @@
       {% if messages %}
         <div class="mt-4 space-y-2">
           {% for cat, msg in messages %}
-            <div class="text-xs p-3 rounded-xl border border-app bg-surface">
+            <div class="text-xs p-3 rounded-xl bg-surface">
               <span class="font-extrabold">{{ cat }}</span>: {{ msg }}
             </div>
           {% endfor %}
@@ -143,7 +159,7 @@
         <!-- Desktop sidebar -->
         {% if current_user.is_authenticated %}
           <aside class="hidden lg:block col-span-12 lg:col-span-3">
-            <div class="border border-app rounded-2xl bg-surface p-3">
+            <div class="card p-3">
               <div class="flex items-center gap-3 px-2 py-2">
                 <img class="h-10 w-10 object-contain" alt="Nexus" src="{{ url_for('static', filename='logo_mark.png') }}"/>
                 <div>
@@ -239,7 +255,7 @@
   {% if current_user.is_authenticated %}
   <!-- Mobile sidebar overlay -->
   <div id="sidebarOverlay" class="hidden lg:hidden fixed inset-0 z-50 bg-black/60">
-    <div id="sidebarPanel" class="absolute left-0 top-0 h-full w-[86%] max-w-sm bg-app border-r border-app p-4 -translate-x-full transition-transform duration-200">
+    <div id="sidebarPanel" class="absolute left-0 top-0 h-full w-[86%] max-w-sm bg-app p-4 -translate-x-full transition-transform duration-200">
       <div class="flex items-center justify-between">
         <div class="flex items-center gap-3">
           <img class="h-10 w-10 object-contain" alt="Nexus" src="{{ url_for('static', filename='logo_mark.png') }}"/>
@@ -248,7 +264,7 @@
             <div class="text-[11px] text-muted">Menu</div>
           </div>
         </div>
-        <button id="sidebarClose" class="btn-secondary rounded-xl px-3 py-2 text-sm font-extrabold" type="button">✕</button>
+        <button id="sidebarClose" class="btn-secondary rounded-xl px-3 py-2 text-sm font-extrabold bg-surface" type="button">✕</button>
       </div>
       <div class="mt-3 text-[11px] text-muted">Navegação</div>
       {% include "_sidebar_nav.html" %}

@@ -3,7 +3,7 @@
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
 
   <!-- Left: Sites + start audit -->
-  <section class="lg:col-span-2 border border-app rounded-2xl bg-surface p-5">
+  <section class="lg:col-span-2 card p-5">
     <div class="flex items-start justify-between gap-3">
       <div>
         <div class="text-sm font-extrabold">Painel de Operações</div>
@@ -14,7 +14,7 @@
       </div>
     </div>
 
-    <div class="mt-4 border border-app rounded-2xl bg-surface2 p-4">
+    <div class="mt-4 card2 p-4">
       <div class="text-xs font-extrabold">Adicionar site</div>
       <form class="mt-3 grid grid-cols-1 md:grid-cols-3 gap-2" method="post" action="{{ url_for('audit.create_site') }}">
         <input name="name" placeholder="Nome (ex.: Loja X)" class="input rounded-xl px-3 py-2 text-sm" />
@@ -27,7 +27,7 @@
       <div class="text-xs font-extrabold">Sites</div>
       <div class="mt-2 space-y-2">
         {% for s in sites %}
-          <div class="border border-app rounded-2xl bg-surface2 p-4">
+          <div class="card2 p-4">
             <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
               <div>
                 <div class="font-extrabold text-sm">{{ s.name }}</div>
@@ -52,11 +52,11 @@
 
   <!-- Right: Billing + recent -->
   <aside class="lg:col-span-1 space-y-4">
-    <section class="border border-app rounded-2xl bg-surface p-5">
+    <section class="card p-5">
       <div class="text-sm font-extrabold">Assinatura</div>
       <div class="mt-2 text-xs text-muted">Status: <span class="font-bold">{{ sub.status if sub else "inactive" }}</span></div>
       {% if request.args.get('billing') == 'required' %}
-      <div class="mt-3 text-xs p-3 rounded-xl border border-[#03A9F4]/30 bg-[#03A9F4]/10 text-[#03A9F4]">
+      <div class="mt-3 text-xs p-3 rounded-xl bg-brand-weak text-brand-2">
           Para rodar auditoria completa, ative a assinatura (ou use trial).
         </div>
       {% endif %}
@@ -68,11 +68,11 @@
       </div>
     </section>
 
-    <section class="border border-app rounded-2xl bg-surface p-5">
+    <section class="card p-5">
       <div class="text-sm font-extrabold">Auditorias recentes</div>
       <div class="mt-3 space-y-2">
         {% for a in audits %}
-          <a href="{{ url_for('audit.view_audit', audit_id=a.id) }}" class="block border border-app rounded-xl bg-surface2 p-3 hover:bg-surface">
+          <a href="{{ url_for('audit.view_audit', audit_id=a.id) }}" class="block rounded-xl bg-surface2 p-3 hover:bg-surface">
             <div class="flex items-center justify-between">
               <div class="mono text-xs">{{ a.target_domain }}</div>
               <div class="text-[11px] text-muted">{{ a.status }}</div>
