@@ -1,0 +1,77 @@
+{% extends "layout.html" %}
+{% block content %}
+<div class="letterhead rounded-2xl p-5">
+  <div class="flex items-start justify-between gap-3">
+    <div>
+      <div class="text-sm font-extrabold text-[#03A9F4]">Audit Debug</div>
+      <div class="mono text-xs text-slate-300">{{ audit.id }}</div>
+      <div class="text-[11px] text-slate-400">
+        status={{ audit.status }} · domain={{ audit.target_domain }} · model={{ audit.model }} · provider={{ audit.provider_base_url_v1 }}
+      </div>
+      {% if site %}
+        <div class="text-[11px] text-slate-500">{{ site.base_url }}</div>
+      {% endif %}
+    </div>
+    <a class="text-xs font-extrabold px-3 py-2 rounded-xl border border-white/10 bg-slate-950/40 hover:bg-slate-950/60"
+       href="{{ url_for('admin.admin_audits') }}">Voltar</a>
+  </div>
+
+  <!-- Tabs (full width for mobile) -->
+  <div class="mt-4 flex flex-wrap gap-2">
+    <button class="tabBtn text-xs font-extrabold px-3 py-2 rounded-xl border border-white/10 bg-slate-950/40" data-tab="logs">Logs</button>
+    <button class="tabBtn text-xs font-extrabold px-3 py-2 rounded-xl border border-white/10 bg-slate-950/40" data-tab="events">Eventos</button>
+  </div>
+
+  <div class="mt-3">
+    <section id="tab-logs" class="border border-white/10 rounded-2xl bg-slate-950/40 p-4">
+      <div class="flex items-center justify-between">
+        <div class="text-xs font-extrabold">Logs (copiável)</div>
+        <button class="text-xs font-extrabold px-3 py-2 rounded-xl bg-gradient-to-r from-[#1A237E] to-[#03A9F4] text-white"
+                onclick="copyText('logsBox')">Copiar</button>
+      </div>
+      <textarea id="logsBox" class="mono mt-3 w-full h-[62vh] bg-slate-950 border border-white/10 rounded-xl p-3 text-xs" readonly>{{ audit.logs }}</textarea>
+      <div class="mt-2 text-[11px] text-slate-400">Dica: copie e cole para suporte.</div>
+    </section>
+
+    <section id="tab-events" class="border border-white/10 rounded-2xl bg-slate-950/40 p-4 hidden">
+      <div class="flex items-center justify-between">
+        <div class="text-xs font-extrabold">Eventos (audit_events)</div>
+        <button class="text-xs font-extrabold px-3 py-2 rounded-xl bg-gradient-to-r from-[#1A237E] to-[#03A9F4] text-white"
+                onclick="copyText('eventsBox')">Copiar</button>
+      </div>
+      <textarea id="eventsBox" class="mono mt-3 w-full h-[62vh] bg-slate-950 border border-white/10 rounded-xl p-3 text-xs" readonly>{% for e in events %}{{ e.ts_ms }} {{ e.level }} {{ e.layer }} :: {{ e.message }}{% if not loop.last %}\n{% endif %}{% endfor %}</textarea>
+      <div class="mt-2 text-[11px] text-slate-400">Mostra até 5000 eventos.</div>
+    </section>
+  </div>
+</div>
+
+<script>
+  function setTab(name){
+    const tabs = ["logs","events"];
+    for(const t of tabs){
+      const el = document.getElementById("tab-"+t);
+      if(el) el.classList.toggle("hidden", t !== name);
+    }
+    document.querySelectorAll(".tabBtn").forEach(b => {
+      const on = b.getAttribute("data-tab") === name;
+      b.className = "tabBtn text-xs font-extrabold px-3 py-2 rounded-xl border " + (on ? "border-[#03A9F4]/35 bg-[#03A9F4]/10 text-[#03A9F4]" : "border-white/10 bg-slate-950/40");
+    });
+  }
+  document.querySelectorAll(".tabBtn").forEach(b => b.addEventListener("click", () => setTab(b.getAttribute("data-tab"))));
+  setTab("logs");
+
+  async function copyText(id){
+    const el = document.getElementById(id);
+    if(!el) return;
+    el.focus();
+    el.select();
+    try{
+      await navigator.clipboard.writeText(el.value);
+      alert("Copiado.");
+    }catch(e){
+      document.execCommand("copy");
+      alert("Copiado.");
+    }
+  }
+</script>
+{% endblock %}

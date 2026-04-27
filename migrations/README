@@ -1,0 +1,7 @@
+Alembic migrations folder (Flask-Migrate).
+
+If you prefer generating this folder fresh:
+  flask db init
+  flask db migrate -m "init"
+  flask db upgrade
+

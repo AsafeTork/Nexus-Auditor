@@ -1,0 +1,50 @@
+services:
+  - type: web
+    name: nexus-auditor-web
+    env: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    autoDeploy: true
+    plan: starter
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: REDIS_URL
+        sync: false
+      - key: SECRET_KEY
+        sync: false
+      - key: LLM_BASE_URL_V1
+        sync: false
+      - key: LLM_API_KEY
+        sync: false
+      - key: LLM_DEFAULT_MODEL
+        sync: false
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
+      - key: STRIPE_PRICE_ID
+        sync: false
+    startCommand: bash bin/start_web.sh
+
+  - type: worker
+    name: nexus-auditor-worker
+    env: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    autoDeploy: true
+    plan: starter
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: REDIS_URL
+        sync: false
+      - key: SECRET_KEY
+        sync: false
+      - key: LLM_BASE_URL_V1
+        sync: false
+      - key: LLM_API_KEY
+        sync: false
+      - key: LLM_DEFAULT_MODEL
+        sync: false
+    startCommand: python -m nexus.worker

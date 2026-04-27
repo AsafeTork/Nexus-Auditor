@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Dossiê — Nexus Auditor</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=JetBrains+Mono:wght@400;600;800&display=swap" rel="stylesheet">
+  <style>
+    body{ background:#020617; color:#e2e8f0; font-family: Inter, system-ui; margin:0; padding:32px; }
+    .page{ max-width: 900px; margin:0 auto; background:#0b1220; border:1px solid rgba(245,158,11,.35);
+      box-shadow: 0 0 0 1px rgba(245,158,11,.10), 0 20px 80px rgba(0,0,0,.45); border-radius:18px; overflow:hidden;}
+    .hdr{ padding:22px 26px; border-bottom:1px solid rgba(245,158,11,.25); background:linear-gradient(180deg, rgba(245,158,11,.10), rgba(2,6,23,0));}
+    .badge{ display:inline-block; padding:6px 10px; border-radius:999px; border:1px solid rgba(245,158,11,.35); color:#fbbf24; font-weight:800; font-size:12px;}
+    .mono{ font-family: "JetBrains Mono", ui-monospace, monospace; }
+    .body{ padding:22px 26px; }
+    pre{ white-space:pre-wrap; word-break:break-word; background:#020617; border:1px solid rgba(148,163,184,.20); padding:14px; border-radius:14px;}
+    .k{ color:#fbbf24; font-weight:800; }
+    @media print{
+      body{ background:white; color:black; padding:0; }
+      .page{ box-shadow:none; border:1px solid #d4af37; border-radius:0; }
+      pre{ background:#f8fafc; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="hdr">
+      <div class="badge">Nexus Auditor — Digital Letterhead</div>
+      <h1 style="margin:10px 0 6px; font-size:22px;">Dossiê de Auditoria</h1>
+      <div style="font-size:12px; color:#94a3b8;">
+        <span class="k">Alvo:</span> {{ site.base_url if site else audit.site_id }} ·
+        <span class="k">Domínio:</span> <span class="mono">{{ audit.target_domain }}</span> ·
+        <span class="k">Data:</span> {{ audit.created_utc }}
+      </div>
+      <div style="margin-top:10px; font-size:12px; color:#94a3b8;">
+        <span class="k">Audit ID:</span> <span class="mono">{{ audit.id }}</span> ·
+        <span class="k">Status:</span> {{ audit.status }} ·
+        <span class="k">Modelo:</span> <span class="mono">{{ audit.model }}</span>
+      </div>
+    </div>
+    <div class="body">
+      <h2 style="margin:0 0 10px;">Relatório (Markdown bruto)</h2>
+      <pre class="mono">{{ audit.markdown_text }}</pre>
+      <h2 style="margin:18px 0 10px;">Matriz de Dados (CSV)</h2>
+      <pre class="mono">{{ audit.csv_text }}</pre>
+    </div>
+  </div>
+</body>
+</html>
+

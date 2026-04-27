@@ -1,0 +1,29 @@
+{% extends "layout.html" %}
+{% block content %}
+<div class="letterhead rounded-2xl p-6">
+  <div class="text-sm font-extrabold text-[#03A9F4]">Falha controlada</div>
+  <div class="mt-2 text-xs text-slate-300">
+    O sistema encontrou um erro, mas a operação foi interrompida com segurança.
+  </div>
+  <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3">
+    <div class="border border-white/10 rounded-2xl bg-slate-950/40 p-4">
+      <div class="text-[11px] text-slate-400">Código</div>
+      <div class="mono text-sm text-slate-100">{{ code }}</div>
+      <div class="mt-3 text-[11px] text-slate-400">Request ID</div>
+      <div class="mono text-sm text-slate-100">{{ request_id }}</div>
+    </div>
+    <div class="border border-white/10 rounded-2xl bg-slate-950/40 p-4">
+      <div class="text-[11px] text-slate-400">O que fazer agora</div>
+      <ul class="mt-2 text-xs text-slate-200 list-disc pl-5 space-y-1">
+        <li>Recarregue a página (às vezes é instabilidade temporária do provedor).</li>
+        <li>Verifique se as env vars estão preenchidas (DATABASE_URL, REDIS_URL, SECRET_KEY).</li>
+        <li>Se persistir, envie o Request ID para suporte técnico.</li>
+      </ul>
+    </div>
+  </div>
+  {% if message %}
+    <div class="mt-4 text-[11px] text-slate-400">Detalhe:</div>
+    <pre class="mono mt-2 text-[11px] whitespace-pre-wrap border border-white/10 rounded-xl bg-slate-950/50 p-3">{{ message }}</pre>
+  {% endif %}
+</div>
+{% endblock %}

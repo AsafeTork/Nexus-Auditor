@@ -1,0 +1,76 @@
+# Nexus Auditor: Professional Edition (SaaS)
+
+Este pacote é um **SaaS profissional** (multi-tenant) do Nexus Auditor:
+- Login + Organização (tenant)
+- Sites + Auditorias (histórico)
+- Worker assíncrono via **Redis + RQ**
+- LLM via **gateway OpenAI-compatible** (Eclipse Provider funciona)
+- Billing via **Stripe** (Checkout + Webhook)
+
+## Rodar local (modo fácil com Docker)
+1) Copie `.env.example` para `.env` e preencha as chaves
+2) Suba:
+```bash
+docker compose up --build
+```
+3) Migrações:
+```bash
+docker compose exec web flask db upgrade
+```
+4) Abra:
+`http://localhost:8000`
+
+
+> Dica: se o comando `flask` não reconhecer o app, rode com:
+> `docker compose exec -e FLASK_APP=app.py web flask db upgrade`
+
+## Deploy “mais fácil e melhor”
+### Opção A (recomendada): Railway/Render
+- Postgres gerenciado
+- Redis gerenciado
+- Deploy do web + worker
+
+#### Render (passo a passo)
+1) Crie um Postgres e um Redis no Render
+2) Crie um novo “Blueprint” apontando para este repositório e o arquivo `render.yaml`
+3) Configure env vars (Render → Environment):
+   - `DATABASE_URL` (Postgres)
+   - `REDIS_URL` (Redis)
+   - `SECRET_KEY`
+   - `LLM_BASE_URL_V1`, `LLM_API_KEY`, `LLM_DEFAULT_MODEL`
+   - Stripe: `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_ID`
+4) Rode as migrações uma vez (Render Shell):
+   - `FLASK_APP=app.py flask db upgrade`
+5) Abra o Web URL e crie sua conta (Register).
+
+### Opção B: VPS Ubuntu (controle total)
+- Use `docker compose`
+- Nginx como reverse proxy (TLS via LetsEncrypt)
+
+## “Teste completo”
+- Testes automatizados com `pytest` (ver pasta `tests/`)
+- Smoke test manual:
+  1) Criar conta
+  2) Adicionar site
+  3) Iniciar auditoria
+  4) Ver streaming + download .md/.csv
+  5) Abrir o **Dossiê** (print-ready) para enviar ao cliente
+
+## Notas sobre “outros provedores”
+O Nexus Pro usa **OpenAI-compatible**:
+- `POST /v1/chat/completions`
+- opcional: `GET /v1/models`
+
+Se o provedor não tiver `/models`, use um proxy como **LiteLLM** e aponte o Base URL para o proxy:
+`http://127.0.0.1:4000/v1`
+
+## Como “colocar no mercado” (guia rápido)
+1) **Domínio**: compre um domínio e aponte para o Render/VPS
+2) **Termos/Privacidade**: crie páginas e políticas (mínimo para SaaS)
+3) **Stripe**:
+   - crie um Product + Price (mensal)
+   - copie o `price_id` para `STRIPE_PRICE_ID`
+   - configure o webhook apontando para `/billing/webhook`
+4) **Onboarding**:
+   - crie um “site demo”
+   - faça um vídeo curto (2–3 min) mostrando: add site → start audit → dossiê → export

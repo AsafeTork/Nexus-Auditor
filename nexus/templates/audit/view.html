@@ -1,0 +1,183 @@
+{% extends "layout.html" %}
+{% block content %}
+<div class="border border-white/10 rounded-2xl bg-slate-900/20 p-5">
+  <div class="flex items-start justify-between gap-3">
+    <div>
+      <div class="text-sm font-extrabold">Auditoria Técnica</div>
+      <div class="mono text-xs text-slate-400">{{ site.base_url if site else audit.site_id }}</div>
+      <div class="text-[11px] text-slate-500">Audit ID: <span class="mono">{{ audit.id }}</span> · Status: <span id="statusBadge">{{ audit.status }}</span></div>
+    </div>
+    <div class="flex flex-wrap items-center gap-2 justify-end">
+      <button class="mono text-xs font-bold px-3 py-2 rounded-xl border border-white/10 bg-slate-950/40 hover:bg-slate-950/60" onclick="downloadMD()">Download .md</button>
+      <button class="mono text-xs font-bold px-3 py-2 rounded-xl border border-white/10 bg-slate-950/40 hover:bg-slate-950/60" onclick="downloadCSV()">Download .csv</button>
+      <a class="mono text-xs font-bold px-3 py-2 rounded-xl border border-[#03A9F4]/30 bg-[#03A9F4]/10 text-[#03A9F4] hover:bg-[#03A9F4]/15" href="/dossier/{{ audit.id }}" target="_blank">Dossiê</a>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="mt-4 flex flex-wrap gap-2">
+    <button class="tabBtn text-xs font-extrabold px-3 py-2 rounded-xl border border-white/10 bg-slate-950/40" data-tab="exec">Resumo Executivo</button>
+    <button class="tabBtn text-xs font-extrabold px-3 py-2 rounded-xl border border-white/10 bg-slate-950/40" data-tab="tech">Auditoria Técnica</button>
+    <button class="tabBtn text-xs font-extrabold px-3 py-2 rounded-xl border border-white/10 bg-slate-950/40" data-tab="data">Dados brutos</button>
+  </div>
+
+  <div class="mt-3 grid grid-cols-1 gap-3">
+    <!-- Exec summary -->
+    <section id="tab-exec" class="letterhead rounded-2xl p-4">
+      <div class="text-xs font-extrabold text-[#03A9F4]">Resumo Executivo</div>
+      <div class="mt-3 grid grid-cols-1 md:grid-cols-3 gap-3">
+        <div class="border border-white/10 rounded-2xl bg-slate-950/40 p-4">
+          <div class="text-[11px] text-slate-400">Achados (linhas CSV)</div>
+          <div class="text-2xl font-extrabold" id="kpiRows">—</div>
+          <div class="text-[11px] text-slate-500">Apenas itens com prova entram no CSV.</div>
+        </div>
+        <div class="border border-white/10 rounded-2xl bg-slate-950/40 p-4">
+          <div class="text-[11px] text-slate-400">Estado</div>
+          <div class="text-2xl font-extrabold" id="kpiStatus">—</div>
+          <div class="text-[11px] text-slate-500">Fila/Execução via worker.</div>
+        </div>
+        <div class="border border-white/10 rounded-2xl bg-slate-950/40 p-4">
+          <div class="text-[11px] text-slate-400">Dossiê</div>
+          <div class="text-2xl font-extrabold">Pronto</div>
+          <div class="text-[11px] text-slate-500">Formato “carta digital” para cliente.</div>
+        </div>
+      </div>
+      <div class="mt-4 text-[11px] text-slate-400">
+        Sugestão comercial: venda “Auditoria + Dossiê + Call” como pacote premium.
+      </div>
+    </section>
+
+    <!-- Technical report -->
+    <section id="tab-tech" class="letterhead rounded-2xl p-4 hidden">
+      <div class="text-xs font-extrabold text-[#03A9F4]">Relatório (Markdown)</div>
+      <div class="mt-3 border border-white/10 rounded-xl bg-slate-950/40 p-4 h-[62vh] overflow-auto">
+        <div id="md" class="prose prose-invert max-w-none"></div>
+      </div>
+
+      <!-- Clean mode: raw data hidden by default -->
+      <details class="mt-4 border border-white/10 rounded-2xl bg-slate-950/40 p-3">
+        <summary class="cursor-pointer text-xs font-extrabold">Dados brutos (CSV/Logs) — abrir</summary>
+        <div class="mt-3 grid grid-cols-1 gap-3">
+          <div>
+            <div class="text-[11px] text-slate-400">CSV</div>
+            <textarea id="csvInline" class="mono mt-2 w-full h-56 bg-slate-950 border border-white/10 rounded-xl p-3 text-xs" readonly></textarea>
+          </div>
+          <div>
+            <div class="text-[11px] text-slate-400">Logs</div>
+            <textarea id="logsInline" class="mono mt-2 w-full h-56 bg-slate-950 border border-white/10 rounded-xl p-3 text-xs" readonly></textarea>
+          </div>
+        </div>
+      </details>
+    </section>
+
+    <!-- Raw data (still available as separate tab) -->
+    <section id="tab-data" class="letterhead rounded-2xl p-4 hidden">
+      <div class="text-xs font-extrabold text-[#03A9F4]">Dados brutos</div>
+      <div class="mt-3 grid grid-cols-1 gap-3">
+        <div class="border border-white/10 rounded-2xl bg-slate-950/40 p-3">
+          <div class="text-[11px] text-slate-400">CSV</div>
+          <textarea id="csv" class="mono mt-2 w-full h-56 bg-slate-950 border border-white/10 rounded-xl p-3 text-xs" readonly></textarea>
+        </div>
+        <div class="border border-white/10 rounded-2xl bg-slate-950/40 p-3">
+          <div class="text-[11px] text-slate-400">Logs</div>
+          <textarea id="logs" class="mono mt-2 w-full h-56 bg-slate-950 border border-white/10 rounded-xl p-3 text-xs" readonly></textarea>
+        </div>
+      </div>
+      <div class="mt-2 text-[11px] text-slate-400">
+        Colunas CSV: Categoria; Falha; Prova; Explicação; Prejuízo; Solução; Prioridade; Complexity
+      </div>
+    </section>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script>
+  const AUDIT_ID = "{{ audit.id }}";
+  let LOGS="", MD="", CSV="";
+
+  function filePrefix(){
+    const host = "{{ audit.target_domain or 'ALVO' }}".toUpperCase().replace(/^WWW\./,'');
+    const iso = new Date().toISOString().replace(/[-:]/g,"").replace(/\..*/,"Z");
+    return "AUDIT_NEXUS_" + host + "_" + iso;
+  }
+  function downloadMD(){
+    const blob = new Blob([MD||""], {type:"text/markdown;charset=utf-8"});
+    const url = URL.createObjectURL(blob);
+    const a=document.createElement("a");
+    a.href=url; a.download=filePrefix()+".md";
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+  function downloadCSV(){
+    const blob = new Blob(["\ufeff", CSV||""], {type:"text/csv;charset=utf-8"});
+    const url = URL.createObjectURL(blob);
+    const a=document.createElement("a");
+    a.href=url; a.download=filePrefix()+".csv";
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  function applyLine(line){
+    if(line.startsWith("LOG:")){ LOGS += line.slice(4) + "\n"; document.getElementById("logs").value = LOGS; return; }
+    if(line.startsWith("DATA:")){ MD += line.slice(5) + "\n"; document.getElementById("md").innerHTML = marked.parse(MD); return; }
+    if(line.startsWith("CSV_ROW:")){ CSV += line.slice(8) + "\n"; document.getElementById("csv").value = CSV; return; }
+  }
+
+  function setTab(name){
+    const tabs = ["exec","tech","data","logs"];
+    for(const t of tabs){
+      const el = document.getElementById("tab-"+t);
+      if(el) el.classList.toggle("hidden", t !== name);
+    }
+    const btns = document.querySelectorAll(".tabBtn");
+    btns.forEach(b => {
+      const on = b.getAttribute("data-tab") === name;
+      b.className = "tabBtn text-xs font-extrabold px-3 py-2 rounded-xl border " + (on ? "border-[#03A9F4]/35 bg-[#03A9F4]/10 text-[#03A9F4]" : "border-white/10 bg-slate-950/40");
+    });
+  }
+  document.querySelectorAll(".tabBtn").forEach(b => b.addEventListener("click", () => setTab(b.getAttribute("data-tab"))));
+  setTab("exec");
+
+  function refreshKpis(status){
+    try{
+      const rows = (CSV||"").trim().split(/\n/).filter(x => x.trim()).length - 1; // minus header
+      document.getElementById("kpiRows").textContent = String(Math.max(0, rows));
+      document.getElementById("kpiStatus").textContent = String(status || "—");
+      document.getElementById("statusBadge").textContent = String(status || "—");
+    }catch(e){}
+  }
+
+  async function connect(){
+    const r = await fetch(`/audit/run/${AUDIT_ID}/progress`);
+    const j = await r.json();
+    LOGS = j.logs || ""; MD = j.markdown_text || ""; CSV = j.csv_text || "";
+    document.getElementById("logs").value = LOGS;
+    document.getElementById("csv").value = CSV;
+    document.getElementById("md").innerHTML = marked.parse(MD);
+    // clean-mode mirrors
+    try{ document.getElementById("logsInline").value = LOGS; }catch(e){}
+    try{ document.getElementById("csvInline").value = CSV; }catch(e){}
+    refreshKpis(j.status);
+    const resp = await fetch(`/audit/run/${AUDIT_ID}/stream?from_log=${LOGS.length}&from_md=${MD.length}&from_csv=${CSV.length}`);
+    const reader = resp.body.getReader();
+    const dec = new TextDecoder("utf-8");
+    let buf="";
+    while(true){
+      const {value,done} = await reader.read();
+      if(done) break;
+      buf += dec.decode(value, {stream:true});
+      const lines = buf.split(/\n/);
+      buf = lines.pop();
+      for(const ln of lines){ if(ln.trim()) applyLine(ln.replace(/\r/g,"")); }
+      try{ document.getElementById("logsInline").value = LOGS; }catch(e){}
+      try{ document.getElementById("csvInline").value = CSV; }catch(e){}
+      refreshKpis("running");
+    }
+    // final refresh
+    const r2 = await fetch(`/audit/run/${AUDIT_ID}/progress`);
+    const j2 = await r2.json();
+    refreshKpis(j2.status);
+  }
+  connect();
+</script>
+{% endblock %}
