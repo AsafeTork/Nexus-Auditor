@@ -6,7 +6,7 @@ from typing import Any, Dict, List
 
 import redis
 import requests
-from flask import Blueprint, current_app, jsonify, render_template, request
+from flask import Blueprint, current_app, jsonify, render_template, request, redirect, url_for, flash
 from flask_login import login_required, current_user
 from sqlalchemy import text
 
@@ -121,3 +121,21 @@ def admin_audit_detail(audit_id: str):
     )
     return render_template("admin/audit_detail.html", audit=audit, site=site, events=events)
 
+
+@bp.post("/admin/audit/<audit_id>/delete")
+@login_required
+@require_admin
+def admin_audit_delete(audit_id: str):
+    """
+    Delete an audit and its events (org-scoped).
+    """
+    audit = AuditRun.query.filter_by(id=audit_id, org_id=current_user.org_id).first_or_404()
+    try:
+        AuditEvent.query.filter_by(audit_run_id=audit.id).delete(synchronize_session=False)
+        db.session.delete(audit)
+        db.session.commit()
+        flash("Auditoria excluída.", "ok")
+    except Exception as e:
+        db.session.rollback()
+        flash(f"Falha ao excluir: {type(e).__name__}: {e}", "error")
+    return redirect(url_for("admin.admin_audits"))

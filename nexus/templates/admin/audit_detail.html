@@ -12,8 +12,13 @@
         <div class="text-[11px] text-slate-500">{{ site.base_url }}</div>
       {% endif %}
     </div>
-    <a class="text-xs font-extrabold px-3 py-2 rounded-xl border border-white/10 bg-slate-950/40 hover:bg-slate-950/60"
-       href="{{ url_for('admin.admin_audits') }}">Voltar</a>
+    <div class="flex items-center gap-2">
+      <form method="post" action="{{ url_for('admin.admin_audit_delete', audit_id=audit.id) }}" onsubmit="return confirm('Excluir esta auditoria?');">
+        <button class="btn-secondary rounded-xl px-3 py-2 text-xs font-extrabold">Excluir</button>
+      </form>
+      <a class="btn-secondary text-xs font-extrabold px-3 py-2 rounded-xl"
+         href="{{ url_for('admin.admin_audits') }}">Voltar</a>
+    </div>
   </div>
 
   <!-- Tabs (full width for mobile) -->

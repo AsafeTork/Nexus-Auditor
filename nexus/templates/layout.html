@@ -166,70 +166,74 @@
   </div>
 
   <script>
-    // Theme toggle (dark/light)
-    (function(){
-      const key = "nexus_theme";
-      const saved = localStorage.getItem(key);
-      if(saved === "light"){ document.documentElement.classList.add("theme-light"); }
-      const btn = document.getElementById("themeToggle");
-      function label(){
-        const isLight = document.documentElement.classList.contains("theme-light");
-        if(btn) btn.textContent = isLight ? "Tema: claro" : "Tema: dark";
-      }
-      label();
-      if(btn){
-        btn.addEventListener("click", () => {
-          document.documentElement.classList.toggle("theme-light");
-          localStorage.setItem(key, document.documentElement.classList.contains("theme-light") ? "light" : "dark");
-          label();
-        });
-      }
-    })();
+    // Wait DOM ready so mobile sidebar elements exist even if rendered after this script.
+    document.addEventListener("DOMContentLoaded", () => {
+      // Theme toggle (dark/light)
+      (function(){
+        const key = "nexus_theme";
+        const saved = localStorage.getItem(key);
+        if(saved === "light"){ document.documentElement.classList.add("theme-light"); }
+        const btn = document.getElementById("themeToggle");
+        function label(){
+          const isLight = document.documentElement.classList.contains("theme-light");
+          if(btn) btn.textContent = isLight ? "Tema: claro" : "Tema: dark";
+        }
+        label();
+        if(btn){
+          btn.addEventListener("click", () => {
+            document.documentElement.classList.toggle("theme-light");
+            localStorage.setItem(key, document.documentElement.classList.contains("theme-light") ? "light" : "dark");
+            label();
+          });
+        }
+      })();
 
-    // Mobile sidebar (drawer)
-    (function(){
-      const btn = document.getElementById("menuBtn");
-      const overlay = document.getElementById("sidebarOverlay");
-      const panel = document.getElementById("sidebarPanel");
-      function open(){
-        if(!overlay) return;
-        overlay.classList.remove("hidden");
-        setTimeout(()=>panel && panel.classList.remove("-translate-x-full"), 10);
-      }
-      function close(){
-        if(!overlay) return;
-        panel && panel.classList.add("-translate-x-full");
-        setTimeout(()=>overlay.classList.add("hidden"), 180);
-      }
-      if(btn) btn.addEventListener("click", open);
-      if(overlay) overlay.addEventListener("click", (e)=>{ if(e.target===overlay) close(); });
-      const closeBtn = document.getElementById("sidebarClose");
-      if(closeBtn) closeBtn.addEventListener("click", close);
-    })();
+      // Mobile sidebar (drawer)
+      (function(){
+        const btn = document.getElementById("menuBtn");
+        const overlay = document.getElementById("sidebarOverlay");
+        const panel = document.getElementById("sidebarPanel");
+        function open(){
+          if(!overlay || !panel) return;
+          overlay.classList.remove("hidden");
+          setTimeout(()=>panel.classList.remove("-translate-x-full"), 10);
+        }
+        function close(){
+          if(!overlay || !panel) return;
+          panel.classList.add("-translate-x-full");
+          setTimeout(()=>overlay.classList.add("hidden"), 180);
+        }
+        if(btn) btn.addEventListener("click", open);
+        if(overlay) overlay.addEventListener("click", (e)=>{ if(e.target===overlay) close(); });
+        const closeBtn = document.getElementById("sidebarClose");
+        if(closeBtn) closeBtn.addEventListener("click", close);
+      })();
 
-    // Small UI polish: UTC clock + simulated CPU/MEM.
-    function pad(n){ return String(n).padStart(2,'0'); }
-    function tickUTC(){
-      try{
-        const d = new Date();
-        const t = pad(d.getUTCHours()) + ":" + pad(d.getUTCMinutes()) + ":" + pad(d.getUTCSeconds());
-        const el = document.getElementById("utcClock");
-        if(el) el.textContent = t;
-      }catch(e){}
-    }
-    function tickPerf(){
-      try{
-        const cpu = 12 + Math.round(Math.random()*35);
-        const mem = 28 + Math.round(Math.random()*45);
-        const a = document.getElementById("cpuPct");
-        const b = document.getElementById("memPct");
-        if(a) a.textContent = cpu + "%";
-        if(b) b.textContent = mem + "%";
-      }catch(e){}
-    }
-    tickUTC(); tickPerf();
-    setInterval(tickUTC, 1000);
-    setInterval(tickPerf, 2500);
+      // Small UI polish: UTC clock + simulated CPU/MEM.
+      function pad(n){ return String(n).padStart(2,'0'); }
+      function tickUTC(){
+        try{
+          const d = new Date();
+          const t = pad(d.getUTCHours()) + ":" + pad(d.getUTCMinutes()) + ":" + pad(d.getUTCSeconds());
+          const el = document.getElementById("utcClock");
+          if(el) el.textContent = t;
+        }catch(e){}
+      }
+      function tickPerf(){
+        try{
+          const cpu = 12 + Math.round(Math.random()*35);
+          const mem = 28 + Math.round(Math.random()*45);
+          const a = document.getElementById("cpuPct");
+          const b = document.getElementById("memPct");
+          if(a) a.textContent = cpu + "%";
+          if(b) b.textContent = mem + "%";
+        }catch(e){}
+      }
+      tickUTC(); tickPerf();
+      setInterval(tickUTC, 1000);
+      setInterval(tickPerf, 2500);
+    });
+
   </script>
 
   {% if current_user.is_authenticated %}
