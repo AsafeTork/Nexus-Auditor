@@ -13,6 +13,64 @@
   <style>
     body{ font-family: Inter, ui-sans-serif, system-ui; }
     .mono{ font-family: "JetBrains Mono", ui-monospace, monospace; }
+    /* Theme tokens */
+    :root{
+      --app-bg: #020617;
+      --app-surface: rgba(15, 23, 42, .55);
+      --app-surface-2: rgba(2, 6, 23, .55);
+      --app-text: #e2e8f0;
+      --app-muted: #94a3b8;
+      --app-border: rgba(148,163,184,.18);
+      --brand-1: #1A237E; /* Sapphire */
+      --brand-2: #03A9F4; /* Cyan */
+      --brand-border: rgba(3,169,244,.28);
+      --brand-weak: rgba(3,169,244,.10);
+      --brand-weak2: rgba(3,169,244,.14);
+    }
+    html.theme-light{
+      --app-bg: #f8fafc;
+      --app-surface: rgba(255,255,255,.9);
+      --app-surface-2: rgba(255,255,255,.7);
+      --app-text: #0f172a;
+      --app-muted: #475569;
+      --app-border: rgba(15,23,42,.14);
+      --brand-border: rgba(26,35,126,.25);
+      --brand-weak: rgba(26,35,126,.06);
+      --brand-weak2: rgba(3,169,244,.10);
+    }
+
+    /* Utility classes (avoid heavy Tailwind rewrites) */
+    .bg-app{ background: var(--app-bg); color: var(--app-text); }
+    .bg-surface{ background: var(--app-surface); }
+    .bg-surface2{ background: var(--app-surface-2); }
+    .border-app{ border-color: var(--app-border); }
+    .text-muted{ color: var(--app-muted); }
+    .text-brand-2{ color: var(--brand-2); }
+    .border-brand{ border-color: var(--brand-border); }
+    .bg-brand-weak{ background: var(--brand-weak); }
+    .bg-brand-weak2{ background: var(--brand-weak2); }
+    .btn-primary{
+      background: linear-gradient(90deg, var(--brand-1), var(--brand-2));
+      color: white;
+    }
+    .btn-primary:hover{ filter: brightness(1.05); }
+    .btn-secondary{
+      background: var(--app-surface-2);
+      border: 1px solid var(--app-border);
+      color: var(--app-text);
+    }
+    .input{
+      background: rgba(2,6,23,.55);
+      border: 1px solid var(--app-border);
+      color: var(--app-text);
+      outline: none;
+    }
+    html.theme-light .input{ background: rgba(255,255,255,.95); }
+    .input:focus{
+      border-color: var(--brand-1);
+      box-shadow: 0 0 0 3px rgba(3,169,244,.20);
+    }
+
     /* Premium "digital letterhead" */
     .letterhead{
       background: radial-gradient(1200px 600px at 20% 0%, rgba(26,35,126,.16), rgba(2,6,23,0) 60%),
@@ -20,35 +78,51 @@
       border: 1px solid rgba(3,169,244,.20);
       box-shadow: 0 0 0 1px rgba(26,35,126,.12), 0 24px 80px rgba(0,0,0,.55);
     }
+
+    /* Minimal markdown styling (works in dark/light) */
+    .md-render{ color: var(--app-text); font-size: 14px; line-height: 1.6; }
+    .md-render h1,.md-render h2,.md-render h3{ font-weight: 800; letter-spacing: -0.01em; margin: 14px 0 8px; }
+    .md-render h1{ font-size: 20px; }
+    .md-render h2{ font-size: 16px; color: var(--brand-2); }
+    .md-render h3{ font-size: 14px; }
+    .md-render p{ margin: 8px 0; }
+    .md-render ul{ margin: 8px 0 8px 18px; list-style: disc; }
+    .md-render ol{ margin: 8px 0 8px 18px; list-style: decimal; }
+    .md-render code{ font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 12px; padding: 2px 6px; border-radius: 10px; background: rgba(2,6,23,.55); border: 1px solid var(--app-border); }
+    html.theme-light .md-render code{ background: rgba(255,255,255,.9); }
+    .md-render pre{ overflow:auto; padding: 12px; border-radius: 14px; background: rgba(2,6,23,.55); border: 1px solid var(--app-border); }
+    html.theme-light .md-render pre{ background: rgba(255,255,255,.9); }
+    .md-render a{ color: var(--brand-2); text-decoration: underline; }
   </style>
 </head>
-<body class="bg-slate-950 text-slate-100">
+<body class="bg-app">
   <div class="min-h-screen">
-    <div class="max-w-7xl mx-auto px-4 py-6">
+    <div class="max-w-7xl mx-auto px-4 py-5">
 
       <!-- Top bar -->
       <div class="flex items-center justify-between gap-4">
         <div class="flex items-center gap-3">
-          <!-- Official logo (embedded) -->
-          <div class="h-10 w-10 rounded-2xl bg-slate-900/60 border border-white/10 flex items-center justify-center overflow-hidden">
-            <img alt="Nexus" class="h-8 w-8 object-contain opacity-90"
-                 src="data:image/png;base64,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"/>
+          <button id="menuBtn" class="lg:hidden btn-secondary rounded-xl px-3 py-2 text-sm font-extrabold" type="button">
+            ☰
+          </button>
+          <div class="h-10 w-10 rounded-2xl bg-surface border border-app flex items-center justify-center overflow-hidden">
+            <img alt="Nexus" class="h-9 w-9 object-contain" src="{{ url_for('static', filename='logo_mark.png') }}"/>
           </div>
           <div>
             <div class="text-lg font-extrabold tracking-tight">Nexus Auditor <span class="text-slate-200">SaaS</span> <span class="text-[#03A9F4]">Professional</span></div>
-            <div class="text-[11px] text-slate-400">Auditoria automatizada · Dossiê premium · Multi-tenant</div>
+            <div class="text-[11px] text-muted">Auditoria automatizada · Dossiê premium · Multi-tenant</div>
           </div>
         </div>
 
-        <div class="hidden md:flex items-center gap-2">
-          <div class="mono text-[11px] px-3 py-2 rounded-xl border border-white/10 bg-slate-900/30">
+        <div class="flex items-center gap-2">
+          <button id="themeToggle" class="btn-secondary rounded-xl px-3 py-2 text-[11px] font-extrabold" type="button">
+            Alternar tema
+          </button>
+          <div class="hidden md:block mono text-[11px] px-3 py-2 rounded-xl border border-app bg-surface">
             CPU <span id="cpuPct" class="text-slate-200">—</span> · MEM <span id="memPct" class="text-slate-200">—</span>
           </div>
-          <div class="mono text-[11px] px-3 py-2 rounded-xl border border-white/10 bg-slate-900/30">
+          <div class="hidden md:block mono text-[11px] px-3 py-2 rounded-xl border border-app bg-surface">
             UTC <span id="utcClock" class="text-slate-200">—</span>
-          </div>
-          <div class="text-[11px] font-extrabold px-3 py-2 rounded-xl border border-[#03A9F4]/30 bg-[#03A9F4]/10 text-[#03A9F4]">
-            Sapphire/Cyan Active
           </div>
         </div>
       </div>
@@ -56,7 +130,7 @@
       {% if messages %}
         <div class="mt-4 space-y-2">
           {% for cat, msg in messages %}
-            <div class="text-xs p-3 rounded-xl border border-white/10 bg-slate-900/30">
+            <div class="text-xs p-3 rounded-xl border border-app bg-surface">
               <span class="font-extrabold">{{ cat }}</span>: {{ msg }}
             </div>
           {% endfor %}
@@ -66,53 +140,19 @@
 
     <div class="mt-4">
       <div class="mt-5 grid grid-cols-12 gap-4">
-        <!-- Sidebar -->
+        <!-- Desktop sidebar -->
         {% if current_user.is_authenticated %}
-          <aside class="col-span-12 lg:col-span-3">
-            <div class="border border-white/10 rounded-2xl bg-slate-900/20 p-3">
+          <aside class="hidden lg:block col-span-12 lg:col-span-3">
+            <div class="border border-app rounded-2xl bg-surface p-3">
               <div class="flex items-center gap-3 px-2 py-2">
-                <div class="h-9 w-9 rounded-2xl bg-slate-950/50 border border-white/10 flex items-center justify-center">
-                  <img class="h-6 w-6" alt="Nexus" src="{{ url_for('static', filename='favicon.png') }}"/>
-                </div>
+                <img class="h-10 w-10 object-contain" alt="Nexus" src="{{ url_for('static', filename='logo_mark.png') }}"/>
                 <div>
                   <div class="text-sm font-extrabold">Nexus Auditor</div>
-                  <div class="text-[11px] text-slate-500">Workspace</div>
+                  <div class="text-[11px] text-muted">Workspace</div>
                 </div>
               </div>
-              <div class="text-[11px] text-slate-400 px-2 py-1">Navegação</div>
-              <nav class="mt-2 space-y-1">
-                <a class="flex items-center gap-2 px-3 py-2 rounded-xl border border-white/10 bg-slate-950/40 hover:bg-slate-950/60"
-                   href="{{ url_for('dashboard.home') }}">
-                  <span class="text-[#03A9F4]">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 13h8V3H3v10Zm10 8h8V11h-8v10ZM3 21h8v-6H3v6Zm10-12h8V3h-8v6Z"/></svg>
-                  </span>
-                  <span class="text-sm font-bold">Resumo Executivo</span>
-                </a>
-                <a class="flex items-center gap-2 px-3 py-2 rounded-xl border border-white/10 bg-slate-950/40 hover:bg-slate-950/60"
-                   href="{{ url_for('settings.settings_home') }}">
-                  <span class="text-[#03A9F4]">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15.5A3.5 3.5 0 1 0 12 8.5a3.5 3.5 0 0 0 0 7Zm7.4-2.5a7.9 7.9 0 0 0 0-2l2-1.5-2-3.5-2.4 1a8 8 0 0 0-1.7-1l-.4-2.6H10l-.4 2.6c-.6.3-1.2.6-1.7 1l-2.4-1-2 3.5 2 1.5a7.9 7.9 0 0 0 0 2l-2 1.5 2 3.5 2.4-1c.5.4 1.1.7 1.7 1l.4 2.6h4.2l.4-2.6c.6-.3 1.2-.6 1.7-1l2.4 1 2-3.5-2-1.5Z"/></svg>
-                  </span>
-                  <span class="text-sm font-bold">Configurações</span>
-                </a>
-                <a class="flex items-center gap-2 px-3 py-2 rounded-xl border border-white/10 bg-slate-950/40 hover:bg-slate-950/60"
-                   href="{{ url_for('auth.logout') }}">
-                  <span class="text-[#03A9F4]">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 17l5-5-5-5M15 12H3m12 9a9 9 0 1 0 0-18"/></svg>
-                  </span>
-                  <span class="text-sm font-bold">Sair</span>
-                </a>
-
-                {% if current_user.is_admin %}
-                <a class="flex items-center gap-2 px-3 py-2 rounded-xl border border-[#03A9F4]/30 bg-[#03A9F4]/10 hover:bg-[#03A9F4]/15"
-                   href="{{ url_for('admin.admin_home') }}">
-                  <span class="text-[#03A9F4]">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6M9 8h6M7 4h10a2 2 0 0 1 2 2v14l-3-2-3 2-3-2-3 2V6a2 2 0 0 1 2-2Z"/></svg>
-                  </span>
-                  <span class="text-sm font-extrabold text-[#03A9F4]">Admin Console</span>
-                </a>
-                {% endif %}
-              </nav>
+              <div class="text-[11px] text-muted px-2 py-1">Navegação</div>
+              {% include "_sidebar_nav.html" %}
             </div>
           </aside>
         {% endif %}
@@ -126,6 +166,47 @@
   </div>
 
   <script>
+    // Theme toggle (dark/light)
+    (function(){
+      const key = "nexus_theme";
+      const saved = localStorage.getItem(key);
+      if(saved === "light"){ document.documentElement.classList.add("theme-light"); }
+      const btn = document.getElementById("themeToggle");
+      function label(){
+        const isLight = document.documentElement.classList.contains("theme-light");
+        if(btn) btn.textContent = isLight ? "Tema: claro" : "Tema: dark";
+      }
+      label();
+      if(btn){
+        btn.addEventListener("click", () => {
+          document.documentElement.classList.toggle("theme-light");
+          localStorage.setItem(key, document.documentElement.classList.contains("theme-light") ? "light" : "dark");
+          label();
+        });
+      }
+    })();
+
+    // Mobile sidebar (drawer)
+    (function(){
+      const btn = document.getElementById("menuBtn");
+      const overlay = document.getElementById("sidebarOverlay");
+      const panel = document.getElementById("sidebarPanel");
+      function open(){
+        if(!overlay) return;
+        overlay.classList.remove("hidden");
+        setTimeout(()=>panel && panel.classList.remove("-translate-x-full"), 10);
+      }
+      function close(){
+        if(!overlay) return;
+        panel && panel.classList.add("-translate-x-full");
+        setTimeout(()=>overlay.classList.add("hidden"), 180);
+      }
+      if(btn) btn.addEventListener("click", open);
+      if(overlay) overlay.addEventListener("click", (e)=>{ if(e.target===overlay) close(); });
+      const closeBtn = document.getElementById("sidebarClose");
+      if(closeBtn) closeBtn.addEventListener("click", close);
+    })();
+
     // Small UI polish: UTC clock + simulated CPU/MEM.
     function pad(n){ return String(n).padStart(2,'0'); }
     function tickUTC(){
@@ -150,5 +231,25 @@
     setInterval(tickUTC, 1000);
     setInterval(tickPerf, 2500);
   </script>
+
+  {% if current_user.is_authenticated %}
+  <!-- Mobile sidebar overlay -->
+  <div id="sidebarOverlay" class="hidden lg:hidden fixed inset-0 z-50 bg-black/60">
+    <div id="sidebarPanel" class="absolute left-0 top-0 h-full w-[86%] max-w-sm bg-app border-r border-app p-4 -translate-x-full transition-transform duration-200">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <img class="h-10 w-10 object-contain" alt="Nexus" src="{{ url_for('static', filename='logo_mark.png') }}"/>
+          <div>
+            <div class="text-sm font-extrabold">Nexus Auditor</div>
+            <div class="text-[11px] text-muted">Menu</div>
+          </div>
+        </div>
+        <button id="sidebarClose" class="btn-secondary rounded-xl px-3 py-2 text-sm font-extrabold" type="button">✕</button>
+      </div>
+      <div class="mt-3 text-[11px] text-muted">Navegação</div>
+      {% include "_sidebar_nav.html" %}
+    </div>
+  </div>
+  {% endif %}
 </body>
 </html>

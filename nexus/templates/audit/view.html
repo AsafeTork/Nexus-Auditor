@@ -50,8 +50,8 @@
     <!-- Technical report -->
     <section id="tab-tech" class="letterhead rounded-2xl p-4 hidden">
       <div class="text-xs font-extrabold text-[#03A9F4]">Relatório (Markdown)</div>
-      <div class="mt-3 border border-white/10 rounded-xl bg-slate-950/40 p-4 h-[62vh] overflow-auto">
-        <div id="md" class="prose prose-invert max-w-none"></div>
+      <div class="mt-3 border border-app rounded-xl bg-surface2 p-4 h-[52vh] md:h-[60vh] lg:h-[62vh] overflow-auto">
+        <div id="md" class="md-render"></div>
       </div>
 
       <!-- Clean mode: raw data hidden by default -->
@@ -60,11 +60,11 @@
         <div class="mt-3 grid grid-cols-1 gap-3">
           <div>
             <div class="text-[11px] text-slate-400">CSV</div>
-            <textarea id="csvInline" class="mono mt-2 w-full h-56 bg-slate-950 border border-white/10 rounded-xl p-3 text-xs" readonly></textarea>
+            <textarea id="csvInline" class="mono mt-2 w-full h-48 md:h-56 bg-surface border border-app rounded-xl p-3 text-xs" readonly></textarea>
           </div>
           <div>
             <div class="text-[11px] text-slate-400">Logs</div>
-            <textarea id="logsInline" class="mono mt-2 w-full h-56 bg-slate-950 border border-white/10 rounded-xl p-3 text-xs" readonly></textarea>
+            <textarea id="logsInline" class="mono mt-2 w-full h-48 md:h-56 bg-surface border border-app rounded-xl p-3 text-xs" readonly></textarea>
           </div>
         </div>
       </details>
@@ -76,11 +76,11 @@
       <div class="mt-3 grid grid-cols-1 gap-3">
         <div class="border border-white/10 rounded-2xl bg-slate-950/40 p-3">
           <div class="text-[11px] text-slate-400">CSV</div>
-          <textarea id="csv" class="mono mt-2 w-full h-56 bg-slate-950 border border-white/10 rounded-xl p-3 text-xs" readonly></textarea>
+          <textarea id="csv" class="mono mt-2 w-full h-48 md:h-56 bg-surface border border-app rounded-xl p-3 text-xs" readonly></textarea>
         </div>
         <div class="border border-white/10 rounded-2xl bg-slate-950/40 p-3">
           <div class="text-[11px] text-slate-400">Logs</div>
-          <textarea id="logs" class="mono mt-2 w-full h-56 bg-slate-950 border border-white/10 rounded-xl p-3 text-xs" readonly></textarea>
+          <textarea id="logs" class="mono mt-2 w-full h-48 md:h-56 bg-surface border border-app rounded-xl p-3 text-xs" readonly></textarea>
         </div>
       </div>
       <div class="mt-2 text-[11px] text-slate-400">
