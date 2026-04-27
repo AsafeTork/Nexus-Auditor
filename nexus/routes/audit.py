@@ -7,7 +7,8 @@ from flask import Blueprint, Response, jsonify, redirect, render_template, reque
 from flask_login import login_required, current_user
 
 from .. import db
-from ..models import AuditRun, Site, Subscription, is_subscription_active
+from ..models import AuditEvent, AuditRun, Site, Subscription, is_subscription_active
+from ..security import require_admin
 from ..services.queueing import enqueue_audit
 
 bp = Blueprint("audit", __name__)
@@ -23,6 +24,28 @@ def create_site():
     site = Site(org_id=current_user.org_id, name=name, base_url=base_url)
     db.session.add(site)
     db.session.commit()
+    return redirect(url_for("dashboard.home"))
+
+
+@bp.post("/sites/<site_id>/delete")
+@login_required
+@require_admin
+def delete_site(site_id: str):
+    """
+    Delete a site and all associated audits/events (org-scoped).
+    """
+    site = Site.query.filter_by(id=site_id, org_id=current_user.org_id).first_or_404()
+    try:
+        audits = AuditRun.query.filter_by(site_id=site.id, org_id=current_user.org_id).all()
+        audit_ids = [a.id for a in audits]
+        if audit_ids:
+            AuditEvent.query.filter(AuditEvent.audit_run_id.in_(audit_ids)).delete(synchronize_session=False)
+            AuditRun.query.filter(AuditRun.id.in_(audit_ids)).delete(synchronize_session=False)
+        db.session.delete(site)
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        raise
     return redirect(url_for("dashboard.home"))
 
 
