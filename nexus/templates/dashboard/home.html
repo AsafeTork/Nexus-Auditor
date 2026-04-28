@@ -92,9 +92,14 @@
                   <input type="hidden" name="site_id" value="{{ s.id }}"/>
                   <input name="provider_base_url_v1" value="{{ config['LLM_BASE_URL_V1'] }}" class="mono hidden md:block w-64 input rounded-xl px-3 py-2 text-xs"/>
                   <input name="model" value="{{ config['LLM_DEFAULT_MODEL'] }}" class="mono hidden md:block w-44 input rounded-xl px-3 py-2 text-xs"/>
-                  <button class="auditStartBtn btn-primary w-full md:w-auto rounded-xl px-4 py-2 font-extrabold">
-                    <span class="btnText">Auditoria completa</span>
-                  </button>
+                  <div class="flex gap-2">
+                    <button name="mode" value="full" class="auditStartBtn btn-primary w-full md:w-auto rounded-xl px-4 py-2 font-extrabold">
+                      <span class="btnText">Auditoria completa</span>
+                    </button>
+                    <button name="mode" value="fast" class="btn-secondary bg-surface w-full md:w-auto rounded-xl px-4 py-2 font-extrabold">
+                      Rápida
+                    </button>
+                  </div>
                 </form>
 
                 {% if current_user.is_admin %}

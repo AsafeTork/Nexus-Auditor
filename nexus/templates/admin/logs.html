@@ -1,0 +1,94 @@
+{% extends "layout.html" %}
+{% block content %}
+<div class="letterhead p-5">
+  <div class="flex items-start justify-between gap-3">
+    <div>
+      <div class="text-sm font-extrabold text-brand-2">Admin · Log Geral</div>
+      <div class="text-xs text-muted">Auditorias + UI Lab + diagnóstico. Copiável para suporte.</div>
+    </div>
+    <a class="btn-secondary rounded-xl px-3 py-2 text-xs font-extrabold bg-surface" href="{{ url_for('admin.admin_home') }}">Voltar</a>
+  </div>
+
+  <div class="mt-4 flex flex-wrap gap-2">
+    <button class="tabBtn text-xs font-extrabold px-3 py-2 rounded-xl bg-surface2" data-tab="events">Eventos</button>
+    <button class="tabBtn text-xs font-extrabold px-3 py-2 rounded-xl bg-surface2" data-tab="uilab">UI Lab</button>
+    <button class="tabBtn text-xs font-extrabold px-3 py-2 rounded-xl bg-surface2" data-tab="diag">Diagnóstico</button>
+  </div>
+
+  <section id="tab-events" class="mt-3 card p-4">
+    <div class="flex items-center justify-between gap-3">
+      <div>
+        <div class="text-xs font-extrabold">Últimos eventos de auditoria</div>
+        <div class="text-[11px] text-muted">Até 800 eventos, escopo do seu org.</div>
+      </div>
+      <button class="btn-secondary rounded-xl px-3 py-2 text-xs font-extrabold bg-surface" onclick="copyText('eventsBox')">Copiar</button>
+    </div>
+    <textarea id="eventsBox" class="mono mt-3 w-full h-[60vh] input rounded-2xl p-3 text-xs" readonly>{% for e in events %}{% set a = audit_map.get(e.audit_run_id) %}{{ e.ts_ms }} {{ e.level }} {{ e.layer }} :: {{ (a.target_domain if a else e.audit_run_id) }} :: {{ e.message }}{% if not loop.last %}\n{% endif %}{% endfor %}</textarea>
+  </section>
+
+  <section id="tab-uilab" class="mt-3 card p-4 hidden">
+    <div class="text-xs font-extrabold">Execuções do UI Lab</div>
+    <div class="text-[11px] text-muted mt-1">Clique para abrir e ver logs/resultado.</div>
+    <div class="mt-3 space-y-2">
+      {% for r in ui_runs %}
+        <a class="block bg-surface2 rounded-xl p-3 hover:bg-surface" href="{{ url_for('admin.ui_lab', run=r.id) }}">
+          <div class="flex items-center justify-between">
+            <div class="mono text-[11px] truncate">{{ r.id }}</div>
+            <div class="text-[11px] text-muted">{{ r.status }}</div>
+          </div>
+          <div class="text-[11px] text-muted">mode={{ r.mode }} · {{ r.created_utc }}</div>
+        </a>
+      {% else %}
+        <div class="text-xs text-muted">Sem execuções ainda.</div>
+      {% endfor %}
+    </div>
+  </section>
+
+  <section id="tab-diag" class="mt-3 card p-4 hidden">
+    <div class="text-xs font-extrabold">Diagnóstico</div>
+    <div class="mt-3 grid grid-cols-1 md:grid-cols-3 gap-3">
+      <div class="card2 p-4">
+        <div class="text-[11px] text-muted">DB</div>
+        <div class="text-lg font-extrabold {% if diag.db.ok %}text-emerald-300{% else %}text-rose-300{% endif %}">{{ "OK" if diag.db.ok else "ERRO" }}</div>
+        {% if not diag.db.ok %}<div class="mono text-[11px] mt-2">{{ diag.db.error }}</div>{% endif %}
+      </div>
+      <div class="card2 p-4">
+        <div class="text-[11px] text-muted">Redis</div>
+        <div class="text-lg font-extrabold {% if diag.redis.ok %}text-emerald-300{% else %}text-rose-300{% endif %}">{{ "OK" if diag.redis.ok else "ERRO" }}</div>
+        {% if not diag.redis.ok %}<div class="mono text-[11px] mt-2">{{ diag.redis.error }}</div>{% endif %}
+      </div>
+      <div class="card2 p-4">
+        <div class="text-[11px] text-muted">LLM</div>
+        <div class="text-lg font-extrabold {% if diag.llm.ok %}text-emerald-300{% else %}text-rose-300{% endif %}">{{ "OK" if diag.llm.ok else "ERRO" }}</div>
+        <div class="mono text-[11px] mt-2">model={{ diag.llm.model }}</div>
+        {% if not diag.llm.ok %}<div class="mono text-[11px] mt-2">{{ diag.llm.error }}</div>{% endif %}
+      </div>
+    </div>
+  </section>
+</div>
+
+<script>
+  function setTab(name){
+    const tabs = ["events","uilab","diag"];
+    for(const t of tabs){
+      const el = document.getElementById("tab-"+t);
+      if(el) el.classList.toggle("hidden", t !== name);
+    }
+    document.querySelectorAll(".tabBtn").forEach(b => {
+      const on = b.getAttribute("data-tab") === name;
+      b.className = "tabBtn text-xs font-extrabold px-3 py-2 rounded-xl " + (on ? "bg-brand-weak text-brand-2" : "bg-surface2");
+    });
+  }
+  document.querySelectorAll(".tabBtn").forEach(b => b.addEventListener("click", () => setTab(b.getAttribute("data-tab"))));
+  setTab("events");
+
+  async function copyText(id){
+    const el = document.getElementById(id);
+    if(!el) return;
+    el.focus(); el.select();
+    try{ await navigator.clipboard.writeText(el.value); alert("Copiado."); }
+    catch(e){ document.execCommand("copy"); alert("Copiado."); }
+  }
+</script>
+{% endblock %}
+

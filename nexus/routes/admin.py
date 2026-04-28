@@ -175,6 +175,53 @@ def admin_audit_publish_github(audit_id: str):
     return redirect(url_for("admin.admin_audits"))
 
 
+@bp.get("/admin/logs")
+@login_required
+@require_admin
+def admin_logs():
+    """
+    Admin log geral: eventos de auditoria + execuções do UI Lab + diagnóstico.
+    """
+    diag = _diagnostics()
+    # Recent audit events (scoped by org via recent audit ids)
+    audits = (
+        AuditRun.query.filter_by(org_id=current_user.org_id)
+        .order_by(AuditRun.created_utc.desc())
+        .limit(40)
+        .all()
+    )
+    audit_ids = [a.id for a in audits]
+    events = []
+    if audit_ids:
+        events = (
+            AuditEvent.query.filter(AuditEvent.audit_run_id.in_(audit_ids))
+            .order_by(AuditEvent.id.desc())
+            .limit(800)
+            .all()
+        )
+    # UI lab runs from redis
+    conn = _redis_conn()
+    runs = []
+    try:
+        ids = conn.lrange(_ui_index_key(current_user.org_id), 0, 10)
+        for rid in ids:
+            rid = rid.decode("utf-8") if isinstance(rid, (bytes, bytearray)) else str(rid)
+            h = conn.hgetall(_ui_key(current_user.org_id, rid)) or {}
+            runs.append(
+                {
+                    "id": rid,
+                    "status": (h.get(b"status") or b"").decode("utf-8", "ignore"),
+                    "mode": (h.get(b"mode") or b"").decode("utf-8", "ignore"),
+                    "created_utc": (h.get(b"created_utc") or b"").decode("utf-8", "ignore"),
+                }
+            )
+    except Exception:
+        runs = []
+    # id->domain map
+    audit_map = {a.id: a for a in audits}
+    return render_template("admin/logs.html", diag=diag, events=events, audits=audits, audit_map=audit_map, ui_runs=runs)
+
+
 def _redis_conn():
     return redis.from_url(current_app.config.get("REDIS_URL", "redis://localhost:6379/0"))
 

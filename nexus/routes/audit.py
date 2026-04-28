@@ -87,6 +87,10 @@ def start_audit():
     if not is_subscription_active(sub):
         return redirect(url_for("dashboard.home", billing="required"))
 
+    mode = (request.form.get("mode") or "").strip().lower() or "full"
+    if mode not in ("full", "fast"):
+        mode = "full"
+
     provider_base_url_v1 = (request.form.get("provider_base_url_v1") or "").strip() or os.getenv("LLM_BASE_URL_V1", "")
     model = (request.form.get("model") or "").strip() or os.getenv("LLM_DEFAULT_MODEL", "deepseek-chat")
     if not provider_base_url_v1:
@@ -99,7 +103,7 @@ def start_audit():
         model=model,
         provider_base_url_v1=provider_base_url_v1,
         target_domain=(urlparse(site.base_url).hostname or ""),
-        logs="",
+        logs=f"MODE={mode}\n",
         markdown_text="",
         csv_text="Categoria;Falha;Prova Técnica;Explicação;Prejuízo Estimado;Solução;Prioridade;Complexity\n",
     )

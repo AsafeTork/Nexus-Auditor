@@ -204,8 +204,17 @@ def run_audit_job(audit_id: str) -> None:
 
         rows: list[str] = []
 
-        for i, layer in enumerate(MICRO_LAYERS, start=1):
-            log(layer, "INFO", f"Iniciando {layer} ({i}/{len(MICRO_LAYERS)})...")
+        # Mode
+        mode = "full"
+        if (audit.logs or "").splitlines()[:1] and (audit.logs or "").splitlines()[0].startswith("MODE="):
+            mode = (audit.logs or "").splitlines()[0].split("=", 1)[-1].strip().lower() or "full"
+        layers = MICRO_LAYERS
+        if mode == "fast":
+            layers = [MICRO_LAYERS[0], MICRO_LAYERS[2], MICRO_LAYERS[6], MICRO_LAYERS[9]]  # 1,3,7,10
+            log("system", "INFO", "Modo FAST ativo: executando camadas 1,3,7,10 para acelerar.")
+
+        for i, layer in enumerate(layers, start=1):
+            log(layer, "INFO", f"Iniciando {layer} ({i}/{len(layers)})...")
             md(f"## {layer}")
 
             # Layer 10 is computed from rows
