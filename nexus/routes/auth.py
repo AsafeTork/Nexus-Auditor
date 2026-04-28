@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from flask import Blueprint, redirect, render_template, request, url_for, flash
+from flask import Blueprint, redirect, render_template, request, url_for, flash, session
 from flask_login import login_user, logout_user, login_required, current_user
 
-from .. import db
+from .. import db, oauth
 from ..models import Organization, User, Subscription
 
 bp = Blueprint("auth", __name__)
@@ -48,6 +48,100 @@ def register_post():
     if not org_name or not email or len(password) < 8:
         flash("Preencha organização, e-mail e senha (mínimo 8).", "error")
         return redirect(url_for("auth.register"))
+
+
+@bp.get("/oauth/<provider>")
+def oauth_start(provider: str):
+    """
+    Start OAuth login for google/github.
+    If credentials are missing, show a friendly error.
+    """
+    if current_user.is_authenticated:
+        return redirect(url_for("dashboard.home"))
+
+    provider = (provider or "").strip().lower()
+    if provider not in ("google", "github"):
+        flash("Provedor OAuth inválido.", "error")
+        return redirect(url_for("auth.login"))
+
+    client = oauth.create_client(provider)
+    if not client:
+        cb = url_for("auth.oauth_callback", provider=provider, _external=True)
+        flash(
+            f"OAuth {provider} não configurado. Configure as env vars OAUTH_{provider.upper()}_CLIENT_ID/SECRET "
+            f"e cadastre o callback: {cb}",
+            "error",
+        )
+        return redirect(url_for("auth.login"))
+
+    redirect_uri = url_for("auth.oauth_callback", provider=provider, _external=True)
+    return client.authorize_redirect(redirect_uri)
+
+
+@bp.get("/oauth/<provider>/callback")
+def oauth_callback(provider: str):
+    if current_user.is_authenticated:
+        return redirect(url_for("dashboard.home"))
+
+    provider = (provider or "").strip().lower()
+    client = oauth.create_client(provider)
+    if not client:
+        flash("OAuth não configurado.", "error")
+        return redirect(url_for("auth.login"))
+
+    try:
+        token = client.authorize_access_token()
+    except Exception as e:
+        flash(f"Falha no OAuth ({provider}): {type(e).__name__}", "error")
+        return redirect(url_for("auth.login"))
+
+    email = ""
+    try:
+        if provider == "google":
+            userinfo = client.parse_id_token(token)
+            email = (userinfo.get("email") or "").strip().lower()
+        elif provider == "github":
+            user = client.get("user").json()
+            email = (user.get("email") or "").strip().lower()
+            if not email:
+                # get primary email
+                emails = client.get("user/emails").json()
+                if isinstance(emails, list):
+                    for e in emails:
+                        if e.get("primary") and e.get("verified"):
+                            email = (e.get("email") or "").strip().lower()
+                            break
+                    if not email and emails:
+                        email = (emails[0].get("email") or "").strip().lower()
+    except Exception:
+        email = ""
+
+    if not email:
+        flash("Não foi possível obter seu e-mail do provedor OAuth.", "error")
+        return redirect(url_for("auth.login"))
+
+    user = User.query.filter_by(email=email).first()
+    if user:
+        login_user(user)
+        return redirect(url_for("dashboard.home"))
+
+    # Auto-provision new org + user (trial)
+    try:
+        org = Organization(name=f"Org de {email}")
+        db.session.add(org)
+        db.session.flush()
+        user = User(org_id=org.id, email=email, role="admin")
+        # random password placeholder (OAuth users won't use it normally)
+        user.set_password("oauth-user-placeholder-" + email)
+        db.session.add(user)
+        db.session.add(Subscription(org_id=org.id, status="trialing"))
+        db.session.commit()
+        login_user(user)
+        return redirect(url_for("dashboard.home"))
+    except Exception:
+        db.session.rollback()
+        flash("Erro ao criar conta via OAuth. Tente novamente.", "error")
+        return redirect(url_for("auth.login"))
     if User.query.filter_by(email=email).first():
         flash("E-mail já cadastrado.", "error")
         return redirect(url_for("auth.register"))

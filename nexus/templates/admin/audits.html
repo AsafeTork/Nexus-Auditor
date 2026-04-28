@@ -27,9 +27,17 @@
               </div>
             </div>
           </a>
-          <form method="post" action="{{ url_for('admin.admin_audit_delete', audit_id=a.id) }}" onsubmit="return confirm('Excluir esta auditoria?');">
-            <button class="btn-secondary rounded-xl px-3 py-2 text-[11px] font-extrabold">Excluir</button>
-          </form>
+          <details class="relative">
+            <summary class="list-none cursor-pointer btn-secondary rounded-xl px-3 py-2 text-[11px] font-extrabold bg-surface">⋯</summary>
+            <div class="absolute right-0 mt-2 w-44 card2 p-2 z-10">
+              <form method="post" action="{{ url_for('admin.admin_audit_publish_github', audit_id=a.id) }}">
+                <button class="w-full text-left px-3 py-2 rounded-xl hover:bg-surface text-xs font-extrabold">Publicar no Git</button>
+              </form>
+              <form method="post" action="{{ url_for('admin.admin_audit_delete', audit_id=a.id) }}" onsubmit="return confirm('Excluir esta auditoria?');">
+                <button class="w-full text-left px-3 py-2 rounded-xl hover:bg-surface text-xs font-extrabold">Excluir</button>
+              </form>
+            </div>
+          </details>
         </div>
       </div>
     {% else %}

@@ -15,6 +15,7 @@ from ..models import AuditEvent, AuditRun, Site, Subscription, is_org_admin
 from ..security import require_admin
 from ..services.audit_engine import call_llm_non_stream
 from ..services.ui_review import read_text_files, summarize_screenshot
+from ..services.github import create_issue
 
 bp = Blueprint("admin", __name__)
 
@@ -144,6 +145,32 @@ def admin_audit_delete(audit_id: str):
     except Exception as e:
         db.session.rollback()
         flash(f"Falha ao excluir: {type(e).__name__}: {e}", "error")
+    return redirect(url_for("admin.admin_audits"))
+
+
+@bp.post("/admin/audit/<audit_id>/publish_github")
+@login_required
+@require_admin
+def admin_audit_publish_github(audit_id: str):
+    audit = AuditRun.query.filter_by(id=audit_id, org_id=current_user.org_id).first_or_404()
+    title = f"[Nexus Auditor] {audit.target_domain or 'audit'} · {audit.id}"
+    body = (
+        f"## Relatório de Auditoria\n\n"
+        f"**Audit ID:** `{audit.id}`\n"
+        f"**Status:** `{audit.status}`\n"
+        f"**Modelo:** `{audit.model}`\n"
+        f"**Gerado em:** `{audit.created_utc}`\n\n"
+        f"---\n\n"
+        f"{audit.markdown_text or '(sem markdown)'}\n\n"
+        f"---\n\n"
+        f"## Matriz CSV\n\n"
+        f"```csv\n{audit.csv_text or ''}\n```\n"
+    )
+    try:
+        url = create_issue(title=title, body_md=body, labels=["audit"])
+        flash(f"Publicado no GitHub: {url}", "ok")
+    except Exception as e:
+        flash(f"Falha ao publicar no GitHub: {type(e).__name__}: {e}", "error")
     return redirect(url_for("admin.admin_audits"))
 
 

@@ -149,9 +149,17 @@
               <div class="text-right shrink-0">
                 <div class="text-[11px] text-muted">{{ a.status }}</div>
                 {% if current_user.is_admin %}
-                  <form method="post" action="{{ url_for('admin.admin_audit_delete', audit_id=a.id) }}" onsubmit="return confirm('Excluir esta auditoria?');">
-                    <button class="mt-1 btn-secondary rounded-lg px-2 py-1 text-[11px] font-extrabold">Excluir</button>
-                  </form>
+                  <details class="relative inline-block mt-1">
+                    <summary class="list-none cursor-pointer btn-secondary rounded-lg px-2 py-1 text-[11px] font-extrabold bg-surface">⋯</summary>
+                    <div class="absolute right-0 mt-2 w-44 card2 p-2 z-10">
+                      <form method="post" action="{{ url_for('admin.admin_audit_publish_github', audit_id=a.id) }}">
+                        <button class="w-full text-left px-3 py-2 rounded-xl hover:bg-surface text-xs font-extrabold">Publicar no Git</button>
+                      </form>
+                      <form method="post" action="{{ url_for('admin.admin_audit_delete', audit_id=a.id) }}" onsubmit="return confirm('Excluir esta auditoria?');">
+                        <button class="w-full text-left px-3 py-2 rounded-xl hover:bg-surface text-xs font-extrabold">Excluir</button>
+                      </form>
+                    </div>
+                  </details>
                 {% endif %}
               </div>
             </div>

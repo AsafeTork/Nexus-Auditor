@@ -9,10 +9,12 @@ from flask import render_template, request
 from flask_login import LoginManager
 from flask_migrate import Migrate
 from flask_sqlalchemy import SQLAlchemy
+from authlib.integrations.flask_client import OAuth
 
 db = SQLAlchemy()
 migrate = Migrate()
 login_manager = LoginManager()
+oauth = OAuth()
 
 
 def create_app() -> Flask:
@@ -47,6 +49,32 @@ def create_app() -> Flask:
     migrate.init_app(app, db)
     login_manager.init_app(app)
     login_manager.login_view = "auth.login"
+    oauth.init_app(app)
+
+    # OAuth providers (optional)
+    google_id = os.getenv("OAUTH_GOOGLE_CLIENT_ID", "")
+    google_secret = os.getenv("OAUTH_GOOGLE_CLIENT_SECRET", "")
+    if google_id and google_secret:
+        oauth.register(
+            name="google",
+            client_id=google_id,
+            client_secret=google_secret,
+            server_metadata_url="https://accounts.google.com/.well-known/openid-configuration",
+            client_kwargs={"scope": "openid email profile"},
+        )
+
+    gh_id = os.getenv("OAUTH_GITHUB_CLIENT_ID", "")
+    gh_secret = os.getenv("OAUTH_GITHUB_CLIENT_SECRET", "")
+    if gh_id and gh_secret:
+        oauth.register(
+            name="github",
+            client_id=gh_id,
+            client_secret=gh_secret,
+            access_token_url="https://github.com/login/oauth/access_token",
+            authorize_url="https://github.com/login/oauth/authorize",
+            api_base_url="https://api.github.com/",
+            client_kwargs={"scope": "user:email"},
+        )
 
     # Register blueprints
     from .routes.auth import bp as auth_bp
