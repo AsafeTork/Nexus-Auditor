@@ -1,24 +1,45 @@
 {% extends "layout.html" %}
 {% block content %}
-<div class="max-w-md mx-auto card p-6">
-  <div class="flex flex-col items-center text-center">
-    <div class="h-24 w-24 rounded-3xl bg-surface2 border border-app flex items-center justify-center shadow-[0_0_40px_rgba(3,169,244,0.18)]">
-      <img class="h-16 w-16" alt="Nexus" src="{{ url_for('static', filename='logo_mark.png') }}"/>
-    </div>
-    <div class="mt-3 text-sm font-extrabold">Entrar</div>
-    <div class="text-xs text-muted">Sapphire & Cyan · Plataforma premium</div>
+<div class="min-h-screen flex flex-col lg:flex-row">
+  <!-- Mobile hero -->
+  <div class="lg:hidden relative h-[38vh] min-h-[240px] overflow-hidden">
+    <img src="{{ url_for('static', filename='login_bg.jpg') }}" alt="" class="absolute inset-0 w-full h-full object-cover opacity-50"/>
+    <div class="absolute inset-0" style="background: linear-gradient(180deg, rgba(2,6,23,0.30) 0%, rgba(2,6,23,0.65) 60%, var(--app-bg) 100%);"></div>
   </div>
-  <form class="mt-4 space-y-3" method="post" action="{{ url_for('auth.login_post') }}">
-    <div>
-      <label class="text-xs text-muted">E-mail</label>
-      <input name="email" class="input mt-1 w-full rounded-xl px-3 py-2 text-sm" />
+
+  <!-- Desktop left image (47%) -->
+  <div class="hidden lg:block relative basis-[47%] overflow-hidden">
+    <img src="{{ url_for('static', filename='login_bg.jpg') }}" alt="" class="absolute inset-0 w-full h-full object-cover opacity-50"/>
+    <div class="absolute inset-0" style="background: linear-gradient(90deg, rgba(2,6,23,0.05) 0%, rgba(2,6,23,0.05) 55%, var(--app-bg) 100%);"></div>
+  </div>
+
+  <!-- Right login panel -->
+  <div class="flex-1 basis-[53%] flex items-center justify-center p-6 lg:p-10">
+    <div class="w-full max-w-md card p-6">
+      <div class="flex flex-col sm:flex-row sm:items-center gap-4">
+        <img class="w-full sm:w-56 max-w-[320px] object-contain" alt="Nexus Auditor" src="{{ url_for('static', filename='logo_login.png') }}"/>
+        <div class="sm:text-right">
+          <div class="text-lg font-extrabold tracking-tight">Entrar</div>
+          <div class="text-xs text-muted">Acesse seu painel</div>
+        </div>
+      </div>
+
+      <form class="mt-6 space-y-3" method="post" action="{{ url_for('auth.login_post') }}">
+        <div>
+          <label class="text-xs text-muted">E-mail</label>
+          <input name="email" class="input mt-1 w-full rounded-xl px-3 py-2 text-sm" />
+        </div>
+        <div>
+          <label class="text-xs text-muted">Senha</label>
+          <input type="password" name="password" class="input mt-1 w-full rounded-xl px-3 py-2 text-sm" />
+        </div>
+        <button class="btn-primary w-full rounded-xl px-4 py-2 font-extrabold">Entrar</button>
+      </form>
+
+      <div class="mt-4 text-xs text-muted">
+        Novo? <a class="text-brand-2 underline" href="{{ url_for('auth.register') }}">Criar conta</a>
+      </div>
     </div>
-    <div>
-      <label class="text-xs text-muted">Senha</label>
-      <input type="password" name="password" class="input mt-1 w-full rounded-xl px-3 py-2 text-sm" />
-    </div>
-    <button class="btn-primary w-full rounded-xl px-4 py-2 font-extrabold">Entrar</button>
-  </form>
-  <div class="mt-3 text-xs text-muted">Novo? <a class="text-brand-2 underline" href="{{ url_for('auth.register') }}">Criar conta</a></div>
+  </div>
 </div>
 {% endblock %}

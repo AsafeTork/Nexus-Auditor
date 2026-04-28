@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
 
-from flask import Blueprint, render_template
+from flask import Blueprint, render_template, session
 from flask_login import login_required, current_user
 
 from ..models import Site, AuditRun, Subscription
@@ -16,6 +16,12 @@ def home():
     sites = Site.query.filter_by(org_id=current_user.org_id).order_by(Site.created_utc.desc()).limit(20).all()
     audits = AuditRun.query.filter_by(org_id=current_user.org_id).order_by(AuditRun.created_utc.desc()).limit(50).all()
     sub = Subscription.query.filter_by(org_id=current_user.org_id).first()
+    # Admin simulator (session-only)
+    if current_user.is_admin:
+        sim_sub = (session.get("sim_sub_status") or "").strip().lower()
+        if sim_sub:
+            sub = sub or Subscription(org_id=current_user.org_id)
+            sub.status = sim_sub
 
     # KPIs
     sites_count = len(sites)

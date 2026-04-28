@@ -10,6 +10,38 @@
        href="{{ url_for('admin.admin_audits') }}">Ver todas auditorias</a>
   </div>
 
+  <!-- Simulator -->
+  <div class="mt-4 card p-4">
+    <div class="flex items-start justify-between gap-3">
+      <div>
+        <div class="text-xs font-extrabold">Simulador (Admin)</div>
+        <div class="text-[11px] text-muted">Simule plano/role para testar paywall e fluxos sem mudar o banco.</div>
+      </div>
+      <form method="post" action="{{ url_for('admin.admin_clear_sim') }}">
+        <button class="btn-secondary rounded-xl px-3 py-2 text-[11px] font-extrabold bg-surface">Desativar</button>
+      </form>
+    </div>
+    <form class="mt-3 grid grid-cols-1 md:grid-cols-3 gap-2" method="post" action="{{ url_for('admin.admin_set_sim') }}">
+      <select name="sub_status" class="input rounded-xl px-3 py-2 text-sm">
+        <option value="">Plano real (sem simulação)</option>
+        <option value="inactive" {% if sim and sim.sub_status=='inactive' %}selected{% endif %}>inactive</option>
+        <option value="trialing" {% if sim and sim.sub_status=='trialing' %}selected{% endif %}>trialing</option>
+        <option value="active" {% if sim and sim.sub_status=='active' %}selected{% endif %}>active</option>
+        <option value="past_due" {% if sim and sim.sub_status=='past_due' %}selected{% endif %}>past_due</option>
+        <option value="canceled" {% if sim and sim.sub_status=='canceled' %}selected{% endif %}>canceled</option>
+      </select>
+      <select name="role" class="input rounded-xl px-3 py-2 text-sm">
+        <option value="">Role real (sem simulação)</option>
+        <option value="member" {% if sim and sim.role=='member' %}selected{% endif %}>member</option>
+        <option value="admin" {% if sim and sim.role=='admin' %}selected{% endif %}>admin</option>
+      </select>
+      <button class="btn-primary rounded-xl px-4 py-2 font-extrabold">Aplicar</button>
+    </form>
+    {% if sim and (sim.role or sim.sub_status) %}
+      <div class="mt-2 text-[11px] text-brand-2">Simulação ativa: role={{ sim.role or "—" }} · plano={{ sim.sub_status or "—" }}</div>
+    {% endif %}
+  </div>
+
   <div class="mt-4 grid grid-cols-1 md:grid-cols-3 gap-3">
     <div class="card2 p-4">
       <div class="text-[11px] text-slate-400">DB</div>

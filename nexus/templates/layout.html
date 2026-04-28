@@ -60,6 +60,10 @@
       border: 0;
       color: var(--app-text);
     }
+
+    /* Admin logo needs contrast (black logo) */
+    .logo-admin-wrap{ background: rgba(255,255,255,.92); }
+    html.theme-light .logo-admin-wrap{ background: rgba(255,255,255,.92); }
     .input{
       background: rgba(2,6,23,.55);
       border: 0;
@@ -112,7 +116,14 @@
   </style>
 </head>
 <body class="bg-app">
+  {% set is_auth_page = (not current_user.is_authenticated) and (request.endpoint or "").startswith("auth.") %}
+  {% set logo_mark = ('logo_admin_mark_96.png' if current_user.is_authenticated and current_user.is_admin else 'logo_user_mark_96.png') %}
+  {% set logo_wrap_class = ('logo-admin-wrap' if current_user.is_authenticated and current_user.is_admin else 'bg-surface') %}
+
   <div class="min-h-screen">
+    {% if is_auth_page %}
+      {% block content %}{% endblock %}
+    {% else %}
     <div class="max-w-7xl mx-auto px-4 py-5">
 
       <!-- Top bar -->
@@ -121,8 +132,8 @@
           <button id="menuBtn" class="lg:hidden btn-secondary rounded-xl px-3 py-2 text-sm font-extrabold bg-surface" type="button">
             ☰
           </button>
-          <div class="h-10 w-10 rounded-2xl bg-surface flex items-center justify-center overflow-hidden">
-            <img alt="Nexus" class="h-9 w-9 object-contain" src="{{ url_for('static', filename='logo_mark.png') }}"/>
+          <div class="h-10 w-10 rounded-2xl {{ logo_wrap_class }} flex items-center justify-center overflow-hidden">
+            <img alt="Nexus" class="h-9 w-9 object-contain" src="{{ url_for('static', filename=logo_mark) }}"/>
           </div>
           <div>
             <div class="text-lg font-extrabold tracking-tight">Nexus Auditor <span class="text-slate-200">SaaS</span> <span class="text-[#03A9F4]">Professional</span></div>
@@ -161,7 +172,9 @@
           <aside class="hidden lg:block col-span-12 lg:col-span-3">
             <div class="card p-3">
               <div class="flex items-center gap-3 px-2 py-2">
-                <img class="h-10 w-10 object-contain" alt="Nexus" src="{{ url_for('static', filename='logo_mark.png') }}"/>
+                <div class="h-10 w-10 rounded-2xl {{ logo_wrap_class }} flex items-center justify-center overflow-hidden">
+                  <img class="h-9 w-9 object-contain" alt="Nexus" src="{{ url_for('static', filename=logo_mark) }}"/>
+                </div>
                 <div>
                   <div class="text-sm font-extrabold">Nexus Auditor</div>
                   <div class="text-[11px] text-muted">Workspace</div>
@@ -180,6 +193,7 @@
       </div>
     </div>
   </div>
+  {% endif %}
 
   <script>
     // Wait DOM ready so mobile sidebar elements exist even if rendered after this script.
@@ -258,7 +272,9 @@
     <div id="sidebarPanel" class="absolute left-0 top-0 h-full w-[86%] max-w-sm bg-app p-4 -translate-x-full transition-transform duration-200">
       <div class="flex items-center justify-between">
         <div class="flex items-center gap-3">
-          <img class="h-10 w-10 object-contain" alt="Nexus" src="{{ url_for('static', filename='logo_mark.png') }}"/>
+          <div class="h-10 w-10 rounded-2xl {{ logo_wrap_class }} flex items-center justify-center overflow-hidden">
+            <img class="h-9 w-9 object-contain" alt="Nexus" src="{{ url_for('static', filename=logo_mark) }}"/>
+          </div>
           <div>
             <div class="text-sm font-extrabold">Nexus Auditor</div>
             <div class="text-[11px] text-muted">Menu</div>

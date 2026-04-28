@@ -1,0 +1,72 @@
+{% extends "layout.html" %}
+{% block content %}
+<div class="letterhead p-5">
+  <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+    <div>
+      <div class="text-sm font-extrabold text-brand-2">Admin · UI Lab (IA)</div>
+      <div class="text-xs text-muted">Analise a UI e receba sugestões de layout/posição/tamanho para PC e mobile.</div>
+    </div>
+    <a class="btn-secondary rounded-xl px-3 py-2 text-xs font-extrabold bg-surface" href="{{ url_for('admin.admin_home') }}">Voltar</a>
+  </div>
+
+  <div class="mt-4 grid grid-cols-1 lg:grid-cols-3 gap-4">
+    <div class="card p-4">
+      <div class="text-xs font-extrabold">Analisar templates do projeto</div>
+      <div class="text-[11px] text-muted mt-1">Melhor para sugerir mudanças em arquivos específicos.</div>
+      <form class="mt-3 space-y-2" method="post" action="{{ url_for('admin.ui_lab_templates') }}">
+        <textarea name="goal" class="input w-full rounded-xl p-3 text-xs" rows="3" placeholder="Ex.: Deixar mais moderno, reduzir contornos, melhorar grid e responsivo."></textarea>
+        <button class="btn-primary w-full rounded-xl px-4 py-2 text-xs font-extrabold">Rodar análise</button>
+      </form>
+    </div>
+
+    <div class="card p-4">
+      <div class="text-xs font-extrabold">Analisar por URL</div>
+      <div class="text-[11px] text-muted mt-1">Busca HTML e sugere melhorias (pode falhar se a página bloquear).</div>
+      <form class="mt-3 space-y-2" method="post" action="{{ url_for('admin.ui_lab_url') }}">
+        <input name="url" class="input w-full rounded-xl px-3 py-2 text-xs" placeholder="https://seu-site/pagina" />
+        <textarea name="goal" class="input w-full rounded-xl p-3 text-xs" rows="2" placeholder="Objetivo (opcional)"></textarea>
+        <button class="btn-primary w-full rounded-xl px-4 py-2 text-xs font-extrabold">Rodar análise</button>
+      </form>
+    </div>
+
+    <div class="card p-4">
+      <div class="text-xs font-extrabold">Analisar por screenshot</div>
+      <div class="text-[11px] text-muted mt-1">Usa metadados + suas notas (não é visão real).</div>
+      <form class="mt-3 space-y-2" method="post" enctype="multipart/form-data" action="{{ url_for('admin.ui_lab_screenshot') }}">
+        <input type="file" name="screenshot" accept="image/*" class="input w-full rounded-xl px-3 py-2 text-xs" />
+        <textarea name="notes" class="input w-full rounded-xl p-3 text-xs" rows="2" placeholder="Descreva o que aparece no screenshot e o que quer melhorar."></textarea>
+        <textarea name="goal" class="input w-full rounded-xl p-3 text-xs" rows="2" placeholder="Objetivo (opcional)"></textarea>
+        <button class="btn-primary w-full rounded-xl px-4 py-2 text-xs font-extrabold">Rodar análise</button>
+      </form>
+    </div>
+  </div>
+
+  <div class="mt-5 card p-4">
+    <div class="flex items-center justify-between gap-3">
+      <div>
+        <div class="text-xs font-extrabold">Resultado ({{ last_mode or "—" }})</div>
+        <div class="text-[11px] text-muted">Copie e envie para mim ou use como backlog de refatoração.</div>
+      </div>
+      <button class="btn-secondary rounded-xl px-3 py-2 text-xs font-extrabold bg-surface" onclick="copyText('outBox')">Copiar</button>
+    </div>
+    <textarea id="outBox" class="mono mt-3 w-full h-[55vh] input rounded-2xl p-3 text-xs" readonly>{{ last_md }}</textarea>
+  </div>
+</div>
+
+<script>
+  async function copyText(id){
+    const el = document.getElementById(id);
+    if(!el) return;
+    el.focus();
+    el.select();
+    try{
+      await navigator.clipboard.writeText(el.value);
+      alert("Copiado.");
+    }catch(e){
+      document.execCommand("copy");
+      alert("Copiado.");
+    }
+  }
+</script>
+{% endblock %}
+

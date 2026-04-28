@@ -5,6 +5,7 @@ from urllib.parse import urlparse
 
 from flask import Blueprint, Response, jsonify, redirect, render_template, request, url_for, stream_with_context
 from flask_login import login_required, current_user
+from flask import session
 
 from .. import db
 from ..models import AuditEvent, AuditRun, Site, Subscription, is_subscription_active
@@ -57,6 +58,11 @@ def start_audit():
 
     # Feature gating: require active subscription (trialing counts as active).
     sub = Subscription.query.filter_by(org_id=current_user.org_id).first()
+    if current_user.is_admin:
+        sim_sub = (session.get("sim_sub_status") or "").strip().lower()
+        if sim_sub:
+            sub = sub or Subscription(org_id=current_user.org_id)
+            sub.status = sim_sub
     if not is_subscription_active(sub):
         return redirect(url_for("dashboard.home", billing="required"))
 
