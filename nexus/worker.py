@@ -6,6 +6,7 @@ from urllib.parse import urlparse
 
 import redis
 from rq import Worker, Queue, Connection
+from rq.exceptions import NoSuchJobError
 
 from . import create_app, db
 from .models import AuditEvent, AuditRun, Site
@@ -18,6 +19,120 @@ from .services.audit_engine import (
     estimate_ltv_loss_from_rows,
     fetch_url_html,
 )
+from .services.ui_review import read_text_files
+
+
+def _ui_key(org_id: str, run_id: str) -> str:
+    return f"ui_lab:{org_id}:{run_id}"
+
+
+def _ui_index_key(org_id: str) -> str:
+    return f"ui_lab:index:{org_id}"
+
+
+def run_ui_lab_job(run_id: str, org_id: str, mode: str, payload: dict) -> None:
+    """
+    Execute UI Lab review in background and store status/logs/result in Redis.
+    """
+    app = create_app()
+    with app.app_context():
+        conn = redis.from_url(app.config["REDIS_URL"])
+        key = _ui_key(org_id, run_id)
+
+        def append_log(msg: str):
+            try:
+                conn.hset(key, mapping={"updated_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())})
+                conn.hincrby(key, "log_len", len(msg) + 1)
+                conn.append(key + ":logs", msg + "\n")
+            except Exception:
+                pass
+
+        try:
+            conn.hset(
+                key,
+                mapping={
+                    "status": "running",
+                    "mode": mode,
+                    "updated_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+                },
+            )
+        except Exception:
+            pass
+
+        append_log(f"[ui-lab] start mode={mode}")
+
+        # Build context
+        context = ""
+        try:
+            if mode == "templates":
+                root = os.path.abspath(os.path.join(os.path.dirname(__file__), "templates"))
+                targets = [
+                    os.path.join(root, "layout.html"),
+                    os.path.join(root, "dashboard", "home.html"),
+                    os.path.join(root, "audit", "view.html"),
+                    os.path.join(root, "admin", "home.html"),
+                    os.path.join(root, "admin", "audits.html"),
+                    os.path.join(root, "admin", "audit_detail.html"),
+                    os.path.join(root, "admin", "ui_lab.html"),
+                    os.path.join(root, "auth", "login.html"),
+                    os.path.join(root, "auth", "register.html"),
+                ]
+                append_log("[ui-lab] lendo templates…")
+                context = read_text_files([p for p in targets if os.path.exists(p)], max_chars_each=12000)
+            elif mode == "url":
+                import requests
+
+                url = str(payload.get("url") or "").strip()
+                append_log(f"[ui-lab] baixando HTML: {url}")
+                r = requests.get(url, timeout=18, headers={"User-Agent": "NexusAuditor/1.0"})
+                r.raise_for_status()
+                html = r.text or ""
+                if len(html) > 20000:
+                    html = html[:20000] + "\n<!-- ... truncado ... -->"
+                context = f"URL: {url}\n\nHTML:\n{html}"
+            elif mode == "screenshot":
+                meta = payload.get("meta") or {}
+                notes = str(payload.get("notes") or "")
+                context = f"Screenshot meta: {meta}\nObservações: {notes}\n"
+            else:
+                context = f"Modo desconhecido: {mode}\nPayload: {payload}"
+        except Exception as e:
+            append_log(f"[ui-lab] erro ao montar contexto: {type(e).__name__}: {e}")
+            try:
+                conn.hset(key, mapping={"status": "error", "error": f"{type(e).__name__}: {e}"})
+            except Exception:
+                pass
+            return
+
+        goal = str(payload.get("goal") or "").strip() or "Melhorar a UI para ficar moderna, limpa e premium."
+
+        # Call LLM
+        try:
+            append_log("[ui-lab] chamando LLM (non-stream)…")
+            md = call_llm_non_stream(
+                base_url_v1=app.config.get("LLM_BASE_URL_V1", ""),
+                api_key=app.config.get("LLM_API_KEY", ""),
+                model=app.config.get("LLM_DEFAULT_MODEL", "deepseek-chat"),
+                temperature=0.2,
+                system_prompt=(
+                    "Você é um especialista em UX/UI e Frontend. Analise a UI descrita e produza melhorias práticas, "
+                    "priorizando layout, hierarquia visual, espaçamento, responsividade (mobile+desktop), tipografia e acessibilidade. "
+                    "Formato: Markdown com seções: Diagnóstico, Problemas, Propostas, Mobile, Desktop, Paleta, Checklist por arquivo."
+                ),
+                user_prompt=f"Objetivo: {goal}\n\nContexto:\n{context}\n",
+                timeout_s=240,
+            )
+            if not md.strip():
+                raise RuntimeError("Resposta vazia do LLM.")
+            conn.set(key + ":result", md, ex=60 * 60 * 24 * 7)  # keep 7 days
+            conn.hset(key, mapping={"status": "done"})
+            append_log("[ui-lab] done")
+        except Exception as e:
+            append_log(f"[ui-lab] erro LLM: {type(e).__name__}: {e}")
+            try:
+                conn.hset(key, mapping={"status": "error", "error": f"{type(e).__name__}: {e}"})
+            except Exception:
+                pass
 
 
 def run_audit_job(audit_id: str) -> None:
@@ -161,7 +276,7 @@ def main() -> None:
         redis_url = app.config["REDIS_URL"]
     conn = redis.from_url(redis_url)
     with Connection(conn):
-        worker = Worker([Queue("audits")])
+        worker = Worker([Queue("audits"), Queue("ui")])
         worker.work()
 
 

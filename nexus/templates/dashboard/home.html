@@ -180,8 +180,10 @@
       '<path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 0 1 8-8v4a4 4 0 0 0-4 4H4z"></path>' +
     '</svg>';
   }
-  document.querySelectorAll("form[action$='/audit/start'] button.auditStartBtn").forEach(btn => {
-    btn.addEventListener("click", () => {
+  document.querySelectorAll("form[action$='/audit/start']").forEach(form => {
+    form.addEventListener("submit", () => {
+      const btn = form.querySelector("button.auditStartBtn");
+      if(!btn) return;
       btn.disabled = true;
       btn.classList.add("opacity-80");
       const span = btn.querySelector(".btnText");

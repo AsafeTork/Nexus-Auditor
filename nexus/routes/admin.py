@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import time
+import uuid
 from typing import Any, Dict
 
 import redis
@@ -13,8 +14,8 @@ from sqlalchemy import text
 from .. import db
 from ..models import AuditEvent, AuditRun, Site, Subscription, is_org_admin
 from ..security import require_admin
-from ..services.audit_engine import call_llm_non_stream
-from ..services.ui_review import read_text_files, summarize_screenshot
+from ..services.queueing import enqueue_ui_lab
+from ..services.ui_review import summarize_screenshot
 from ..services.github import create_issue
 
 bp = Blueprint("admin", __name__)
@@ -174,38 +175,67 @@ def admin_audit_publish_github(audit_id: str):
     return redirect(url_for("admin.admin_audits"))
 
 
-def _run_ui_review(user_goal: str, context: str) -> str:
-    base_url = current_app.config.get("LLM_BASE_URL_V1", "")
-    api_key = current_app.config.get("LLM_API_KEY", "")
-    model = current_app.config.get("LLM_DEFAULT_MODEL", "") or "deepseek-chat"
+def _redis_conn():
+    return redis.from_url(current_app.config.get("REDIS_URL", "redis://localhost:6379/0"))
 
-    system = (
-        "Você é um especialista em UX/UI e Frontend. Analise a UI descrita e produza melhorias práticas, "
-        "priorizando layout, hierarquia visual, espaçamento, responsividade (mobile+desktop), tipografia e acessibilidade. "
-        "NÃO invente páginas. Se algo estiver ausente, indique como coletar a informação. "
-        "Formato de saída: Markdown com seções: 1) Diagnóstico rápido 2) Problemas (com impacto) 3) Propostas de layout "
-        "4) Ajustes mobile 5) Ajustes desktop 6) Paleta/contraste 7) Lista de mudanças em arquivos (path + o que mudar)."
-    )
 
-    user = f"Objetivo do admin: {user_goal}\n\nContexto/UI:\n{context}\n"
-    return call_llm_non_stream(
-        base_url_v1=base_url,
-        api_key=api_key,
-        model=model,
-        temperature=0.2,
-        system_prompt=system,
-        user_prompt=user,
-        timeout_s=240,
-    )
+def _ui_key(org_id: str, run_id: str) -> str:
+    return f"ui_lab:{org_id}:{run_id}"
+
+
+def _ui_index_key(org_id: str) -> str:
+    return f"ui_lab:index:{org_id}"
 
 
 @bp.get("/admin/ui-lab")
 @login_required
 @require_admin
 def ui_lab():
-    last = session.get("ui_lab_last_md", "")
-    last_mode = session.get("ui_lab_last_mode", "")
-    return render_template("admin/ui_lab.html", last_md=last, last_mode=last_mode)
+    org_id = current_user.org_id
+    conn = _redis_conn()
+    run_id = (request.args.get("run") or "").strip()
+    # last runs
+    runs = []
+    try:
+        ids = conn.lrange(_ui_index_key(org_id), 0, 10)
+        for rid in ids:
+            rid = rid.decode("utf-8") if isinstance(rid, (bytes, bytearray)) else str(rid)
+            h = conn.hgetall(_ui_key(org_id, rid))
+            runs.append(
+                {
+                    "id": rid,
+                    "status": (h.get(b"status") or b"").decode("utf-8", "ignore"),
+                    "mode": (h.get(b"mode") or b"").decode("utf-8", "ignore"),
+                    "created_utc": (h.get(b"created_utc") or b"").decode("utf-8", "ignore"),
+                }
+            )
+    except Exception:
+        runs = []
+    return render_template("admin/ui_lab.html", run_id=run_id, runs=runs)
+
+
+@bp.get("/admin/ui-lab/run/<run_id>.json")
+@login_required
+@require_admin
+def ui_lab_run_json(run_id: str):
+    org_id = current_user.org_id
+    conn = _redis_conn()
+    key = _ui_key(org_id, run_id)
+    h = conn.hgetall(key) or {}
+    logs = conn.get(key + ":logs") or b""
+    result = conn.get(key + ":result") or b""
+    return jsonify(
+        {
+            "id": run_id,
+            "status": (h.get(b"status") or b"").decode("utf-8", "ignore"),
+            "mode": (h.get(b"mode") or b"").decode("utf-8", "ignore"),
+            "created_utc": (h.get(b"created_utc") or b"").decode("utf-8", "ignore"),
+            "updated_utc": (h.get(b"updated_utc") or b"").decode("utf-8", "ignore"),
+            "error": (h.get(b"error") or b"").decode("utf-8", "ignore"),
+            "logs": logs.decode("utf-8", "ignore"),
+            "result_md": result.decode("utf-8", "ignore"),
+        }
+    )
 
 
 @bp.post("/admin/ui-lab/templates")
@@ -213,52 +243,51 @@ def ui_lab():
 @require_admin
 def ui_lab_templates():
     goal = (request.form.get("goal") or "").strip() or "Melhorar a UI para ficar moderna, limpa e premium."
-    # Analyze key templates
-    root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-    tpl_dir = os.path.join(root, "templates")
-    targets = [
-        os.path.join(tpl_dir, "layout.html"),
-        os.path.join(tpl_dir, "dashboard", "home.html"),
-        os.path.join(tpl_dir, "audit", "view.html"),
-        os.path.join(tpl_dir, "admin", "home.html"),
-        os.path.join(tpl_dir, "admin", "audits.html"),
-        os.path.join(tpl_dir, "admin", "audit_detail.html"),
-        os.path.join(tpl_dir, "auth", "login.html"),
-        os.path.join(tpl_dir, "auth", "register.html"),
-    ]
-    context = read_text_files([p for p in targets if os.path.exists(p)], max_chars_each=12000)
-    md = _run_ui_review(goal, context)
-    session["ui_lab_last_md"] = md
-    session["ui_lab_last_mode"] = "templates"
-    flash("Análise por templates concluída.", "ok")
-    return redirect(url_for("admin.ui_lab"))
+    run_id = str(uuid.uuid4())
+    conn = _redis_conn()
+    conn.hset(
+        _ui_key(current_user.org_id, run_id),
+        mapping={
+            "status": "queued",
+            "mode": "templates",
+            "created_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+            "updated_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        },
+    )
+    conn.delete(_ui_key(current_user.org_id, run_id) + ":logs")
+    conn.delete(_ui_key(current_user.org_id, run_id) + ":result")
+    conn.rpush(_ui_index_key(current_user.org_id), run_id)
+    enqueue_ui_lab(run_id, current_user.org_id, "templates", {"goal": goal})
+    flash("UI Lab enfileirado (templates). Veja logs/resultado abaixo.", "ok")
+    return redirect(url_for("admin.ui_lab", run=run_id))
 
 
 @bp.post("/admin/ui-lab/url")
 @login_required
 @require_admin
 def ui_lab_url():
-    import requests
-
     goal = (request.form.get("goal") or "").strip() or "Avaliar e sugerir melhorias de layout e responsividade."
     url = (request.form.get("url") or "").strip()
     if not url:
         flash("Informe uma URL.", "error")
         return redirect(url_for("admin.ui_lab"))
-    try:
-        r = requests.get(url, timeout=15, headers={"User-Agent": "NexusAuditor/1.0"})
-        r.raise_for_status()
-        html = r.text
-        if len(html) > 20000:
-            html = html[:20000] + "\n<!-- ... truncado ... -->"
-        context = f"URL: {url}\n\nHTML:\n{html}"
-        md = _run_ui_review(goal, context)
-        session["ui_lab_last_md"] = md
-        session["ui_lab_last_mode"] = "url"
-        flash("Análise por URL concluída.", "ok")
-    except Exception as e:
-        flash(f"Falha ao buscar URL: {type(e).__name__}: {e}", "error")
-    return redirect(url_for("admin.ui_lab"))
+    run_id = str(uuid.uuid4())
+    conn = _redis_conn()
+    conn.hset(
+        _ui_key(current_user.org_id, run_id),
+        mapping={
+            "status": "queued",
+            "mode": "url",
+            "created_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+            "updated_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        },
+    )
+    conn.delete(_ui_key(current_user.org_id, run_id) + ":logs")
+    conn.delete(_ui_key(current_user.org_id, run_id) + ":result")
+    conn.rpush(_ui_index_key(current_user.org_id), run_id)
+    enqueue_ui_lab(run_id, current_user.org_id, "url", {"goal": goal, "url": url})
+    flash("UI Lab enfileirado (URL). Veja logs/resultado abaixo.", "ok")
+    return redirect(url_for("admin.ui_lab", run=run_id))
 
 
 @bp.post("/admin/ui-lab/screenshot")
@@ -274,15 +303,37 @@ def ui_lab_screenshot():
     try:
         data = f.read()
         meta = summarize_screenshot(data)
-        context = (
-            f"Screenshot meta: {meta.width}x{meta.height}, bytes={meta.size_bytes}, cores={meta.dominant_hex}\n"
-            f"Observações do admin: {notes}\n"
-            "Atenção: você NÃO está vendo a imagem; baseie-se em heurísticas + notas.\n"
+        run_id = str(uuid.uuid4())
+        conn = _redis_conn()
+        conn.hset(
+            _ui_key(current_user.org_id, run_id),
+            mapping={
+                "status": "queued",
+                "mode": "screenshot",
+                "created_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+                "updated_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+            },
         )
-        md = _run_ui_review(goal, context)
-        session["ui_lab_last_md"] = md
-        session["ui_lab_last_mode"] = "screenshot"
-        flash("Análise por screenshot concluída (via metadados + notas).", "ok")
+        conn.delete(_ui_key(current_user.org_id, run_id) + ":logs")
+        conn.delete(_ui_key(current_user.org_id, run_id) + ":result")
+        conn.rpush(_ui_index_key(current_user.org_id), run_id)
+        enqueue_ui_lab(
+            run_id,
+            current_user.org_id,
+            "screenshot",
+            {
+                "goal": goal,
+                "notes": notes,
+                "meta": {
+                    "width": meta.width,
+                    "height": meta.height,
+                    "size_bytes": meta.size_bytes,
+                    "dominant_hex": meta.dominant_hex,
+                },
+            },
+        )
+        flash("UI Lab enfileirado (screenshot). Veja logs/resultado abaixo.", "ok")
+        return redirect(url_for("admin.ui_lab", run=run_id))
     except Exception as e:
         flash(f"Falha ao processar screenshot: {type(e).__name__}: {e}", "error")
     return redirect(url_for("admin.ui_lab"))

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+from datetime import datetime, timedelta, timezone
 from urllib.parse import urlparse
 
 from flask import Blueprint, Response, jsonify, redirect, render_template, request, url_for, stream_with_context
@@ -55,6 +56,26 @@ def delete_site(site_id: str):
 def start_audit():
     site_id = (request.form.get("site_id") or "").strip()
     site = Site.query.filter_by(id=site_id, org_id=current_user.org_id).first_or_404()
+
+    # Avoid accidental duplicate runs: if there is a recent queued/running audit, reuse it.
+    try:
+        existing = (
+            AuditRun.query.filter_by(org_id=current_user.org_id, site_id=site.id)
+            .filter(AuditRun.status.in_(["queued", "running"]))
+            .order_by(AuditRun.created_utc.desc())
+            .first()
+        )
+        if existing:
+            try:
+                created = datetime.fromisoformat(existing.created_utc)
+            except Exception:
+                created = None
+            if created and created.tzinfo is None:
+                created = created.replace(tzinfo=timezone.utc)
+            if created and created > datetime.now(timezone.utc) - timedelta(hours=6):
+                return redirect(url_for("audit.view_audit", audit_id=existing.id))
+    except Exception:
+        pass
 
     # Feature gating: require active subscription (trialing counts as active).
     sub = Subscription.query.filter_by(org_id=current_user.org_id).first()

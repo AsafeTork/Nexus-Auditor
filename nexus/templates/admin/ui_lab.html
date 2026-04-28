@@ -41,15 +41,37 @@
     </div>
   </div>
 
-  <div class="mt-5 card p-4">
+  <div class="mt-5 grid grid-cols-1 lg:grid-cols-3 gap-4">
+    <div class="card p-4">
+      <div class="text-xs font-extrabold">Execuções recentes</div>
+      <div class="text-[11px] text-muted mt-1">Clique para abrir logs/resultado.</div>
+      <div class="mt-3 space-y-2">
+        {% for r in runs %}
+          <a class="block bg-surface2 rounded-xl p-3 hover:bg-surface" href="{{ url_for('admin.ui_lab', run=r.id) }}">
+            <div class="flex items-center justify-between">
+              <div class="mono text-[11px] truncate">{{ r.id }}</div>
+              <div class="text-[11px] text-muted">{{ r.status }}</div>
+            </div>
+            <div class="text-[11px] text-muted">mode={{ r.mode }} · {{ r.created_utc }}</div>
+          </a>
+        {% else %}
+          <div class="text-xs text-muted">Sem execuções ainda.</div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="card p-4 lg:col-span-2">
     <div class="flex items-center justify-between gap-3">
       <div>
-        <div class="text-xs font-extrabold">Resultado ({{ last_mode or "—" }})</div>
-        <div class="text-[11px] text-muted">Copie e envie para mim ou use como backlog de refatoração.</div>
+        <div class="text-xs font-extrabold">Logs + Resultado</div>
+        <div class="text-[11px] text-muted">Este painel não trava: roda em background e atualiza automaticamente.</div>
       </div>
       <button class="btn-secondary rounded-xl px-3 py-2 text-xs font-extrabold bg-surface" onclick="copyText('outBox')">Copiar</button>
     </div>
-    <textarea id="outBox" class="mono mt-3 w-full h-[55vh] input rounded-2xl p-3 text-xs" readonly>{{ last_md }}</textarea>
+    <div class="mt-2 text-[11px] text-muted">Run: <span class="mono" id="runId">{{ run_id or "—" }}</span> · status: <span class="mono" id="runStatus">—</span></div>
+    <textarea id="logBox" class="mono mt-3 w-full h-40 input rounded-2xl p-3 text-xs" readonly></textarea>
+    <textarea id="outBox" class="mono mt-3 w-full h-[42vh] input rounded-2xl p-3 text-xs" readonly></textarea>
+  </div>
   </div>
 </div>
 
@@ -68,5 +90,29 @@
     }
   }
 </script>
-{% endblock %}
 
+<script>
+  // Live poll
+  (function(){
+    const runId = "{{ run_id or '' }}";
+    if(!runId) return;
+    const statusEl = document.getElementById("runStatus");
+    const logBox = document.getElementById("logBox");
+    const outBox = document.getElementById("outBox");
+    async function tick(){
+      try{
+        const r = await fetch(`/admin/ui-lab/run/${runId}.json`);
+        const j = await r.json();
+        if(statusEl) statusEl.textContent = j.status || "—";
+        if(logBox) logBox.value = j.logs || "";
+        if(outBox && (j.result_md || j.error)){
+          outBox.value = j.result_md || ("ERRO: " + (j.error || "unknown"));
+        }
+        if((j.status || "") === "done" || (j.status || "") === "error") return;
+      }catch(e){}
+      setTimeout(tick, 1200);
+    }
+    tick();
+  })();
+</script>
+{% endblock %}
