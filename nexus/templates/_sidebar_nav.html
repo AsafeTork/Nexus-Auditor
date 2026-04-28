@@ -27,6 +27,12 @@
         <span>UI Lab</span>
       </a>
 
+      <a class="nav-link {% if ep.startswith('admin.backend_lab') %}nav-link-active{% endif %}"
+         href="{{ url_for('admin.backend_lab') }}">
+        <svg class="opacity-90" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7h16M4 12h16M4 17h16"/></svg>
+        <span>Backend Lab</span>
+      </a>
+
       <a class="nav-link {% if ep.startswith('admin.admin_logs') %}nav-link-active{% endif %}"
          href="{{ url_for('admin.admin_logs') }}">
         <svg class="opacity-90" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4h16v16H4V4Zm4 12h8M8 8h8M8 12h6"/></svg>

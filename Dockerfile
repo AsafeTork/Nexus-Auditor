@@ -10,6 +10,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY requirements.txt /app/requirements.txt
 RUN pip install --no-cache-dir -r /app/requirements.txt
 
+# UI Lab: enable automatic screenshots (Playwright Chromium)
+RUN python -m playwright install --with-deps chromium
+
 COPY . /app
 
 ENV PYTHONDONTWRITEBYTECODE=1

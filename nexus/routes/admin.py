@@ -285,6 +285,39 @@ def ui_lab():
     return render_template("admin/ui_lab.html", run_id=run_id, runs=runs)
 
 
+@bp.get("/admin/backend-lab")
+@login_required
+@require_admin
+def backend_lab():
+    """
+    Backend Lab: generates a single prompt for SOLO to improve backend code.
+    Uses the same run storage as UI Lab.
+    """
+    org_id = current_user.org_id
+    conn = _redis_conn()
+    run_id = (request.args.get("run") or "").strip()
+    runs = []
+    try:
+        ids = conn.lrange(_ui_index_key(org_id), 0, 20)
+        for rid in ids:
+            rid = rid.decode("utf-8") if isinstance(rid, (bytes, bytearray)) else str(rid)
+            h = conn.hgetall(_ui_key(org_id, rid)) or {}
+            mode = (h.get(b"mode") or b"").decode("utf-8", "ignore")
+            if mode != "backend":
+                continue
+            runs.append(
+                {
+                    "id": rid,
+                    "status": (h.get(b"status") or b"").decode("utf-8", "ignore"),
+                    "mode": mode,
+                    "created_utc": (h.get(b"created_utc") or b"").decode("utf-8", "ignore"),
+                }
+            )
+    except Exception:
+        runs = []
+    return render_template("admin/backend_lab.html", run_id=run_id, runs=runs)
+
+
 @bp.get("/admin/ui-lab/run/<run_id>.json")
 @login_required
 @require_admin
@@ -350,6 +383,30 @@ def ui_lab_run():
     enqueue_ui_lab(run_id, current_user.org_id, "auto", {"goal": goal})
     flash("UI Lab enfileirado. Ele vai analisar TODA a UI e gerar um PROMPT pronto para copiar/colar.", "ok")
     return redirect(url_for("admin.ui_lab", run=run_id))
+
+
+@bp.post("/admin/backend-lab/run")
+@login_required
+@require_admin
+def backend_lab_run():
+    goal = (request.form.get("goal") or "").strip() or "Melhorar robustez, segurança e performance do backend."
+    run_id = str(uuid.uuid4())
+    conn = _redis_conn()
+    conn.hset(
+        _ui_key(current_user.org_id, run_id),
+        mapping={
+            "status": "queued",
+            "mode": "backend",
+            "created_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+            "updated_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        },
+    )
+    conn.delete(_ui_key(current_user.org_id, run_id) + ":logs")
+    conn.delete(_ui_key(current_user.org_id, run_id) + ":result")
+    conn.rpush(_ui_index_key(current_user.org_id), run_id)
+    enqueue_ui_lab(run_id, current_user.org_id, "backend", {"goal": goal})
+    flash("Backend Lab enfileirado. Ele vai gerar um PROMPT pronto para copiar/colar.", "ok")
+    return redirect(url_for("admin.backend_lab", run=run_id))
 
 
 @bp.post("/admin/sim")

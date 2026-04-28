@@ -1,28 +1,24 @@
 {% extends "layout.html" %}
-{% set title = "UI Lab" %}
-{% set subtitle = "Quick UI review" %}
+{% set title = "Backend Lab" %}
+{% set subtitle = "Gera um PROMPT pronto para melhorar o backend" %}
 {% block content %}
 <div class="letterhead">
   <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
     <div>
-      <div class="page-title text-brand-2">UI Lab</div>
-      <div class="body-text">Gera um PROMPT pronto para copiar/colar no SOLO. Também tira prints automaticamente (e descarta).</div>
+      <div class="page-title text-brand-2">Backend Lab</div>
+      <div class="body-text">Ele analisa o código Python do backend e gera um único PROMPT para colar no SOLO.</div>
     </div>
     <a class="btn-secondary" href="{{ url_for('admin.admin_home') }}">Back</a>
   </div>
 
-  <div class="mt-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
-    <div class="card card-focus lg:col-span-3">
-      <div class="section-title">Rodar UI Lab (automático)</div>
-      <div class="body-text mt-4">
-        Ele analisa todos os templates do projeto e também coleta os sites do org (domínios) automaticamente.
-        Para cada domínio, tenta baixar HTML + tirar print (os bytes do print são descartados após extrair metadados).
-        Não há opção de URL/domínio nem upload de screenshot.
-      </div>
-      <form class="mt-6 flex flex-col gap-4" method="post" action="{{ url_for('admin.ui_lab_run') }}">
+  <div class="mt-6 grid grid-cols-1 gap-6">
+    <div class="card card-focus">
+      <div class="section-title">Rodar Backend Lab</div>
+      <div class="body-text mt-4">Sem opções de arquivos: ele analisa tudo automaticamente.</div>
+      <form class="mt-6 flex flex-col gap-4" method="post" action="{{ url_for('admin.backend_lab_run') }}">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <textarea name="goal" class="input text-xs" rows="2" placeholder="Opcional: foco da melhoria (ex.: sidebar, hierarquia, mobile, acessibilidade)."></textarea>
-        <button class="btn-primary w-full">Gerar PROMPT</button>
+        <textarea name="goal" class="input text-xs" rows="2" placeholder="Opcional: foco (ex.: segurança, performance, logs, filas, testes)."></textarea>
+        <button class="btn-primary w-full">Gerar PROMPT (Backend)</button>
       </form>
     </div>
   </div>
@@ -30,10 +26,10 @@
   <div class="mt-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
     <div class="card">
       <div class="section-title">Recent runs</div>
-      <div class="body-text mt-4">Open a run to view logs/output.</div>
+      <div class="body-text mt-4">Abra uma execução para ver logs/resultado.</div>
       <div class="mt-6 flex flex-col gap-4">
         {% for r in runs %}
-          <a class="block bg-surface2 rounded-xl p-4 hover:bg-surface border border-app" href="{{ url_for('admin.ui_lab', run=r.id) }}">
+          <a class="block bg-surface2 rounded-xl p-4 hover:bg-surface border border-app" href="{{ url_for('admin.backend_lab', run=r.id) }}">
             <div class="flex items-center justify-between">
               <div class="mono text-[11px] truncate">{{ r.id }}</div>
               <div class="text-[11px] text-muted">{{ r.status }}</div>
@@ -47,17 +43,17 @@
     </div>
 
     <div class="card lg:col-span-2">
-    <div class="flex items-center justify-between gap-6">
-      <div>
-        <div class="section-title">Logs + Output</div>
-        <div class="body-text">Runs in the background and updates automatically.</div>
+      <div class="flex items-center justify-between gap-6">
+        <div>
+          <div class="section-title">Logs + Output</div>
+          <div class="body-text">Quando terminar, copie o PROMPT e cole no SOLO.</div>
+        </div>
+        <button class="btn-secondary" onclick="copyText('outBox')">Copy</button>
       </div>
-      <button class="btn-secondary" onclick="copyText('outBox')">Copy</button>
+      <div class="mt-4 body-text">Run: <span class="mono" id="runId">{{ run_id or "—" }}</span> · status: <span class="mono" id="runStatus">—</span></div>
+      <textarea id="logBox" class="mono mt-4 w-full h-40 input text-xs" readonly></textarea>
+      <textarea id="outBox" class="mono mt-4 w-full h-[42vh] input text-xs" readonly></textarea>
     </div>
-    <div class="mt-4 body-text">Run: <span class="mono" id="runId">{{ run_id or "—" }}</span> · status: <span class="mono" id="runStatus">—</span></div>
-    <textarea id="logBox" class="mono mt-4 w-full h-40 input text-xs" readonly></textarea>
-    <textarea id="outBox" class="mono mt-4 w-full h-[42vh] input text-xs" readonly></textarea>
-  </div>
   </div>
 </div>
 
@@ -75,9 +71,7 @@
       alert("Copiado.");
     }
   }
-</script>
 
-<script>
   // Live poll
   (function(){
     const runId = "{{ run_id or '' }}";
@@ -102,3 +96,4 @@
   })();
 </script>
 {% endblock %}
+

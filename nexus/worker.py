@@ -21,7 +21,7 @@ from .services.audit_engine import (
     stream_llm_events,
     stream_llm_text,
 )
-from .services.ui_review import read_text_files
+from .services.ui_review import read_text_files, summarize_screenshot
 
 
 def _ui_key(org_id: str, run_id: str) -> str:
@@ -88,6 +88,65 @@ def run_ui_lab_job(run_id: str, org_id: str, mode: str, payload: dict) -> None:
                     blob = blob[:max_total] + "\n\n/* ... contexto truncado por tamanho ... */\n"
                     append_log(f"[ui-lab] contexto truncado para {max_total} chars")
                 context = blob
+
+                # Optional: also scan all org sites (domains) and attach HTML + screenshots metadata.
+                sites = Site.query.filter_by(org_id=org_id).all()
+                append_log(f"[ui-lab] coletando sites do org ({len(sites)})…")
+                if sites:
+                    import requests
+
+                    site_ctx_parts: list[str] = []
+                    max_site_html = int(os.getenv("UI_LAB_MAX_SITE_HTML_CHARS", "12000"))
+
+                    def _try_screenshot(url: str) -> dict:
+                        """
+                        Attempt a real browser screenshot using Playwright.
+                        The screenshot bytes are NOT persisted and are discarded after summarization.
+                        """
+                        try:
+                            from playwright.sync_api import sync_playwright  # type: ignore
+                        except Exception as e:
+                            return {"ok": False, "error": f"playwright_not_available: {type(e).__name__}"}
+                        try:
+                            with sync_playwright() as p:
+                                browser = p.chromium.launch(args=["--no-sandbox"])
+                                page = browser.new_page(viewport={"width": 1440, "height": 900})
+                                page.goto(url, wait_until="networkidle", timeout=60000)
+                                img_bytes = page.screenshot(full_page=True, type="png")
+                                browser.close()
+                            meta = summarize_screenshot(img_bytes).__dict__
+                            # Discard bytes immediately (do not store anywhere).
+                            del img_bytes
+                            return {"ok": True, "meta": meta}
+                        except Exception as e:
+                            return {"ok": False, "error": f"{type(e).__name__}: {e}"}
+
+                    for s in sites:
+                        url = (s.base_url or "").strip()
+                        if not url:
+                            continue
+                        append_log(f"[ui-lab] site: {url}")
+                        # HTML
+                        html_snip = ""
+                        try:
+                            r = requests.get(url, timeout=25, headers={"User-Agent": "NexusAuditor/1.0"})
+                            r.raise_for_status()
+                            html_snip = (r.text or "")[:max_site_html]
+                        except Exception as e:
+                            html_snip = f"<!-- HTML fetch failed: {type(e).__name__}: {e} -->"
+                        # Screenshot meta
+                        shot = _try_screenshot(url)
+                        site_ctx_parts.append(
+                            "\n\n===== ORG SITE =====\n"
+                            + f"site_id={s.id}\n"
+                            + f"url={url}\n"
+                            + f"screenshot={shot}\n"
+                            + f"html_snippet:\n{html_snip}\n"
+                        )
+
+                    site_blob = "\n".join(site_ctx_parts)
+                    if site_blob:
+                        context = context + "\n\n===== ORG SITES (AUTO) =====\n" + site_blob
             elif mode == "url":
                 import requests
 
@@ -103,6 +162,26 @@ def run_ui_lab_job(run_id: str, org_id: str, mode: str, payload: dict) -> None:
                 meta = payload.get("meta") or {}
                 notes = str(payload.get("notes") or "")
                 context = f"Screenshot meta: {meta}\nObservações: {notes}\n"
+            elif mode == "backend":
+                # Backend prompt generator: read backend source files (Python).
+                root = os.path.abspath(os.path.dirname(__file__))
+                targets: list[str] = []
+                for r, dirs, files in os.walk(root):
+                    # Skip caches
+                    dirs[:] = [d for d in dirs if d != "__pycache__"]
+                    for fn in files:
+                        if not fn.endswith(".py"):
+                            continue
+                        targets.append(os.path.join(r, fn))
+                targets = sorted(set(targets))
+                append_log(f"[backend-lab] lendo backend ({len(targets)} arquivos)…")
+                max_each = int(os.getenv("BACKEND_LAB_MAX_CHARS_EACH", "12000"))
+                max_total = int(os.getenv("BACKEND_LAB_MAX_CONTEXT_CHARS", "220000"))
+                blob = read_text_files([p for p in targets if os.path.exists(p)], max_chars_each=max_each)
+                if len(blob) > max_total:
+                    blob = blob[:max_total] + "\n\n/* ... contexto truncado por tamanho ... */\n"
+                    append_log(f"[backend-lab] contexto truncado para {max_total} chars")
+                context = blob
             else:
                 context = f"Modo desconhecido: {mode}\nPayload: {payload}"
         except Exception as e:
@@ -134,23 +213,42 @@ def run_ui_lab_job(run_id: str, org_id: str, mode: str, payload: dict) -> None:
 
             acc = ""
             last_flush = time.time()
-            # UI Lab v2: output a single PROMPT to feed back into SOLO (not a long report).
-            system_prompt = (
-                "Você é um Product Designer + Frontend Engineer senior. "
-                "Sua saída NÃO é um relatório para humanos lerem. "
-                "Sua saída deve ser um ÚNICO PROMPT pronto para colar no SOLO, para ele implementar mudanças no código. "
-                "Requisitos: (1) foco/hierarquia/ritmo vertical, (2) espaçamento consistente, (3) responsivo mobile+desktop, "
-                "(4) acessibilidade (aria/keyboard/focus/contraste), (5) não inventar arquivos que não existem. "
-                "Formato obrigatório:\n"
-                "1) TÍTULO: \"PROMPT PARA SOLO\"\n"
-                "2) CONTEXTO (2-3 linhas)\n"
-                "3) OBJETIVO (bullet)\n"
-                "4) REGRAS (bullet)\n"
-                "5) PLANO DE ALTERAÇÕES POR ARQUIVO (checklist, com paths reais)\n"
-                "6) TRECHOS DE CÓDIGO (somente quando necessário, curtos)\n"
-                "7) COMO VALIDAR (passos rápidos)\n"
-                "Seja direto e acionável."
-            )
+            # v2: output a single PROMPT to feed back into SOLO (not a long report).
+            if mode == "backend":
+                system_prompt = (
+                    "Você é um Staff Backend Engineer. "
+                    "Sua saída NÃO é um relatório para humanos lerem. "
+                    "Sua saída deve ser um ÚNICO PROMPT pronto para colar no SOLO, para ele implementar mudanças no backend. "
+                    "Priorize: segurança, confiabilidade, performance, observabilidade (logs/metrics), "
+                    "tratamento de erros, consistência de dados, jobs/filas, timeouts e testes. "
+                    "Não invente arquivos que não existem. "
+                    "Formato obrigatório:\n"
+                    "1) TÍTULO: \"PROMPT PARA SOLO (BACKEND)\"\n"
+                    "2) CONTEXTO (2-3 linhas)\n"
+                    "3) OBJETIVO (bullet)\n"
+                    "4) REGRAS (bullet)\n"
+                    "5) PLANO DE ALTERAÇÕES POR ARQUIVO (checklist, com paths reais)\n"
+                    "6) TRECHOS DE CÓDIGO (somente quando necessário, curtos)\n"
+                    "7) COMO VALIDAR (comandos e cenários)\n"
+                    "Seja direto e acionável."
+                )
+            else:
+                system_prompt = (
+                    "Você é um Product Designer + Frontend Engineer senior. "
+                    "Sua saída NÃO é um relatório para humanos lerem. "
+                    "Sua saída deve ser um ÚNICO PROMPT pronto para colar no SOLO, para ele implementar mudanças no código. "
+                    "Requisitos: (1) foco/hierarquia/ritmo vertical, (2) espaçamento consistente, (3) responsivo mobile+desktop, "
+                    "(4) acessibilidade (aria/keyboard/focus/contraste), (5) não inventar arquivos que não existem. "
+                    "Formato obrigatório:\n"
+                    "1) TÍTULO: \"PROMPT PARA SOLO\"\n"
+                    "2) CONTEXTO (2-3 linhas)\n"
+                    "3) OBJETIVO (bullet)\n"
+                    "4) REGRAS (bullet)\n"
+                    "5) PLANO DE ALTERAÇÕES POR ARQUIVO (checklist, com paths reais)\n"
+                    "6) TRECHOS DE CÓDIGO (somente quando necessário, curtos)\n"
+                    "7) COMO VALIDAR (passos rápidos)\n"
+                    "Seja direto e acionável."
+                )
 
             for delta in stream_llm_text(
                 base_url_v1=base_url_v1,
