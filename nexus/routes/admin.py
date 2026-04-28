@@ -12,7 +12,7 @@ from flask_login import login_required, current_user
 from sqlalchemy import text
 
 from .. import db
-from ..models import AuditEvent, AuditRun, Site, Subscription, is_org_admin
+from ..models import AuditEvent, AuditRun, Organization, Site, Subscription, is_org_admin
 from ..security import require_admin
 from ..services.queueing import enqueue_ui_lab
 from ..services.ui_review import summarize_screenshot
@@ -97,7 +97,31 @@ def admin_home():
         "role": session.get("sim_role") or "",
         "sub_status": session.get("sim_sub_status") or "",
     }
-    return render_template("admin/home.html", diag=diag, audits=audits, sim=sim)
+    org = Organization.query.filter_by(id=current_user.org_id).first()
+    return render_template(
+        "admin/home.html",
+        diag=diag,
+        audits=audits,
+        sim=sim,
+        llm_defaults={
+            "base_url_v1": (getattr(org, "llm_base_url_v1", "") or "").strip(),
+            "model": (getattr(org, "llm_model", "") or "").strip(),
+        },
+    )
+
+
+@bp.post("/admin/llm/save")
+@login_required
+@require_admin
+def admin_llm_save():
+    org = Organization.query.filter_by(id=current_user.org_id).first_or_404()
+    base = (request.form.get("base_url_v1") or "").strip()
+    model = (request.form.get("model") or "").strip()
+    org.llm_base_url_v1 = base
+    org.llm_model = model
+    db.session.commit()
+    flash("Configuração de IA salva para este org.", "ok")
+    return redirect(url_for("admin.admin_home"))
 
 
 @bp.get("/admin/diagnostics.json")

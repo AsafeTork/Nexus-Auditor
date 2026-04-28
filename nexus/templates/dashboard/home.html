@@ -13,9 +13,10 @@
         <a class="text-xs text-brand-2 underline" href="{{ url_for('admin.ui_lab') if current_user.is_admin else '#' }}">UI Lab</a>
       </div>
       <div class="mt-3 grid grid-cols-1 md:grid-cols-3 gap-2">
-        <input id="llmBase" class="input rounded-xl px-3 py-2 text-sm" placeholder="https://seu-provedor/v1" value="{{ config['LLM_BASE_URL_V1'] }}"/>
+        <input id="llmBase" class="input rounded-xl px-3 py-2 text-sm" placeholder="https://seu-provedor/v1" value="{{ llm_defaults.base_url_v1 or config['LLM_BASE_URL_V1'] }}"/>
         <select id="llmModel" class="input rounded-xl px-3 py-2 text-sm">
-          <option value="{{ config['LLM_DEFAULT_MODEL'] }}">{{ config['LLM_DEFAULT_MODEL'] }}</option>
+          {% set _m = (llm_defaults.model or config['LLM_DEFAULT_MODEL']) %}
+          <option value="{{ _m }}">{{ _m }}</option>
         </select>
         <button type="button" class="btn-secondary bg-surface rounded-xl px-4 py-2 font-extrabold" onclick="loadModels()">Carregar modelos</button>
       </div>
@@ -42,7 +43,7 @@
       </div>
     </div>
 
-    <!-- Trend + right mini widgets -->
+    <!-- Trend + debug widgets -->
     <div class="grid grid-cols-1 md:grid-cols-12 gap-4">
       <div class="md:col-span-8 letterhead p-5">
         <div class="flex items-center justify-between">
@@ -59,7 +60,12 @@
 
       <div class="md:col-span-4 space-y-4">
         <div class="card p-5">
-          <div class="text-sm font-extrabold">Status</div>
+          <div class="flex items-center justify-between">
+            <div class="text-sm font-extrabold">Depuração</div>
+            {% if current_user.is_admin %}
+              <a class="text-xs text-brand-2 underline" href="{{ url_for('admin.admin_logs') }}">ver logs</a>
+            {% endif %}
+          </div>
           <div class="mt-3 grid grid-cols-2 gap-2 text-xs">
             <div class="bg-surface2 rounded-xl p-3">
               <div class="text-muted">Queued</div><div class="mt-1 font-extrabold">{{ status_counts.queued }}</div>
@@ -74,13 +80,139 @@
               <div class="text-muted">Error</div><div class="mt-1 font-extrabold" style="color:#fb7185">{{ status_counts.error }}</div>
             </div>
           </div>
+          {% if current_user.is_admin %}
+            <div class="mt-3 flex flex-wrap gap-2">
+              <a class="btn-secondary bg-surface rounded-xl px-3 py-2 text-xs font-extrabold" href="{{ url_for('admin.ui_lab') }}">UI Lab</a>
+              <a class="btn-secondary bg-surface rounded-xl px-3 py-2 text-xs font-extrabold" href="{{ url_for('admin.admin_home') }}">Admin</a>
+            </div>
+          {% endif %}
         </div>
 
         <div class="card p-5">
           <div class="text-sm font-extrabold">Ações rápidas</div>
-          <div class="mt-3 text-[11px] text-muted">Otimize o fluxo: cadastre um site e rode auditorias.</div>
+          <div class="mt-3 text-[11px] text-muted">Cadastre um site e rode auditorias.</div>
           <a href="#addSite" class="mt-3 inline-block btn-primary rounded-xl px-4 py-2 text-xs font-extrabold">Adicionar site</a>
         </div>
+      </div>
+    </div>
+
+    <!-- Auditorias (enterprise table on desktop, cards on mobile) -->
+    <div class="card p-5">
+      <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+        <div>
+          <div class="text-sm font-extrabold">Auditorias</div>
+          <div class="text-[11px] text-muted">Status, alvo e ações rápidas (⋯). No mobile vira cards.</div>
+        </div>
+        <div class="flex items-center gap-2">
+          <select id="auditFilter" class="input rounded-xl px-3 py-2 text-xs">
+            <option value="all">Todos</option>
+            <option value="queued">Queued</option>
+            <option value="running">Running</option>
+            <option value="done">Done</option>
+            <option value="error">Error</option>
+          </select>
+          <button type="button" class="btn-secondary bg-surface rounded-xl px-3 py-2 text-xs font-extrabold" onclick="applyAuditFilter()">Filtrar</button>
+        </div>
+      </div>
+
+      <!-- Desktop table -->
+      <div class="mt-4 hidden md:block table-wrap">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Alvo</th>
+              <th>Status</th>
+              <th>Data</th>
+              <th class="text-right">Ações</th>
+            </tr>
+          </thead>
+          <tbody id="auditTbody">
+          {% for a in audits %}
+            <tr data-status="{{ a.status }}">
+              <td class="min-w-[220px]">
+                <div class="mono text-xs">{{ a.target_domain or a.id }}</div>
+                <div class="text-[11px] text-muted">{{ a.id }}</div>
+              </td>
+              <td class="min-w-[140px]">
+                {% if a.status == 'done' %}
+                  <span class="badge badge-ok"><span class="dot" style="background:#34d399"></span>DONE</span>
+                {% elif a.status == 'error' %}
+                  <span class="badge badge-err"><span class="dot" style="background:#fb7185"></span>ERROR</span>
+                {% elif a.status == 'running' %}
+                  <span class="badge badge-run"><span class="dot" style="background:#03A9F4"></span>RUNNING</span>
+                {% else %}
+                  <span class="badge badge-muted"><span class="dot" style="background:#94a3b8"></span>QUEUED</span>
+                {% endif %}
+              </td>
+              <td class="min-w-[180px]">
+                <div class="text-[11px] text-muted">{{ a.created_utc }}</div>
+                <div class="text-[11px] text-muted">model={{ a.model }}</div>
+              </td>
+              <td class="text-right min-w-[170px]">
+                <a class="btn-secondary bg-surface rounded-xl px-3 py-2 text-xs font-extrabold" href="{{ url_for('audit.view_audit', audit_id=a.id) }}">Abrir</a>
+                {% if current_user.is_admin %}
+                  <details class="relative inline-block ml-2">
+                    <summary class="list-none cursor-pointer btn-secondary rounded-xl px-3 py-2 text-xs font-extrabold bg-surface">⋯</summary>
+                    <div class="absolute right-0 mt-2 w-48 card2 p-2 z-10">
+                      <form method="post" action="{{ url_for('admin.admin_audit_publish_github', audit_id=a.id) }}">
+                        <button class="w-full text-left px-3 py-2 rounded-xl hover:bg-surface text-xs font-extrabold">Publicar no Git</button>
+                      </form>
+                      <form method="post" action="{{ url_for('admin.admin_audit_delete', audit_id=a.id) }}" onsubmit="return confirm('Excluir esta auditoria?');">
+                        <button class="w-full text-left px-3 py-2 rounded-xl hover:bg-surface text-xs font-extrabold">Excluir</button>
+                      </form>
+                    </div>
+                  </details>
+                {% endif %}
+              </td>
+            </tr>
+          {% else %}
+            <tr><td colspan="4" class="text-xs text-muted p-4">Nenhuma auditoria ainda.</td></tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Mobile cards -->
+      <div class="mt-4 md:hidden space-y-2" id="auditCards">
+        {% for a in audits %}
+          <div class="bg-surface2 rounded-2xl p-4" data-status="{{ a.status }}">
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0">
+                <div class="mono text-xs truncate">{{ a.target_domain or a.id }}</div>
+                <div class="text-[11px] text-muted truncate">{{ a.created_utc }}</div>
+              </div>
+              <div class="shrink-0">
+                {% if a.status == 'done' %}
+                  <span class="badge badge-ok"><span class="dot" style="background:#34d399"></span>DONE</span>
+                {% elif a.status == 'error' %}
+                  <span class="badge badge-err"><span class="dot" style="background:#fb7185"></span>ERROR</span>
+                {% elif a.status == 'running' %}
+                  <span class="badge badge-run"><span class="dot" style="background:#03A9F4"></span>RUNNING</span>
+                {% else %}
+                  <span class="badge badge-muted"><span class="dot" style="background:#94a3b8"></span>QUEUED</span>
+                {% endif %}
+              </div>
+            </div>
+            <div class="mt-3 flex items-center gap-2">
+              <a class="btn-primary rounded-xl px-4 py-2 text-xs font-extrabold" href="{{ url_for('audit.view_audit', audit_id=a.id) }}">Abrir</a>
+              {% if current_user.is_admin %}
+                <details class="relative">
+                  <summary class="list-none cursor-pointer btn-secondary rounded-xl px-3 py-2 text-xs font-extrabold bg-surface">⋯</summary>
+                  <div class="absolute right-0 mt-2 w-48 card2 p-2 z-10">
+                    <form method="post" action="{{ url_for('admin.admin_audit_publish_github', audit_id=a.id) }}">
+                      <button class="w-full text-left px-3 py-2 rounded-xl hover:bg-surface text-xs font-extrabold">Publicar no Git</button>
+                    </form>
+                    <form method="post" action="{{ url_for('admin.admin_audit_delete', audit_id=a.id) }}" onsubmit="return confirm('Excluir esta auditoria?');">
+                      <button class="w-full text-left px-3 py-2 rounded-xl hover:bg-surface text-xs font-extrabold">Excluir</button>
+                    </form>
+                  </div>
+                </details>
+              {% endif %}
+            </div>
+          </div>
+        {% else %}
+          <div class="text-xs text-muted">Nenhuma auditoria ainda.</div>
+        {% endfor %}
       </div>
     </div>
 
@@ -109,8 +241,8 @@
               <div class="flex flex-col md:flex-row items-stretch md:items-center gap-2 w-full md:w-auto">
                 <form method="post" action="{{ url_for('audit.start_audit') }}" class="grid grid-cols-1 md:grid-cols-3 gap-2 items-center w-full md:w-auto">
                   <input type="hidden" name="site_id" value="{{ s.id }}"/>
-                  <input name="provider_base_url_v1" value="{{ config['LLM_BASE_URL_V1'] }}" class="mono hidden md:block w-64 input rounded-xl px-3 py-2 text-xs llmBaseField"/>
-                  <input name="model" value="{{ config['LLM_DEFAULT_MODEL'] }}" class="mono hidden md:block w-44 input rounded-xl px-3 py-2 text-xs llmModelField"/>
+                  <input name="provider_base_url_v1" value="{{ llm_defaults.base_url_v1 or config['LLM_BASE_URL_V1'] }}" class="mono hidden md:block w-64 input rounded-xl px-3 py-2 text-xs llmBaseField"/>
+                  <input name="model" value="{{ llm_defaults.model or config['LLM_DEFAULT_MODEL'] }}" class="mono hidden md:block w-44 input rounded-xl px-3 py-2 text-xs llmModelField"/>
                   <div class="flex gap-2">
                     <button name="mode" value="full" class="auditStartBtn btn-primary w-full md:w-auto rounded-xl px-4 py-2 font-extrabold">
                       <span class="btnText">Auditoria completa</span>
@@ -158,40 +290,14 @@
     </section>
 
     <section class="card p-5">
-      <div class="flex items-center justify-between">
-        <div class="text-sm font-extrabold">Auditorias recentes</div>
-        <a class="text-xs text-brand-2 underline" href="{{ url_for('admin.admin_audits') if current_user.is_admin else url_for('dashboard.home') }}">ver tudo</a>
-      </div>
-      <div class="mt-3 space-y-2">
-        {% for a in audits[:10] %}
-          <div class="bg-surface2 rounded-xl p-3">
-            <div class="flex items-center justify-between gap-3">
-              <a href="{{ url_for('audit.view_audit', audit_id=a.id) }}" class="min-w-0 hover:opacity-90">
-                <div class="mono text-xs truncate">{{ a.target_domain or a.id }}</div>
-                <div class="text-[11px] text-muted truncate">{{ a.created_utc }}</div>
-              </a>
-              <div class="text-right shrink-0">
-                <div class="text-[11px] text-muted">{{ a.status }}</div>
-                {% if current_user.is_admin %}
-                  <details class="relative inline-block mt-1">
-                    <summary class="list-none cursor-pointer btn-secondary rounded-lg px-2 py-1 text-[11px] font-extrabold bg-surface">⋯</summary>
-                    <div class="absolute right-0 mt-2 w-44 card2 p-2 z-10">
-                      <form method="post" action="{{ url_for('admin.admin_audit_publish_github', audit_id=a.id) }}">
-                        <button class="w-full text-left px-3 py-2 rounded-xl hover:bg-surface text-xs font-extrabold">Publicar no Git</button>
-                      </form>
-                      <form method="post" action="{{ url_for('admin.admin_audit_delete', audit_id=a.id) }}" onsubmit="return confirm('Excluir esta auditoria?');">
-                        <button class="w-full text-left px-3 py-2 rounded-xl hover:bg-surface text-xs font-extrabold">Excluir</button>
-                      </form>
-                    </div>
-                  </details>
-                {% endif %}
-              </div>
-            </div>
-          </div>
-        {% else %}
-          <div class="text-xs text-muted">Nenhuma auditoria ainda.</div>
-        {% endfor %}
-      </div>
+      <div class="text-sm font-extrabold">Ajuda rápida</div>
+      <div class="mt-3 text-[11px] text-muted">Se a IA estiver lenta, teste “Rápida”, confira o provedor/modelo e veja Logs (Admin).</div>
+      {% if current_user.is_admin %}
+        <div class="mt-3 flex flex-wrap gap-2">
+          <a class="btn-secondary bg-surface rounded-xl px-3 py-2 text-xs font-extrabold" href="{{ url_for('admin.admin_logs') }}">Logs (geral)</a>
+          <a class="btn-secondary bg-surface rounded-xl px-3 py-2 text-xs font-extrabold" href="{{ url_for('admin.ui_lab') }}">UI Lab</a>
+        </div>
+      {% endif %}
     </section>
   </aside>
 </div>
@@ -290,5 +396,20 @@
       }
     }
   })();
+
+  // Audit filter (client-side)
+  window.applyAuditFilter = function(){
+    const v = (document.getElementById("auditFilter")?.value || "all").toLowerCase();
+    const rows = document.querySelectorAll("#auditTbody tr[data-status]");
+    rows.forEach(tr => {
+      const s = (tr.getAttribute("data-status") || "").toLowerCase();
+      tr.style.display = (v === "all" || v === s) ? "" : "none";
+    });
+    const cards = document.querySelectorAll("#auditCards [data-status]");
+    cards.forEach(el => {
+      const s = (el.getAttribute("data-status") || "").toLowerCase();
+      el.style.display = (v === "all" || v === s) ? "" : "none";
+    });
+  }
 </script>
 {% endblock %}

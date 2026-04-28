@@ -1,13 +1,16 @@
 {% extends "layout.html" %}
 {% block content %}
-<div class="letterhead rounded-2xl p-5">
+<div class="letterhead p-5">
   <div class="flex items-start justify-between gap-3">
     <div>
-      <div class="text-sm font-extrabold text-[#03A9F4]">Admin Console</div>
-      <div class="text-xs text-slate-400">Diagnóstico rápido + logs copiáveis para suporte</div>
+      <div class="text-sm font-extrabold text-brand-2">Admin Console</div>
+      <div class="text-xs text-muted">Diagnóstico + simulador + links rápidos</div>
     </div>
-    <a class="text-xs font-extrabold px-3 py-2 rounded-xl border border-white/10 bg-slate-950/40 hover:bg-slate-950/60"
-       href="{{ url_for('admin.admin_audits') }}">Ver todas auditorias</a>
+    <div class="flex items-center gap-2">
+      <a class="btn-secondary bg-surface rounded-xl px-3 py-2 text-xs font-extrabold" href="{{ url_for('admin.admin_logs') }}">Logs (geral)</a>
+      <a class="btn-secondary bg-surface rounded-xl px-3 py-2 text-xs font-extrabold" href="{{ url_for('admin.admin_audits') }}">Auditorias</a>
+      <a class="btn-secondary bg-surface rounded-xl px-3 py-2 text-xs font-extrabold" href="{{ url_for('admin.ui_lab') }}">UI Lab</a>
+    </div>
   </div>
 
   <!-- Simulator -->
@@ -42,54 +45,71 @@
     {% endif %}
   </div>
 
+  <!-- LLM Defaults -->
+  <div class="mt-4 card p-4">
+    <div class="flex items-start justify-between gap-3">
+      <div>
+        <div class="text-xs font-extrabold">IA (padrão do Org)</div>
+        <div class="text-[11px] text-muted">Define provedor/modelo padrão para auditorias e UI Lab (sem depender do navegador).</div>
+      </div>
+      <a class="btn-secondary bg-surface rounded-xl px-3 py-2 text-[11px] font-extrabold" href="{{ url_for('admin.ui_lab') }}">Abrir UI Lab</a>
+    </div>
+    <form class="mt-3 grid grid-cols-1 md:grid-cols-3 gap-2" method="post" action="{{ url_for('admin.admin_llm_save') }}">
+      <input name="base_url_v1" class="input rounded-xl px-3 py-2 text-sm" placeholder="https://seu-provedor/v1" value="{{ llm_defaults.base_url_v1 or diag.llm.base_url_v1 }}"/>
+      <input name="model" class="input rounded-xl px-3 py-2 text-sm" placeholder="modelo (ex.: deepseek-chat)" value="{{ llm_defaults.model or diag.llm.model }}"/>
+      <button class="btn-primary rounded-xl px-4 py-2 font-extrabold">Salvar</button>
+    </form>
+    <div class="mt-2 text-[11px] text-muted">Dica: use só o base <span class="mono">.../v1</span> (não cole <span class="mono">/chat/completions</span>).</div>
+  </div>
+
   <div class="mt-4 grid grid-cols-1 md:grid-cols-3 gap-3">
     <div class="card2 p-4">
-      <div class="text-[11px] text-slate-400">DB</div>
+      <div class="text-[11px] text-muted">DB</div>
       <div class="text-lg font-extrabold {% if diag.db.ok %}text-emerald-300{% else %}text-rose-300{% endif %}">
         {{ "OK" if diag.db.ok else "ERRO" }}
       </div>
       {% if not diag.db.ok %}
-        <div class="mono text-[11px] text-slate-300 mt-2">{{ diag.db.error }}</div>
+        <div class="mono text-[11px] mt-2">{{ diag.db.error }}</div>
       {% endif %}
     </div>
     <div class="card2 p-4">
-      <div class="text-[11px] text-slate-400">Redis</div>
+      <div class="text-[11px] text-muted">Redis</div>
       <div class="text-lg font-extrabold {% if diag.redis.ok %}text-emerald-300{% else %}text-rose-300{% endif %}">
         {{ "OK" if diag.redis.ok else "ERRO" }}
       </div>
-      <div class="mono text-[11px] text-slate-400 mt-2">{{ diag.redis.url }}</div>
+      <div class="mono text-[11px] text-muted mt-2">{{ diag.redis.url }}</div>
       {% if not diag.redis.ok %}
-        <div class="mono text-[11px] text-slate-300 mt-2">{{ diag.redis.error }}</div>
+        <div class="mono text-[11px] mt-2">{{ diag.redis.error }}</div>
       {% endif %}
     </div>
     <div class="card2 p-4">
-      <div class="text-[11px] text-slate-400">LLM</div>
+      <div class="text-[11px] text-muted">LLM</div>
       <div class="text-lg font-extrabold {% if diag.llm.ok %}text-emerald-300{% else %}text-rose-300{% endif %}">
         {{ "OK" if diag.llm.ok else "ERRO" }}
       </div>
-      <div class="mono text-[11px] text-slate-400 mt-2">{{ diag.llm.base_url_v1 }} · {{ diag.llm.model }}</div>
-      <div class="mono text-[11px] text-slate-500 mt-1">key={{ diag.llm.api_key_mask }}</div>
+      <div class="mono text-[11px] text-muted mt-2">{{ diag.llm.base_url_v1 }} · {{ diag.llm.model }}</div>
+      <div class="mono text-[11px] text-muted mt-1">key={{ diag.llm.api_key_mask }}</div>
       {% if diag.llm.ok %}
-        <div class="text-[11px] text-slate-300 mt-2">sample: <span class="mono">{{ diag.llm.sample }}</span></div>
+        <div class="text-[11px] mt-2">sample: <span class="mono">{{ diag.llm.sample }}</span></div>
       {% else %}
-        <div class="mono text-[11px] text-slate-300 mt-2">{{ diag.llm.error }}</div>
+        <div class="mono text-[11px] mt-2">{{ diag.llm.error }}</div>
       {% endif %}
     </div>
   </div>
 
   <div class="mt-5">
-    <div class="text-xs font-extrabold text-[#03A9F4]">Últimas auditorias</div>
+    <div class="text-xs font-extrabold text-brand-2">Últimas auditorias</div>
     <div class="mt-2 space-y-2">
       {% for a in audits %}
-        <a href="{{ url_for('admin.admin_audit_detail', audit_id=a.id) }}" class="block border border-white/10 rounded-xl bg-slate-950/40 p-3 hover:bg-slate-950/60">
+        <a href="{{ url_for('admin.admin_audit_detail', audit_id=a.id) }}" class="block bg-surface2 rounded-xl p-3 hover:bg-surface">
           <div class="flex items-center justify-between">
-            <div class="mono text-xs text-slate-300">{{ a.target_domain }}</div>
-            <div class="text-[11px] text-slate-400">{{ a.status }}</div>
+            <div class="mono text-xs">{{ a.target_domain }}</div>
+            <div class="text-[11px] text-muted">{{ a.status }}</div>
           </div>
-          <div class="text-[11px] text-slate-500">{{ a.created_utc }} · model={{ a.model }}</div>
+          <div class="text-[11px] text-muted">{{ a.created_utc }} · model={{ a.model }}</div>
         </a>
       {% else %}
-        <div class="text-xs text-slate-400">Nenhuma auditoria ainda.</div>
+        <div class="text-xs text-muted">Nenhuma auditoria ainda.</div>
       {% endfor %}
     </div>
   </div>

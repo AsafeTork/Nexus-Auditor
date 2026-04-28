@@ -64,6 +64,24 @@
     /* Admin logo needs contrast (black logo) */
     .logo-admin-wrap{ background: rgba(255,255,255,.92); }
     html.theme-light .logo-admin-wrap{ background: rgba(255,255,255,.92); }
+
+    /* Badges */
+    .badge{ display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:999px; font-size:11px; font-weight:800; letter-spacing:.01em; }
+    .dot{ width:6px; height:6px; border-radius:999px; display:inline-block; }
+    .badge-muted{ background: rgba(148,163,184,.10); color: var(--app-text); }
+    .badge-ok{ background: rgba(16,185,129,.14); color: #34d399; }
+    .badge-warn{ background: rgba(245,158,11,.16); color: #fbbf24; }
+    .badge-err{ background: rgba(244,63,94,.14); color: #fb7185; }
+    .badge-run{ background: rgba(3,169,244,.12); color: var(--brand-2); }
+
+    /* Table */
+    .table{ width:100%; border-collapse: separate; border-spacing:0; }
+    .table th{ text-align:left; font-size:11px; color: var(--app-muted); font-weight:800; padding:10px 12px; }
+    .table td{ padding:12px; vertical-align: top; }
+    .table tr{ background: var(--app-surface-2); }
+    .table tr + tr td{ border-top: 1px solid rgba(148,163,184,.06); }
+    .table-wrap{ overflow:auto; border-radius: 18px; box-shadow: 0 10px 30px rgba(0,0,0,.18); }
+    html.theme-light .table-wrap{ box-shadow: 0 14px 40px rgba(2,6,23,.06); }
     .input{
       background: rgba(2,6,23,.55);
       border: 0;

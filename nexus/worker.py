@@ -161,28 +161,53 @@ def run_audit_job(audit_id: str) -> None:
         audit.updated_utc = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
         db.session.commit()
 
-        def log(layer: str, level: str, msg: str) -> None:
+        # PERFORMANCE: avoid committing per line (very slow on hosted DB).
+        log_buf: list[str] = []
+        md_buf: list[str] = []
+        csv_buf: list[str] = []
+        events_buf: list[AuditEvent] = []
+        last_flush = time.time()
+
+        def flush(force: bool = False) -> None:
+            nonlocal last_flush
+            if not force and (time.time() - last_flush) < 0.8 and len(events_buf) < 30 and len(log_buf) < 30:
+                return
             try:
-                audit.logs = (audit.logs or "") + msg + "\n"
-                db.session.add(AuditEvent(audit_run_id=audit.id, layer=layer, level=level, message=msg))
+                if log_buf:
+                    audit.logs = (audit.logs or "") + "".join(log_buf)
+                    log_buf.clear()
+                if md_buf:
+                    audit.markdown_text = (audit.markdown_text or "") + "".join(md_buf)
+                    md_buf.clear()
+                if csv_buf:
+                    audit.csv_text = (audit.csv_text or "") + "".join(csv_buf)
+                    csv_buf.clear()
+                if events_buf:
+                    db.session.add_all(events_buf)
+                    events_buf.clear()
                 audit.updated_utc = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
                 db.session.commit()
+                last_flush = time.time()
             except Exception:
-                # Prevent cascading failures after an insert error.
                 try:
                     db.session.rollback()
                 except Exception:
                     pass
 
+        def log(layer: str, level: str, msg: str) -> None:
+            # Always keep logs readable (one line each)
+            line = (msg or "").rstrip("\n") + "\n"
+            log_buf.append(line)
+            events_buf.append(AuditEvent(audit_run_id=audit.id, layer=layer, level=level, message=msg))
+            flush()
+
         def md(line: str) -> None:
-            audit.markdown_text = (audit.markdown_text or "") + line + "\n"
-            audit.updated_utc = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
-            db.session.commit()
+            md_buf.append((line or "").rstrip("\n") + "\n")
+            flush()
 
         def csv(row: str) -> None:
-            audit.csv_text = (audit.csv_text or "") + row + "\n"
-            audit.updated_utc = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
-            db.session.commit()
+            csv_buf.append((row or "").rstrip("\n") + "\n")
+            flush()
 
         site = Site.query.filter_by(id=audit.site_id).first()
         if not site:
@@ -201,11 +226,11 @@ def run_audit_job(audit_id: str) -> None:
             cleaned = clean_html(fetch.html)
             host = (urlparse(fetch.url).hostname or "")
             audit.target_domain = host
-            db.session.commit()
+            flush(force=True)
         except Exception as e:
             log("fetch", "ERROR", f"Falha ao baixar HTML: {type(e).__name__}: {e}")
             audit.status = "error"
-            db.session.commit()
+            flush(force=True)
             return
 
         md("# AUDIT_NEXUS — Professional Edition")
@@ -240,6 +265,7 @@ def run_audit_job(audit_id: str) -> None:
                 fin = f"Financeiro;Executive LTV Loss (heurístico);Derivado do CSV desta auditoria;Faixa estimada por severidade/prioridade;USD {lo}–{hi};Ajustar com métricas reais;Média;Baixa"
                 csv(fin)
                 rows.append(fin)
+                flush(force=True)
                 continue
 
             prompt = build_user_prompt(layer, fetch, cleaned)
@@ -309,8 +335,10 @@ def run_audit_job(audit_id: str) -> None:
                 log(layer, "ERROR", f"Falha no provedor LLM: {type(e).__name__}: {e}")
                 continue
 
+            flush(force=True)
+
         audit.status = "done" if audit.status != "error" else "error"
-        db.session.commit()
+        flush(force=True)
 
 
 def main() -> None:

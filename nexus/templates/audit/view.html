@@ -1,24 +1,24 @@
 {% extends "layout.html" %}
 {% block content %}
-<div class="border border-white/10 rounded-2xl bg-slate-900/20 p-5">
+<div class="card p-5">
   <div class="flex items-start justify-between gap-3">
     <div>
       <div class="text-sm font-extrabold">Auditoria Técnica</div>
-      <div class="mono text-xs text-slate-400">{{ site.base_url if site else audit.site_id }}</div>
-      <div class="text-[11px] text-slate-500">Audit ID: <span class="mono">{{ audit.id }}</span> · Status: <span id="statusBadge">{{ audit.status }}</span></div>
+      <div class="mono text-xs text-muted">{{ site.base_url if site else audit.site_id }}</div>
+      <div class="text-[11px] text-muted">Audit ID: <span class="mono">{{ audit.id }}</span> · Status: <span id="statusBadge">{{ audit.status }}</span></div>
     </div>
     <div class="flex flex-wrap items-center gap-2 justify-end">
-      <button class="mono text-xs font-bold px-3 py-2 rounded-xl border border-white/10 bg-slate-950/40 hover:bg-slate-950/60" onclick="downloadMD()">Download .md</button>
-      <button class="mono text-xs font-bold px-3 py-2 rounded-xl border border-white/10 bg-slate-950/40 hover:bg-slate-950/60" onclick="downloadCSV()">Download .csv</button>
-      <a class="mono text-xs font-bold px-3 py-2 rounded-xl border border-[#03A9F4]/30 bg-[#03A9F4]/10 text-[#03A9F4] hover:bg-[#03A9F4]/15" href="/dossier/{{ audit.id }}" target="_blank">Dossiê</a>
+      <button class="mono text-xs font-bold px-3 py-2 rounded-xl btn-secondary bg-surface" onclick="downloadMD()">Download .md</button>
+      <button class="mono text-xs font-bold px-3 py-2 rounded-xl btn-secondary bg-surface" onclick="downloadCSV()">Download .csv</button>
+      <a class="mono text-xs font-bold px-3 py-2 rounded-xl bg-brand-weak text-brand-2 hover:bg-brand-weak2" href="/dossier/{{ audit.id }}" target="_blank">Dossiê</a>
     </div>
   </div>
 
   <!-- Tabs -->
   <div class="mt-4 flex flex-wrap gap-2">
-    <button class="tabBtn text-xs font-extrabold px-3 py-2 rounded-xl border border-white/10 bg-slate-950/40" data-tab="exec">Resumo Executivo</button>
-    <button class="tabBtn text-xs font-extrabold px-3 py-2 rounded-xl border border-white/10 bg-slate-950/40" data-tab="tech">Auditoria Técnica</button>
-    <button class="tabBtn text-xs font-extrabold px-3 py-2 rounded-xl border border-white/10 bg-slate-950/40" data-tab="data">Dados brutos</button>
+    <button class="tabBtn text-xs font-extrabold px-3 py-2 rounded-xl bg-surface2" data-tab="exec">Resumo Executivo</button>
+    <button class="tabBtn text-xs font-extrabold px-3 py-2 rounded-xl bg-surface2" data-tab="tech">Auditoria Técnica</button>
+    <button class="tabBtn text-xs font-extrabold px-3 py-2 rounded-xl bg-surface2" data-tab="data">Dados brutos</button>
   </div>
 
   <div class="mt-3 grid grid-cols-1 gap-3">
@@ -26,23 +26,23 @@
     <section id="tab-exec" class="letterhead rounded-2xl p-4">
       <div class="text-xs font-extrabold text-[#03A9F4]">Resumo Executivo</div>
       <div class="mt-3 grid grid-cols-1 md:grid-cols-3 gap-3">
-        <div class="border border-white/10 rounded-2xl bg-slate-950/40 p-4">
-          <div class="text-[11px] text-slate-400">Achados (linhas CSV)</div>
+        <div class="card2 p-4">
+          <div class="text-[11px] text-muted">Achados (linhas CSV)</div>
           <div class="text-2xl font-extrabold" id="kpiRows">—</div>
-          <div class="text-[11px] text-slate-500">Apenas itens com prova entram no CSV.</div>
+          <div class="text-[11px] text-muted">Apenas itens com prova entram no CSV.</div>
         </div>
-        <div class="border border-white/10 rounded-2xl bg-slate-950/40 p-4">
-          <div class="text-[11px] text-slate-400">Estado</div>
+        <div class="card2 p-4">
+          <div class="text-[11px] text-muted">Estado</div>
           <div class="text-2xl font-extrabold" id="kpiStatus">—</div>
-          <div class="text-[11px] text-slate-500">Fila/Execução via worker.</div>
+          <div class="text-[11px] text-muted">Fila/Execução via worker.</div>
         </div>
-        <div class="border border-white/10 rounded-2xl bg-slate-950/40 p-4">
-          <div class="text-[11px] text-slate-400">Dossiê</div>
+        <div class="card2 p-4">
+          <div class="text-[11px] text-muted">Dossiê</div>
           <div class="text-2xl font-extrabold">Pronto</div>
-          <div class="text-[11px] text-slate-500">Formato “carta digital” para cliente.</div>
+          <div class="text-[11px] text-muted">Formato “carta digital” para cliente.</div>
         </div>
       </div>
-      <div class="mt-4 text-[11px] text-slate-400">
+      <div class="mt-4 text-[11px] text-muted">
         Sugestão comercial: venda “Auditoria + Dossiê + Call” como pacote premium.
       </div>
     </section>

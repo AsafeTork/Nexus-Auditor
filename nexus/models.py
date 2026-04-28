@@ -20,6 +20,9 @@ class Organization(db.Model):
     id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     name = db.Column(db.String(200), nullable=False)
     created_utc = db.Column(db.String(40), default=utc_now)
+    # Optional per-org LLM defaults (override env vars in UI/worker)
+    llm_base_url_v1 = db.Column(db.String(1000), default="")
+    llm_model = db.Column(db.String(200), default="")
 
 
 class User(UserMixin, db.Model):

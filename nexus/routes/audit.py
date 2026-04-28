@@ -9,7 +9,7 @@ from flask_login import login_required, current_user
 from flask import session
 
 from .. import db
-from ..models import AuditEvent, AuditRun, Site, Subscription, is_subscription_active
+from ..models import AuditEvent, AuditRun, Organization, Site, Subscription, is_subscription_active
 from ..security import require_admin
 from ..services.queueing import enqueue_audit
 
@@ -91,8 +91,12 @@ def start_audit():
     if mode not in ("full", "fast"):
         mode = "full"
 
-    provider_base_url_v1 = (request.form.get("provider_base_url_v1") or "").strip() or os.getenv("LLM_BASE_URL_V1", "")
-    model = (request.form.get("model") or "").strip() or os.getenv("LLM_DEFAULT_MODEL", "deepseek-chat")
+    org = Organization.query.filter_by(id=current_user.org_id).first()
+    org_base = (getattr(org, "llm_base_url_v1", "") or "").strip()
+    org_model = (getattr(org, "llm_model", "") or "").strip()
+
+    provider_base_url_v1 = (request.form.get("provider_base_url_v1") or "").strip() or org_base or os.getenv("LLM_BASE_URL_V1", "")
+    model = (request.form.get("model") or "").strip() or org_model or os.getenv("LLM_DEFAULT_MODEL", "deepseek-chat")
     if not provider_base_url_v1:
         provider_base_url_v1 = "https://eclipse.mestredoblack.pro/v1"
 

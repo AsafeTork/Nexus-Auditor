@@ -5,7 +5,7 @@ from datetime import datetime, timedelta, timezone
 from flask import Blueprint, render_template, session
 from flask_login import login_required, current_user
 
-from ..models import Site, AuditRun, Subscription
+from ..models import Organization, Site, AuditRun, Subscription
 
 bp = Blueprint("dashboard", __name__)
 
@@ -13,6 +13,7 @@ bp = Blueprint("dashboard", __name__)
 @bp.get("/")
 @login_required
 def home():
+    org = Organization.query.filter_by(id=current_user.org_id).first()
     sites = Site.query.filter_by(org_id=current_user.org_id).order_by(Site.created_utc.desc()).limit(20).all()
     audits = AuditRun.query.filter_by(org_id=current_user.org_id).order_by(AuditRun.created_utc.desc()).limit(50).all()
     sub = Subscription.query.filter_by(org_id=current_user.org_id).first()
@@ -48,6 +49,10 @@ def home():
         sites=sites,
         audits=audits,
         sub=sub,
+        llm_defaults={
+            "base_url_v1": (getattr(org, "llm_base_url_v1", "") or "").strip(),
+            "model": (getattr(org, "llm_model", "") or "").strip(),
+        },
         kpi={
             "sites": sites_count,
             "audits": total_audits,
