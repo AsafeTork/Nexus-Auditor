@@ -3,7 +3,7 @@ from __future__ import annotations
 from flask import Blueprint, redirect, render_template, request, url_for, flash, session
 from flask_login import login_user, logout_user, login_required, current_user
 
-from .. import db, oauth
+from .. import db, oauth, limiter
 from ..models import Organization, User, Subscription
 
 bp = Blueprint("auth", __name__)
@@ -17,6 +17,7 @@ def login():
 
 
 @bp.post("/login")
+@limiter.limit("12 per minute; 60 per hour")
 def login_post():
     email = (request.form.get("email") or "").strip().lower()
     password = request.form.get("password") or ""

@@ -1,13 +1,12 @@
 {% extends "layout.html" %}
 {% block content %}
-<div class="letterhead rounded-2xl p-5">
+<div class="letterhead p-6">
   <div class="flex items-start justify-between gap-3">
     <div>
-      <div class="text-sm font-extrabold text-[#03A9F4]">Auditorias (Admin)</div>
-      <div class="text-xs text-slate-400">Clique para ver logs/eventos e copiar para suporte</div>
+      <div class="text-sm font-semibold text-brand-2">Audits</div>
+      <div class="text-xs text-muted">Open an audit to view logs/events.</div>
     </div>
-    <a class="text-xs font-extrabold px-3 py-2 rounded-xl border border-white/10 bg-slate-950/40 hover:bg-slate-950/60"
-       href="{{ url_for('admin.admin_home') }}">Voltar</a>
+    <a class="btn-secondary" href="{{ url_for('admin.admin_home') }}">Back</a>
   </div>
 
   <div class="mt-4 space-y-2">
@@ -31,9 +30,11 @@
             <summary class="list-none cursor-pointer btn-secondary rounded-xl px-3 py-2 text-[11px] font-extrabold bg-surface">⋯</summary>
             <div class="absolute right-0 mt-2 w-44 card2 p-2 z-10">
               <form method="post" action="{{ url_for('admin.admin_audit_publish_github', audit_id=a.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <button class="w-full text-left px-3 py-2 rounded-xl hover:bg-surface text-xs font-extrabold">Publicar no Git</button>
               </form>
               <form method="post" action="{{ url_for('admin.admin_audit_delete', audit_id=a.id) }}" onsubmit="return confirm('Excluir esta auditoria?');">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <button class="w-full text-left px-3 py-2 rounded-xl hover:bg-surface text-xs font-extrabold">Excluir</button>
               </form>
             </div>
@@ -41,7 +42,7 @@
         </div>
       </div>
     {% else %}
-      <div class="text-xs text-slate-400">Sem auditorias.</div>
+      <div class="text-xs text-muted">No audits yet.</div>
     {% endfor %}
   </div>
 </div>

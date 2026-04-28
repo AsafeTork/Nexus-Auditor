@@ -4,7 +4,7 @@
   <!-- Desktop/Tablet left image (47%) -->
   <div class="hidden md:block relative w-[47%] overflow-hidden">
     <img src="{{ url_for('static', filename='login_bg.jpg') }}" alt="" class="absolute inset-0 w-full h-full object-cover opacity-50" style="object-position: 15% 50%;"/>
-    <div class="absolute inset-0" style="background: linear-gradient(90deg, rgba(2,6,23,0.05) 0%, rgba(2,6,23,0.05) 55%, var(--app-bg) 100%);"></div>
+    <div class="absolute inset-0" style="background: linear-gradient(90deg, rgba(11,11,12,0.10) 0%, rgba(11,11,12,0.20) 55%, rgba(11,11,12,1) 100%);"></div>
   </div>
 
   <!-- Right login panel -->
@@ -13,30 +13,31 @@
       <div class="flex flex-col sm:flex-row sm:items-center gap-4">
         <img class="w-full sm:w-56 max-w-[320px] object-contain" alt="Nexus Auditor" src="{{ url_for('static', filename='logo_login_small.png') }}"/>
         <div class="sm:text-right">
-          <div class="text-lg font-extrabold tracking-tight">Entrar</div>
-          <div class="text-xs text-muted">Acesse seu painel</div>
+          <div class="text-base font-semibold tracking-tight">Sign in</div>
+          <div class="text-xs text-muted">Access your workspace</div>
         </div>
       </div>
 
       <form class="mt-6 space-y-3" method="post" action="{{ url_for('auth.login_post') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div>
-          <label class="text-xs text-muted">E-mail</label>
+          <label class="text-xs text-muted">Email</label>
           <input name="email" autocomplete="email" class="input mt-1 w-full rounded-xl px-3 py-2 text-sm" />
         </div>
         <div>
-          <label class="text-xs text-muted">Senha</label>
+          <label class="text-xs text-muted">Password</label>
           <input type="password" name="password" autocomplete="current-password" class="input mt-1 w-full rounded-xl px-3 py-2 text-sm" />
         </div>
-        <button class="btn-primary w-full rounded-xl px-4 py-2 font-extrabold">Entrar</button>
+        <button class="btn-primary w-full">Sign in</button>
       </form>
 
       <div class="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-2">
-        <a class="btn-secondary bg-surface rounded-xl px-4 py-2 text-xs font-extrabold text-center" href="{{ url_for('auth.oauth_start', provider='google') }}">Entrar com Google</a>
-        <a class="btn-secondary bg-surface rounded-xl px-4 py-2 text-xs font-extrabold text-center" href="{{ url_for('auth.oauth_start', provider='github') }}">Entrar com GitHub</a>
+        <a class="btn-secondary w-full text-center" href="{{ url_for('auth.oauth_start', provider='google') }}">Google</a>
+        <a class="btn-secondary w-full text-center" href="{{ url_for('auth.oauth_start', provider='github') }}">GitHub</a>
       </div>
 
-      <div class="mt-4 text-xs text-muted">
-        Novo? <a class="text-brand-2 underline" href="{{ url_for('auth.register') }}">Criar conta</a>
+      <div class="mt-5 text-sm text-muted">
+        New here? <a class="text-brand-2 underline" href="{{ url_for('auth.register') }}">Create account</a>
       </div>
     </div>
   </div>
@@ -44,7 +45,7 @@
 
 <!-- Mobile: seção extra para revelar MAIS imagem ao rolar (sem empurrar o login para cima) -->
 <div class="md:hidden h-[55vh] relative overflow-hidden">
-  <img loading="lazy" src="{{ url_for('static', filename='login_bg.jpg') }}" alt="" class="absolute inset-0 w-full h-full object-cover opacity-55" style="object-position: 15% 50%;"/>
-  <div class="absolute inset-0" style="background: linear-gradient(180deg, rgba(2,6,23,0.98) 0%, rgba(2,6,23,0.35) 45%, rgba(2,6,23,0.92) 100%);"></div>
+  <img loading="lazy" src="{{ url_for('static', filename='login_bg.jpg') }}" alt="" class="absolute inset-0 w-full h-full object-cover opacity-45" style="object-position: 15% 50%;"/>
+  <div class="absolute inset-0" style="background: linear-gradient(180deg, rgba(11,11,12,0.98) 0%, rgba(11,11,12,0.35) 45%, rgba(11,11,12,0.96) 100%);"></div>
 </div>
 {% endblock %}

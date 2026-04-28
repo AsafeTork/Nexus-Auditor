@@ -110,7 +110,7 @@ def is_org_admin(user: User) -> bool:
     if not user:
         return False
 
-    master = (os.getenv("MASTER_ADMIN_EMAIL", "asafetork@gmail.com") or "").strip().lower()
+    master = (os.getenv("MASTER_ADMIN_EMAIL", "") or "").strip().lower()
     if master and str(getattr(user, "email", "") or "").lower() == master:
         return True
 

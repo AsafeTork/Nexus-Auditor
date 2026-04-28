@@ -175,6 +175,9 @@ def run_audit_job(audit_id: str) -> None:
             try:
                 if log_buf:
                     audit.logs = (audit.logs or "") + "".join(log_buf)
+                    # Keep logs bounded to limit DB growth.
+                    if len(audit.logs) > 200_000:
+                        audit.logs = audit.logs[-200_000:]
                     log_buf.clear()
                 if md_buf:
                     audit.markdown_text = (audit.markdown_text or "") + "".join(md_buf)

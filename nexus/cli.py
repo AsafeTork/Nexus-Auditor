@@ -4,6 +4,7 @@ import click
 
 from . import db
 from .models import Organization, Subscription, User
+from .services.retention import cleanup_old_audit_events
 
 
 def register_cli(app):
@@ -47,3 +48,9 @@ def register_cli(app):
         db.session.commit()
         click.echo(f"Created user={u.email} role={u.role}")
 
+    @app.cli.command("cleanup")
+    @click.option("--keep-audit-events-days", default=30, show_default=True, type=int)
+    def cleanup(keep_audit_events_days: int):
+        """Cleanup old data to control DB growth."""
+        n = cleanup_old_audit_events(keep_days=keep_audit_events_days)
+        click.echo(f"Deleted audit_events rows: {n}")

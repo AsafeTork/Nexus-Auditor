@@ -3,14 +3,18 @@ from __future__ import annotations
 import json
 import os
 import re
+import socket
 import time
+import hashlib
 from dataclasses import dataclass
+from ipaddress import ip_address
 from typing import Dict, Generator, List, Tuple
 from urllib.parse import urlparse
 
 import requests
 from requests.adapters import HTTPAdapter
 from bs4 import BeautifulSoup
+import redis
 
 
 MAX_DOWNLOAD_BYTES = 5_000_000
@@ -27,6 +31,73 @@ _HTTP = requests.Session()
 _ADAPTER = HTTPAdapter(pool_connections=4, pool_maxsize=8, max_retries=0)
 _HTTP.mount("http://", _ADAPTER)
 _HTTP.mount("https://", _ADAPTER)
+
+# Redis cache (best-effort; disabled if Redis is unavailable)
+_REDIS: redis.Redis | None = None
+
+
+def _redis_conn() -> redis.Redis | None:
+    global _REDIS
+    if _REDIS is not None:
+        return _REDIS
+    try:
+        url = os.getenv("REDIS_URL", "")
+        if not url:
+            return None
+        _REDIS = redis.from_url(url, socket_connect_timeout=2, socket_timeout=2, decode_responses=True)
+        return _REDIS
+    except Exception:
+        return None
+
+
+def _llm_cache_key(
+    *,
+    kind: str,
+    base_url_v1: str,
+    model: str,
+    temperature: float,
+    system_prompt: str,
+    user_prompt: str,
+) -> str:
+    """
+    Stable cache key for identical inputs (minimize LLM costs).
+    """
+    h = hashlib.sha256()
+    h.update((kind or "llm").encode("utf-8"))
+    h.update(b"\n")
+    h.update((normalize_base_url_v1(base_url_v1) or "").encode("utf-8"))
+    h.update(b"\n")
+    h.update((model or "").encode("utf-8"))
+    h.update(b"\n")
+    h.update((str(float(temperature))).encode("utf-8"))
+    h.update(b"\n")
+    h.update((system_prompt or "").encode("utf-8"))
+    h.update(b"\n")
+    h.update((user_prompt or "").encode("utf-8"))
+    return "llm:" + h.hexdigest()
+
+
+def _cache_get_text(key: str) -> str | None:
+    r = _redis_conn()
+    if not r:
+        return None
+    try:
+        return r.get(key)
+    except Exception:
+        return None
+
+
+def _cache_set_text(key: str, value: str, ttl_s: int) -> None:
+    r = _redis_conn()
+    if not r:
+        return
+    try:
+        # Keep cached payloads bounded to avoid blowing up Redis memory.
+        if value and len(value) > 400_000:
+            value = value[:400_000]
+        r.set(key, value, ex=int(ttl_s))
+    except Exception:
+        return
 
 
 def normalize_base_url_v1(base_url_v1: str) -> str:
@@ -95,9 +166,23 @@ def stream_llm_text(
         "stream": True,
         "messages": [{"role": "system", "content": system_prompt}, {"role": "user", "content": user_prompt}],
     }
+    cache_key = _llm_cache_key(
+        kind="stream_text",
+        base_url_v1=base_url_v1,
+        model=model,
+        temperature=temperature,
+        system_prompt=system_prompt,
+        user_prompt=user_prompt,
+    )
+    cached = _cache_get_text(cache_key)
+    if cached:
+        yield cached
+        return
+
     r = _HTTP.post(url, headers=headers, json=payload, stream=True, timeout=timeout_s)
     r.encoding = "utf-8"
     r.raise_for_status()
+    acc = ""
     for raw in r.iter_lines(decode_unicode=True, chunk_size=2048):
         if not raw:
             continue
@@ -112,7 +197,11 @@ def stream_llm_text(
         except Exception:
             delta = ""
         if delta:
-            yield str(delta)
+            s = str(delta)
+            acc += s
+            yield s
+    if acc.strip():
+        _cache_set_text(cache_key, acc, ttl_s=int(os.getenv("LLM_CACHE_TTL_S", str(60 * 60 * 24 * 7))))
 
 
 MICRO_LAYERS = [
@@ -160,12 +249,85 @@ class FetchResult:
 
 
 def fetch_url_html(url: str) -> FetchResult:
+    # SSRF protection: allow only public http(s) targets
+    p = urlparse(url or "")
+    if p.scheme not in ("http", "https"):
+        raise ValueError("URL inválida: use http/https.")
+    host = (p.hostname or "").strip().lower()
+    if not host:
+        raise ValueError("URL inválida: host ausente.")
+    if host in ("localhost",) or host.endswith(".local"):
+        raise ValueError("Host bloqueado (SSRF).")
+
+    try:
+        infos = socket.getaddrinfo(host, p.port or (443 if p.scheme == "https" else 80), type=socket.SOCK_STREAM)
+        ips = {info[4][0] for info in infos if info and info[4]}
+    except Exception as e:
+        raise ValueError(f"Falha ao resolver DNS do host: {host}") from e
+
+    for ip in ips:
+        try:
+            ip_obj = ip_address(ip)
+        except Exception:
+            continue
+        if (
+            ip_obj.is_private
+            or ip_obj.is_loopback
+            or ip_obj.is_link_local
+            or ip_obj.is_multicast
+            or ip_obj.is_reserved
+            or ip_obj.is_unspecified
+        ):
+            raise ValueError(f"Host/IP bloqueado (SSRF): {host} -> {ip}")
+
     t0 = time.time()
     headers = {
         "User-Agent": "NexusAuditor-Pro/1.0",
         "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
     }
-    r = requests.get(url, headers=headers, timeout=FETCH_TIMEOUT_S, stream=True, allow_redirects=True)
+    # Follow redirects manually and re-validate each hop
+    current = url
+    r = None
+    for _ in range(5):
+        rr = requests.get(current, headers=headers, timeout=FETCH_TIMEOUT_S, stream=True, allow_redirects=False)
+        if rr.is_redirect or rr.is_permanent_redirect:
+            loc = rr.headers.get("Location", "")
+            rr.close()
+            if not loc:
+                r = rr
+                break
+            nxt = requests.compat.urljoin(current, loc)
+            pp = urlparse(nxt)
+            hh = (pp.hostname or "").strip().lower()
+            if not hh:
+                raise ValueError("Redirect inválido.")
+            if hh in ("localhost",) or hh.endswith(".local"):
+                raise ValueError("Redirect bloqueado (SSRF).")
+            try:
+                infos2 = socket.getaddrinfo(hh, pp.port or (443 if pp.scheme == "https" else 80), type=socket.SOCK_STREAM)
+                ips2 = {info[4][0] for info in infos2 if info and info[4]}
+            except Exception as e:
+                raise ValueError(f"Falha ao resolver DNS do redirect: {hh}") from e
+            for ip2 in ips2:
+                try:
+                    ip_obj2 = ip_address(ip2)
+                except Exception:
+                    continue
+                if (
+                    ip_obj2.is_private
+                    or ip_obj2.is_loopback
+                    or ip_obj2.is_link_local
+                    or ip_obj2.is_multicast
+                    or ip_obj2.is_reserved
+                    or ip_obj2.is_unspecified
+                ):
+                    raise ValueError(f"Redirect bloqueado (SSRF): {hh} -> {ip2}")
+            current = nxt
+            continue
+        r = rr
+        break
+    if r is None:
+        raise ValueError("Falha ao seguir redirect.")
     raw = bytearray()
     total = 0
     for chunk in r.iter_content(chunk_size=8192):
@@ -246,6 +408,30 @@ def stream_llm_events(
         "stream": True,
         "messages": [{"role": "system", "content": system_prompt}, {"role": "user", "content": user_prompt}],
     }
+    cache_key = _llm_cache_key(
+        kind="stream_events",
+        base_url_v1=base_url_v1,
+        model=model,
+        temperature=temperature,
+        system_prompt=system_prompt,
+        user_prompt=user_prompt,
+    )
+    cached = _cache_get_text(cache_key)
+    if cached:
+        # cached format: ---REPORT---\n...\n---CSV---\n...
+        try:
+            content2 = cached.split("---REPORT---", 1)[1] if "---REPORT---" in cached else cached
+        except Exception:
+            content2 = cached
+        report, csv_block = (content2.split("---CSV---", 1) + [""])[:2] if "---CSV---" in content2 else (content2, "")
+        for ln in report.splitlines():
+            if ln.strip():
+                yield ("DATA", ln)
+        for ln in csv_block.splitlines():
+            if ln.strip():
+                yield ("CSV_ROW", ln.strip("\r"))
+        return
+
     retry_statuses = {429, 502, 503, 504}
     backoffs = [2, 4, 8]
     last_exc: Exception | None = None
@@ -283,6 +469,8 @@ def stream_llm_events(
     buf = ""
     mode = "pre"
     last = time.time()
+    report_lines: list[str] = []
+    csv_lines: list[str] = []
 
     for raw in r.iter_lines(decode_unicode=True, chunk_size=2048):
         if (time.time() - last) >= LLM_HEARTBEAT_S:
@@ -321,12 +509,14 @@ def stream_llm_events(
                     if "\n" in buf:
                         parts = buf.split("\n")
                         for ln in parts[:-1]:
+                            report_lines.append(ln)
                             yield ("DATA", ln)
                         buf = parts[-1]
                     break
                 report_part = buf[:i]
                 for ln in report_part.split("\n"):
                     if ln.strip():
+                        report_lines.append(ln)
                         yield ("DATA", ln)
                 buf = buf[i + len("---CSV---") :]
                 mode = "csv"
@@ -336,9 +526,15 @@ def stream_llm_events(
                     parts = buf.split("\n")
                     for ln in parts[:-1]:
                         if ln.strip():
+                            csv_lines.append(ln.strip("\r"))
                             yield ("CSV_ROW", ln.strip("\r"))
                     buf = parts[-1]
                 break
+
+    # store cache as canonical content to allow replay
+    if report_lines or csv_lines:
+        cache_payload = "---REPORT---\n" + "\n".join(report_lines).strip() + "\n---CSV---\n" + "\n".join(csv_lines).strip()
+        _cache_set_text(cache_key, cache_payload, ttl_s=int(os.getenv("LLM_CACHE_TTL_S", str(60 * 60 * 24 * 7))))
 
 
 def call_llm_non_stream(
@@ -367,10 +563,22 @@ def call_llm_non_stream(
         "messages": [{"role": "system", "content": system_prompt}, {"role": "user", "content": user_prompt}],
     }
 
+    cache_key = _llm_cache_key(
+        kind="non_stream",
+        base_url_v1=base_url_v1,
+        model=model,
+        temperature=temperature,
+        system_prompt=system_prompt,
+        user_prompt=user_prompt,
+    )
+    cached = _cache_get_text(cache_key)
+    if cached:
+        return cached
+
     last_exc: Exception | None = None
     for attempt in range(3):
         try:
-            r = requests.post(url, headers=headers, json=payload, timeout=timeout_s)
+            r = _HTTP.post(url, headers=headers, json=payload, timeout=timeout_s)
             r.encoding = "utf-8"
             # Cloudflare / upstream timeouts
             if r.status_code in (520, 524, 502, 503, 504):
@@ -380,7 +588,10 @@ def call_llm_non_stream(
             r.raise_for_status()
             data = r.json()
             try:
-                return str(((data.get("choices") or [None])[0] or {}).get("message", {}).get("content") or "")
+                out = str(((data.get("choices") or [None])[0] or {}).get("message", {}).get("content") or "")
+                if out.strip():
+                    _cache_set_text(cache_key, out, ttl_s=int(os.getenv("LLM_CACHE_TTL_S", str(60 * 60 * 24 * 7))))
+                return out
             except Exception:
                 return ""
         except Exception as e:

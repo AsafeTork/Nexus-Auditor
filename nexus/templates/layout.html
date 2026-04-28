@@ -13,226 +13,200 @@
   <style>
     body{ font-family: Inter, ui-sans-serif, system-ui; }
     .mono{ font-family: "JetBrains Mono", ui-monospace, monospace; }
-    /* Theme tokens */
+    /* Minimalist dark-first design system (Stripe/Linear/Notion-inspired) */
     :root{
-      --app-bg: #020617;
-      --app-surface: rgba(15, 23, 42, .55);
-      --app-surface-2: rgba(2, 6, 23, .55);
-      --app-text: #e2e8f0;
-      --app-muted: #94a3b8;
-      /* keep borders VERY subtle (modern / clean) */
-      --app-border: rgba(148,163,184,.08);
-      --brand-1: #1A237E; /* Sapphire */
-      --brand-2: #03A9F4; /* Cyan */
-      --brand-border: rgba(3,169,244,.28);
-      --brand-weak: rgba(3,169,244,.10);
-      --brand-weak2: rgba(3,169,244,.14);
-    }
-    html.theme-light{
-      --app-bg: #f8fafc;
-      --app-surface: rgba(255,255,255,.9);
-      --app-surface-2: rgba(255,255,255,.7);
-      --app-text: #0f172a;
-      --app-muted: #475569;
-      --app-border: rgba(15,23,42,.14);
-      --brand-border: rgba(26,35,126,.25);
-      --brand-weak: rgba(26,35,126,.06);
-      --brand-weak2: rgba(3,169,244,.10);
+      --app-bg: #0B0B0C;
+      --app-surface: #111113;
+      --app-border: #1C1C1F;
+      --app-text: #EDEDED;
+      --app-muted: #9CA3AF;
+      --accent: #4F46E5;
+      --accent-weak: rgba(79,70,229,.14);
+      --danger: #ef4444;
+      --danger-weak: rgba(239,68,68,.14);
     }
 
     /* Utility classes (avoid heavy Tailwind rewrites) */
     .bg-app{ background: var(--app-bg); color: var(--app-text); }
     .bg-surface{ background: var(--app-surface); }
-    .bg-surface2{ background: var(--app-surface-2); }
+    .bg-surface2{ background: var(--app-surface); }
     .border-app{ border-color: var(--app-border); }
     .text-muted{ color: var(--app-muted); }
-    .text-brand-2{ color: var(--brand-2); }
-    .border-brand{ border-color: var(--brand-border); }
-    .bg-brand-weak{ background: var(--brand-weak); }
-    .bg-brand-weak2{ background: var(--brand-weak2); }
-    .btn-primary{
-      background: linear-gradient(90deg, var(--brand-1), var(--brand-2));
-      color: white;
-    }
-    .btn-primary:hover{ filter: brightness(1.05); }
-    .btn-secondary{
-      background: var(--app-surface-2);
-      border: 0;
-      color: var(--app-text);
-    }
+    .text-brand-2{ color: var(--accent); }
+    .border-brand{ border-color: rgba(79,70,229,.35); }
+    .bg-brand-weak{ background: var(--accent-weak); }
+    .bg-brand-weak2{ background: rgba(79,70,229,.20); }
 
-    /* Admin logo needs contrast (black logo) */
-    .logo-admin-wrap{ background: rgba(255,255,255,.92); }
-    html.theme-light .logo-admin-wrap{ background: rgba(255,255,255,.92); }
+    .btn, .btn-primary, .btn-secondary, .btn-danger{
+      display:inline-flex; align-items:center; justify-content:center; gap:8px;
+      border-radius: 12px;
+      padding: 10px 12px;
+      font-size: 13px;
+      font-weight: 600;
+      line-height: 1;
+      transition: transform .12s ease, background .12s ease, border-color .12s ease, opacity .12s ease;
+      user-select: none;
+    }
+    .btn:active{ transform: scale(.98); }
+    .btn-primary{ background: var(--accent); color: #fff; }
+    .btn-primary:hover{ opacity: .92; }
+    .btn-secondary{ background: transparent; border: 1px solid var(--app-border); color: var(--app-text); }
+    .btn-secondary:hover{ background: rgba(255,255,255,.03); }
+    .btn-danger{ background: var(--danger-weak); border: 1px solid rgba(239,68,68,.30); color: #fecaca; }
+    .btn-danger:hover{ background: rgba(239,68,68,.18); }
 
     /* Badges */
-    .badge{ display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:999px; font-size:11px; font-weight:800; letter-spacing:.01em; }
+    .badge{ display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:999px; font-size:11px; font-weight:700; letter-spacing:.01em; border:1px solid var(--app-border); background: rgba(255,255,255,.02); }
     .dot{ width:6px; height:6px; border-radius:999px; display:inline-block; }
-    .badge-muted{ background: rgba(148,163,184,.10); color: var(--app-text); }
-    .badge-ok{ background: rgba(16,185,129,.14); color: #34d399; }
-    .badge-warn{ background: rgba(245,158,11,.16); color: #fbbf24; }
-    .badge-err{ background: rgba(244,63,94,.14); color: #fb7185; }
-    .badge-run{ background: rgba(3,169,244,.12); color: var(--brand-2); }
+    .badge-muted{ color: var(--app-muted); }
+    .badge-ok{ border-color: rgba(16,185,129,.25); color: #6ee7b7; }
+    .badge-warn{ border-color: rgba(245,158,11,.30); color: #fbbf24; }
+    .badge-err{ border-color: rgba(239,68,68,.30); color: #fecaca; }
+    .badge-run{ border-color: rgba(79,70,229,.35); color: #c7d2fe; }
 
     /* Table */
     .table{ width:100%; border-collapse: separate; border-spacing:0; }
-    .table th{ text-align:left; font-size:11px; color: var(--app-muted); font-weight:800; padding:10px 12px; }
-    .table td{ padding:12px; vertical-align: top; }
-    .table tr{ background: var(--app-surface-2); }
-    .table tr + tr td{ border-top: 1px solid rgba(148,163,184,.06); }
-    .table-wrap{ overflow:auto; border-radius: 18px; box-shadow: 0 10px 30px rgba(0,0,0,.18); }
-    html.theme-light .table-wrap{ box-shadow: 0 14px 40px rgba(2,6,23,.06); }
+    .table th{ text-align:left; font-size:11px; color: var(--app-muted); font-weight:600; padding:10px 12px; border-bottom: 1px solid var(--app-border); background: rgba(255,255,255,.01); }
+    .table td{ padding:12px; vertical-align: top; border-bottom: 1px solid var(--app-border); }
+    .table tr:hover td{ background: rgba(255,255,255,.02); }
+    .table-wrap{ overflow:auto; border-radius: 12px; border: 1px solid var(--app-border); background: var(--app-surface); }
+
     .input{
-      background: rgba(2,6,23,.55);
-      border: 0;
+      background: var(--app-surface);
+      border: 1px solid var(--app-border);
       color: var(--app-text);
       outline: none;
     }
-    html.theme-light .input{ background: rgba(255,255,255,.95); }
     .input:focus{
-      box-shadow: 0 0 0 3px rgba(3,169,244,.18);
+      box-shadow: 0 0 0 3px rgba(79,70,229,.20);
+      border-color: rgba(79,70,229,.45);
     }
 
-    /* Modern cards (less contours, more depth) */
+    /* Cards */
     .card{
       background: var(--app-surface);
-      border: 0;
-      border-radius: 18px;
-      box-shadow: 0 12px 40px rgba(0,0,0,.35);
+      border: 1px solid var(--app-border);
+      border-radius: 12px;
     }
-    html.theme-light .card{ box-shadow: 0 14px 40px rgba(2,6,23,.08); }
     .card2{
-      background: var(--app-surface-2);
-      border: 0;
-      border-radius: 18px;
-      box-shadow: 0 10px 30px rgba(0,0,0,.25);
+      background: var(--app-surface);
+      border: 1px solid var(--app-border);
+      border-radius: 12px;
     }
 
-    /* Premium "digital letterhead" */
+    /* Premium but minimal "letterhead" */
     .letterhead{
-      background: radial-gradient(1200px 600px at 20% 0%, rgba(26,35,126,.16), rgba(2,6,23,0) 60%),
-                  radial-gradient(900px 500px at 100% 20%, rgba(3,169,244,.14), rgba(2,6,23,0) 55%);
-      border: 0;
-      border-radius: 18px;
-      box-shadow: 0 24px 80px rgba(0,0,0,.55);
+      background:
+        radial-gradient(900px 450px at 20% 0%, rgba(79,70,229,.14), rgba(11,11,12,0) 60%),
+        radial-gradient(900px 450px at 100% 20%, rgba(79,70,229,.10), rgba(11,11,12,0) 55%),
+        var(--app-surface);
+      border: 1px solid var(--app-border);
+      border-radius: 12px;
     }
 
-    /* Minimal markdown styling (works in dark/light) */
-    .md-render{ color: var(--app-text); font-size: 14px; line-height: 1.6; }
-    .md-render h1,.md-render h2,.md-render h3{ font-weight: 800; letter-spacing: -0.01em; margin: 14px 0 8px; }
-    .md-render h1{ font-size: 20px; }
-    .md-render h2{ font-size: 16px; color: var(--brand-2); }
-    .md-render h3{ font-size: 14px; }
-    .md-render p{ margin: 8px 0; }
-    .md-render ul{ margin: 8px 0 8px 18px; list-style: disc; }
-    .md-render ol{ margin: 8px 0 8px 18px; list-style: decimal; }
-    .md-render code{ font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 12px; padding: 2px 6px; border-radius: 10px; background: rgba(2,6,23,.55); border: 1px solid var(--app-border); }
-    html.theme-light .md-render code{ background: rgba(255,255,255,.9); }
-    .md-render pre{ overflow:auto; padding: 12px; border-radius: 14px; background: rgba(2,6,23,.55); border: 1px solid var(--app-border); }
-    html.theme-light .md-render pre{ background: rgba(255,255,255,.9); }
-    .md-render a{ color: var(--brand-2); text-decoration: underline; }
+    /* Minimal markdown styling */
+    .md-render{ color: var(--app-text); font-size: 14px; line-height: 1.65; }
+    .md-render h1,.md-render h2,.md-render h3{ font-weight: 600; letter-spacing: -0.01em; margin: 16px 0 8px; }
+    .md-render h1{ font-size: 18px; }
+    .md-render h2{ font-size: 15px; color: #c7d2fe; }
+    .md-render h3{ font-size: 14px; color: #e5e7eb; }
+    .md-render p{ margin: 10px 0; color: #e5e7eb; }
+    .md-render ul{ margin: 10px 0 10px 18px; list-style: disc; }
+    .md-render ol{ margin: 10px 0 10px 18px; list-style: decimal; }
+    .md-render code{ font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 12px; padding: 2px 6px; border-radius: 10px; background: rgba(255,255,255,.03); border: 1px solid var(--app-border); }
+    .md-render pre{ overflow:auto; padding: 12px; border-radius: 12px; background: rgba(255,255,255,.02); border: 1px solid var(--app-border); }
+    .md-render a{ color: #c7d2fe; text-decoration: underline; text-underline-offset: 3px; }
+
+    /* Sidebar */
+    .nav-link{ display:flex; align-items:center; gap:10px; padding:10px 10px; border-radius: 10px; color: var(--app-muted); font-size: 13px; font-weight: 600; }
+    .nav-link:hover{ background: rgba(255,255,255,.03); color: var(--app-text); }
+    .nav-link-active{ background: var(--accent-weak); color: var(--app-text); border: 1px solid rgba(79,70,229,.25); }
   </style>
 </head>
 <body class="bg-app">
   {% set logo_mark = ('logo_admin_mark_96.png' if current_user.is_authenticated and current_user.is_admin else 'logo_user_mark_96.png') %}
-  {% set logo_wrap_class = ('logo-admin-wrap' if current_user.is_authenticated and current_user.is_admin else 'bg-surface') %}
 
   {% block body %}
   <div class="min-h-screen">
-    <div class="max-w-7xl mx-auto px-4 py-5">
-
-      <!-- Top bar -->
-      <div class="flex items-center justify-between gap-4">
-        <div class="flex items-center gap-3">
-          <button id="menuBtn" class="lg:hidden btn-secondary rounded-xl px-3 py-2 text-sm font-extrabold bg-surface" type="button">
-            ☰
-          </button>
-          <div class="h-10 w-10 rounded-2xl {{ logo_wrap_class }} flex items-center justify-center overflow-hidden">
-            <img alt="Nexus" class="h-9 w-9 object-contain" src="{{ url_for('static', filename=logo_mark) }}"/>
-          </div>
-          <div>
-            <div class="text-lg font-extrabold tracking-tight">Nexus Auditor <span class="text-slate-200">SaaS</span> <span class="text-[#03A9F4]">Professional</span></div>
-            <div class="text-[11px] text-muted">Auditoria automatizada · Dossiê premium · Multi-tenant</div>
-          </div>
-        </div>
-
-        <div class="flex items-center gap-2">
-          <button id="themeToggle" class="btn-secondary rounded-xl px-3 py-2 text-[11px] font-extrabold bg-surface" type="button">
-            Alternar tema
-          </button>
-          <div class="hidden md:block mono text-[11px] px-3 py-2 rounded-xl bg-surface">
-            CPU <span id="cpuPct" class="text-slate-200">—</span> · MEM <span id="memPct" class="text-slate-200">—</span>
-          </div>
-          <div class="hidden md:block mono text-[11px] px-3 py-2 rounded-xl bg-surface">
-            UTC <span id="utcClock" class="text-slate-200">—</span>
-          </div>
-        </div>
-      </div>
-    {% with messages = get_flashed_messages(with_categories=true) %}
-      {% if messages %}
-        <div class="mt-4 space-y-2">
-          {% for cat, msg in messages %}
-            <div class="text-xs p-3 rounded-xl bg-surface">
-              <span class="font-extrabold">{{ cat }}</span>: {{ msg }}
-            </div>
-          {% endfor %}
-        </div>
-      {% endif %}
-    {% endwith %}
-
-    <div class="mt-4">
-      <div class="mt-5 grid grid-cols-12 gap-4">
-        <!-- Desktop sidebar -->
-        {% if current_user.is_authenticated %}
-          <aside class="hidden lg:block col-span-12 lg:col-span-3">
-            <div class="card p-3">
-              <div class="flex items-center gap-3 px-2 py-2">
-                <div class="h-10 w-10 rounded-2xl {{ logo_wrap_class }} flex items-center justify-center overflow-hidden">
-                  <img class="h-9 w-9 object-contain" alt="Nexus" src="{{ url_for('static', filename=logo_mark) }}"/>
-                </div>
-                <div>
-                  <div class="text-sm font-extrabold">Nexus Auditor</div>
-                  <div class="text-[11px] text-muted">Workspace</div>
-                </div>
+    {% if current_user.is_authenticated %}
+      <div class="flex min-h-screen">
+        <!-- Sidebar (desktop) -->
+        <aside class="hidden lg:flex w-60 shrink-0 border-r border-app">
+          <div class="w-full px-4 py-5">
+            <div class="flex items-center gap-3">
+              <div class="h-9 w-9 rounded-xl bg-brand-weak flex items-center justify-center overflow-hidden">
+                <img alt="Nexus" class="h-7 w-7 object-contain" src="{{ url_for('static', filename=logo_mark) }}"/>
               </div>
-              <div class="text-[11px] text-muted px-2 py-1">Navegação</div>
+              <div class="min-w-0">
+                <div class="text-sm font-semibold tracking-tight truncate">Nexus Auditor</div>
+                <div class="text-xs text-muted truncate">{{ current_user.email }}</div>
+              </div>
+            </div>
+            <div class="mt-5">
               {% include "_sidebar_nav.html" %}
             </div>
-          </aside>
-        {% endif %}
+          </div>
+        </aside>
 
-        <!-- Main content -->
-        <main class="{% if current_user.is_authenticated %}col-span-12 lg:col-span-9{% else %}col-span-12{% endif %}">
-          {% block content %}{% endblock %}
-        </main>
+        <!-- Main -->
+        <div class="flex-1 min-w-0">
+          <!-- Top navbar -->
+          <header class="sticky top-0 z-40 border-b border-app" style="background: rgba(11,11,12,.72); backdrop-filter: blur(10px);">
+            <div class="mx-auto max-w-6xl px-4 py-3 flex items-center justify-between gap-4">
+              <div class="flex items-center gap-3 min-w-0">
+                <button id="menuBtn" class="lg:hidden btn btn-secondary px-3 py-2" type="button">Menu</button>
+                <div class="min-w-0">
+                  <div class="text-sm font-semibold truncate">{{ title or "Dashboard" }}</div>
+                  <div class="text-xs text-muted truncate">Org {{ current_user.org_id }}</div>
+                </div>
+              </div>
+              <div class="flex items-center gap-2">
+                <a class="btn btn-secondary px-3 py-2" href="{{ url_for('auth.logout') }}">Logout</a>
+              </div>
+            </div>
+          </header>
+
+          <main class="mx-auto max-w-6xl px-4 py-6">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+              {% if messages %}
+                <div class="mb-6 space-y-2">
+                  {% for cat, msg in messages %}
+                    <div class="card px-4 py-3 text-sm">
+                      <span class="font-semibold">{{ cat }}</span>
+                      <span class="text-muted">—</span>
+                      {{ msg }}
+                    </div>
+                  {% endfor %}
+                </div>
+              {% endif %}
+            {% endwith %}
+            {% block content %}{% endblock %}
+          </main>
+        </div>
       </div>
-    </div>
-  </div>
+    {% else %}
+      <main class="min-h-screen">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            <div class="mx-auto max-w-lg px-4 pt-6 space-y-2">
+              {% for cat, msg in messages %}
+                <div class="card px-4 py-3 text-sm">
+                  <span class="font-semibold">{{ cat }}</span>
+                  <span class="text-muted">—</span>
+                  {{ msg }}
+                </div>
+              {% endfor %}
+            </div>
+          {% endif %}
+        {% endwith %}
+        {% block content %}{% endblock %}
+      </main>
+    {% endif %}
   {% endblock %}
 
   <script>
     // Wait DOM ready so mobile sidebar elements exist even if rendered after this script.
     document.addEventListener("DOMContentLoaded", () => {
-      // Theme toggle (dark/light)
-      (function(){
-        const key = "nexus_theme";
-        const saved = localStorage.getItem(key);
-        if(saved === "light"){ document.documentElement.classList.add("theme-light"); }
-        const btn = document.getElementById("themeToggle");
-        function label(){
-          const isLight = document.documentElement.classList.contains("theme-light");
-          if(btn) btn.textContent = isLight ? "Tema: claro" : "Tema: dark";
-        }
-        label();
-        if(btn){
-          btn.addEventListener("click", () => {
-            document.documentElement.classList.toggle("theme-light");
-            localStorage.setItem(key, document.documentElement.classList.contains("theme-light") ? "light" : "dark");
-            label();
-          });
-        }
-      })();
-
       // Mobile sidebar (drawer)
       (function(){
         const btn = document.getElementById("menuBtn");
@@ -253,30 +227,6 @@
         const closeBtn = document.getElementById("sidebarClose");
         if(closeBtn) closeBtn.addEventListener("click", close);
       })();
-
-      // Small UI polish: UTC clock + simulated CPU/MEM.
-      function pad(n){ return String(n).padStart(2,'0'); }
-      function tickUTC(){
-        try{
-          const d = new Date();
-          const t = pad(d.getUTCHours()) + ":" + pad(d.getUTCMinutes()) + ":" + pad(d.getUTCSeconds());
-          const el = document.getElementById("utcClock");
-          if(el) el.textContent = t;
-        }catch(e){}
-      }
-      function tickPerf(){
-        try{
-          const cpu = 12 + Math.round(Math.random()*35);
-          const mem = 28 + Math.round(Math.random()*45);
-          const a = document.getElementById("cpuPct");
-          const b = document.getElementById("memPct");
-          if(a) a.textContent = cpu + "%";
-          if(b) b.textContent = mem + "%";
-        }catch(e){}
-      }
-      tickUTC(); tickPerf();
-      setInterval(tickUTC, 1000);
-      setInterval(tickPerf, 2500);
     });
 
   </script>
@@ -284,21 +234,22 @@
   {% if current_user.is_authenticated %}
   <!-- Mobile sidebar overlay -->
   <div id="sidebarOverlay" class="hidden lg:hidden fixed inset-0 z-50 bg-black/60">
-    <div id="sidebarPanel" class="absolute left-0 top-0 h-full w-[86%] max-w-sm bg-app p-4 -translate-x-full transition-transform duration-200">
+    <div id="sidebarPanel" class="absolute left-0 top-0 h-full w-[86%] max-w-sm bg-app p-4 -translate-x-full transition-transform duration-200 border-r border-app">
       <div class="flex items-center justify-between">
         <div class="flex items-center gap-3">
-          <div class="h-10 w-10 rounded-2xl {{ logo_wrap_class }} flex items-center justify-center overflow-hidden">
-            <img class="h-9 w-9 object-contain" alt="Nexus" src="{{ url_for('static', filename=logo_mark) }}"/>
+          <div class="h-9 w-9 rounded-xl bg-brand-weak flex items-center justify-center overflow-hidden">
+            <img class="h-7 w-7 object-contain" alt="Nexus" src="{{ url_for('static', filename=logo_mark) }}"/>
           </div>
-          <div>
-            <div class="text-sm font-extrabold">Nexus Auditor</div>
-            <div class="text-[11px] text-muted">Menu</div>
+          <div class="min-w-0">
+            <div class="text-sm font-semibold truncate">Nexus Auditor</div>
+            <div class="text-xs text-muted truncate">{{ current_user.email }}</div>
           </div>
         </div>
-        <button id="sidebarClose" class="btn-secondary rounded-xl px-3 py-2 text-sm font-extrabold bg-surface" type="button">✕</button>
+        <button id="sidebarClose" class="btn btn-secondary px-3 py-2" type="button">Close</button>
       </div>
-      <div class="mt-3 text-[11px] text-muted">Navegação</div>
-      {% include "_sidebar_nav.html" %}
+      <div class="mt-4">
+        {% include "_sidebar_nav.html" %}
+      </div>
     </div>
   </div>
   {% endif %}

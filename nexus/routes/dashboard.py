@@ -9,6 +9,7 @@ from flask_login import login_required, current_user
 
 from .. import db
 from ..models import Organization, Site, AuditRun, Subscription
+from ..services.cache import cache_get_json, cache_set_json
 
 bp = Blueprint("dashboard", __name__)
 
@@ -42,30 +43,39 @@ def home():
 
     # KPIs
     sites_count = len(sites)
-    status_counts = {"queued": 0, "running": 0, "done": 0, "error": 0}
-    rows = (
-        db.session.query(AuditRun.status, func.count())
-        .filter_by(org_id=current_user.org_id)
-        .group_by(AuditRun.status)
-        .all()
-    )
-    for st, cnt in rows:
-        key = str(st or "queued")
-        status_counts[key] = int(cnt or 0)
-    total_audits = sum(status_counts.values())
+    cache_key = f"dash:{current_user.org_id}:kpi_v1"
+    cached = cache_get_json(cache_key)
+    if cached:
+        status_counts = cached.get("status_counts") or {"queued": 0, "running": 0, "done": 0, "error": 0}
+        trend = cached.get("trend") or {"labels": [], "counts": []}
+        total_audits = int(cached.get("total_audits") or 0)
+    else:
+        status_counts = {"queued": 0, "running": 0, "done": 0, "error": 0}
+        rows = (
+            db.session.query(AuditRun.status, func.count())
+            .filter_by(org_id=current_user.org_id)
+            .group_by(AuditRun.status)
+            .all()
+        )
+        for st, cnt in rows:
+            key = str(st or "queued")
+            status_counts[key] = int(cnt or 0)
+        total_audits = sum(status_counts.values())
 
-    # Simple 7-day trend (based on created_utc ISO strings)
-    today = datetime.now(timezone.utc).date()
-    days = [today - timedelta(days=i) for i in range(6, -1, -1)]
-    labels = [d.strftime("%d/%m") for d in days]
-    counts = [0 for _ in days]
-    for a in audits:
-        try:
-            d = datetime.fromisoformat(a.created_utc).date()
-            if d in days:
-                counts[days.index(d)] += 1
-        except Exception:
-            pass
+        # Simple 7-day trend (based on created_utc ISO strings)
+        today = datetime.now(timezone.utc).date()
+        days = [today - timedelta(days=i) for i in range(6, -1, -1)]
+        labels = [d.strftime("%d/%m") for d in days]
+        counts = [0 for _ in days]
+        for a in audits:
+            try:
+                d = datetime.fromisoformat(a.created_utc).date()
+                if d in days:
+                    counts[days.index(d)] += 1
+            except Exception:
+                pass
+        trend = {"labels": labels, "counts": counts}
+        cache_set_json(cache_key, {"status_counts": status_counts, "trend": trend, "total_audits": total_audits}, ttl_s=300)
 
     return render_template(
         "dashboard/home.html",
@@ -82,6 +92,6 @@ def home():
             "done": status_counts.get("done", 0),
             "errors": status_counts.get("error", 0),
         },
-        trend={"labels": labels, "counts": counts},
+        trend=trend,
         status_counts=status_counts,
     )

@@ -1,68 +1,91 @@
 {% extends "layout.html" %}
 {% block content %}
-<div class="grid grid-cols-1 lg:grid-cols-3 gap-3">
-  <div class="lg:col-span-2 border border-white/10 rounded-2xl bg-slate-900/20 p-5">
-    <div class="text-sm font-extrabold">Configurações (Organização)</div>
-    <div class="mt-2 text-xs text-slate-400">Org ID: <span class="mono text-slate-200">{{ current_user.org_id }}</span></div>
-    <div class="mt-2 text-xs text-slate-400">Seu papel: <span class="text-slate-200 font-bold">{{ current_user.role or "member" }}</span></div>
-    <div class="mt-2 text-xs text-slate-500">Master: <span class="mono">{{ master_email }}</span></div>
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+  <section class="lg:col-span-2 card p-6">
+    <div class="flex items-start justify-between gap-4">
+      <div>
+        <div class="text-sm font-semibold">Organization</div>
+        <div class="mt-2 text-xs text-muted">Org ID: <span class="mono">{{ current_user.org_id }}</span></div>
+        <div class="mt-1 text-xs text-muted">Role: <span class="font-semibold">{{ current_user.role or "member" }}</span></div>
+        <div class="mt-1 text-xs text-muted">Master: <span class="mono">{{ master_email or "—" }}</span></div>
+      </div>
+    </div>
 
-    <div class="mt-6 text-sm font-extrabold">Usuários</div>
-    <div class="mt-2 space-y-2">
-      {% for u in users %}
-        <div class="border border-white/10 rounded-xl bg-slate-950/40 p-3 flex items-center justify-between">
-          <div>
-            <div class="mono text-xs text-slate-200">{{ u.email }}</div>
-            <div class="text-[11px] text-slate-500">{{ u.role }} · {{ u.created_utc }}</div>
-          </div>
-          {% if is_master and u.email != master_email %}
-            <div class="flex items-center gap-2">
-              {% if u.role == 'admin' %}
-                <form method="post" action="{{ url_for('settings.make_member', user_id=u.id) }}">
-                  <button class="text-[11px] font-extrabold px-3 py-2 rounded-xl border border-white/10 bg-slate-950/50 hover:bg-slate-950/70">Remover admin</button>
-                </form>
-              {% else %}
-                <form method="post" action="{{ url_for('settings.make_admin', user_id=u.id) }}">
-                  <button class="text-[11px] font-extrabold px-3 py-2 rounded-xl bg-gradient-to-r from-[#1A237E] to-[#03A9F4] text-white">Tornar admin</button>
-                </form>
-              {% endif %}
-            </div>
-          {% endif %}
-        </div>
-      {% endfor %}
+    <div class="mt-6">
+      <div class="text-sm font-semibold">Users</div>
+      <div class="mt-3 table-wrap">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Email</th>
+              <th>Role</th>
+              <th>Created</th>
+              <th class="text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for u in users %}
+              <tr>
+                <td class="mono text-xs">{{ u.email }}</td>
+                <td class="text-sm text-muted">{{ u.role }}</td>
+                <td class="text-sm text-muted">{{ u.created_utc }}</td>
+                <td class="text-right">
+                  {% if is_master and u.email != master_email %}
+                    {% if u.role == 'admin' %}
+                      <form class="inline" method="post" action="{{ url_for('settings.make_member', user_id=u.id) }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button class="btn-secondary">Remove admin</button>
+                      </form>
+                    {% else %}
+                      <form class="inline" method="post" action="{{ url_for('settings.make_admin', user_id=u.id) }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button class="btn-primary">Make admin</button>
+                      </form>
+                    {% endif %}
+                  {% else %}
+                    <span class="text-xs text-muted">—</span>
+                  {% endif %}
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
     </div>
 
     {% if is_admin %}
-      <form class="mt-4 grid grid-cols-1 md:grid-cols-3 gap-2" method="post" action="{{ url_for('settings.create_user') }}">
-        <input name="email" placeholder="email@dominio.com" class="rounded-xl bg-slate-950 border border-white/10 px-3 py-2 text-sm focus:ring-2 focus:ring-[#1A237E] focus:border-[#1A237E] outline-none" />
-        <input name="password" placeholder="senha (mín. 8)" class="rounded-xl bg-slate-950 border border-white/10 px-3 py-2 text-sm focus:ring-2 focus:ring-[#1A237E] focus:border-[#1A237E] outline-none" />
-        <select name="role" class="rounded-xl bg-slate-950 border border-white/10 px-3 py-2 text-sm focus:ring-2 focus:ring-[#1A237E] focus:border-[#1A237E] outline-none">
-          <option value="member">member</option>
-          <option value="admin">admin</option>
-        </select>
-        <button class="md:col-span-3 rounded-xl px-4 py-2 font-extrabold bg-gradient-to-r from-[#1A237E] to-[#03A9F4] text-white">Criar usuário</button>
-      </form>
+      <div class="mt-6">
+        <div class="text-sm font-semibold">Create user</div>
+        <form class="mt-3 grid grid-cols-1 md:grid-cols-3 gap-3" method="post" action="{{ url_for('settings.create_user') }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input name="email" placeholder="email@domain.com" class="input rounded-xl px-3 py-2 text-sm" />
+          <input name="password" placeholder="password (min 8)" class="input rounded-xl px-3 py-2 text-sm" />
+          <select name="role" class="input rounded-xl px-3 py-2 text-sm">
+            <option value="member">member</option>
+            <option value="admin">admin</option>
+          </select>
+          <button class="md:col-span-3 btn-primary">Create user</button>
+        </form>
+      </div>
     {% endif %}
-  </div>
+  </section>
 
-  <div class="lg:col-span-1 border border-white/10 rounded-2xl bg-slate-900/20 p-5">
-    <div class="text-sm font-extrabold">Assinatura</div>
-    <div class="mt-2 text-xs text-slate-400">Status: <span class="text-slate-200 font-bold">{{ sub.status if sub else "inactive" }}</span></div>
-    <div class="mt-2 text-xs text-slate-400">
-      Stripe Customer: <span class="mono text-slate-300">{{ sub.stripe_customer_id if sub else "" }}</span>
-    </div>
-    <div class="mt-2 text-xs text-slate-400">
-      Stripe Sub: <span class="mono text-slate-300">{{ sub.stripe_subscription_id if sub else "" }}</span>
-    </div>
+  <aside class="lg:col-span-1 card p-6">
+    <div class="text-sm font-semibold">Billing</div>
+    <div class="mt-2 text-xs text-muted">Status: <span class="font-semibold">{{ sub.status if sub else "inactive" }}</span></div>
+    <div class="mt-3 text-xs text-muted">Stripe customer: <span class="mono">{{ sub.stripe_customer_id if sub else "" }}</span></div>
+    <div class="mt-1 text-xs text-muted">Stripe subscription: <span class="mono">{{ sub.stripe_subscription_id if sub else "" }}</span></div>
 
     {% if is_admin %}
-      <form class="mt-4" method="post" action="{{ url_for('billing.create_checkout') }}">
-        <button class="w-full rounded-xl px-4 py-2 font-extrabold bg-gradient-to-r from-[#1A237E] to-[#03A9F4] text-white">Ativar/Alterar plano (Stripe)</button>
+      <form class="mt-5" method="post" action="{{ url_for('billing.create_checkout') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button class="btn-primary w-full">Manage plan</button>
       </form>
-      <form class="mt-2" method="post" action="{{ url_for('settings.reset_subscription') }}">
-        <button class="w-full rounded-xl px-4 py-2 font-bold bg-slate-950 border border-white/10 text-slate-100">Reset (debug)</button>
+      <form class="mt-3" method="post" action="{{ url_for('settings.reset_subscription') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button class="btn-danger w-full">Reset (debug)</button>
       </form>
     {% endif %}
-  </div>
+  </aside>
 </div>
 {% endblock %}

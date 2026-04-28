@@ -10,11 +10,16 @@ from flask_login import LoginManager
 from flask_migrate import Migrate
 from flask_sqlalchemy import SQLAlchemy
 from authlib.integrations.flask_client import OAuth
+from flask_wtf.csrf import CSRFProtect
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 
 db = SQLAlchemy()
 migrate = Migrate()
 login_manager = LoginManager()
 oauth = OAuth()
+csrf = CSRFProtect()
+limiter = Limiter(key_func=get_remote_address, default_limits=[])
 
 
 def create_app() -> Flask:
@@ -50,6 +55,10 @@ def create_app() -> Flask:
     login_manager.init_app(app)
     login_manager.login_view = "auth.login"
     oauth.init_app(app)
+    csrf.init_app(app)
+    # Rate limiting (prefer Redis if available)
+    limiter.storage_uri = os.getenv("REDIS_URL", "") or "memory://"
+    limiter.init_app(app)
 
     # OAuth providers (optional)
     google_id = os.getenv("OAUTH_GOOGLE_CLIENT_ID", "")

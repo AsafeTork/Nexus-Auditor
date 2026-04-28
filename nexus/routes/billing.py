@@ -6,7 +6,7 @@ import stripe
 from flask import Blueprint, current_app, redirect, request, url_for, jsonify
 from flask_login import login_required, current_user
 
-from .. import db
+from .. import db, csrf
 from ..models import Subscription
 
 bp = Blueprint("billing", __name__)
@@ -47,6 +47,7 @@ def create_checkout():
 
 
 @bp.post("/webhook")
+@csrf.exempt
 def webhook():
     """
     Stripe webhook to update subscription status.
@@ -96,4 +97,3 @@ def webhook():
             set_sub(org_id, "canceled", customer=data.get("customer", ""), sub_id=data.get("id", ""))
 
     return "ok", 200
-

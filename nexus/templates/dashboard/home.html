@@ -1,16 +1,18 @@
 {% extends "layout.html" %}
 {% block content %}
-<div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
   <!-- Main -->
   <section class="lg:col-span-8 space-y-4">
     <!-- LLM config (provider + model) -->
-    <div class="card p-4">
+    <div class="card p-6">
       <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
         <div>
-          <div class="text-sm font-extrabold">IA · Provedor e Modelo</div>
-          <div class="text-[11px] text-muted">Escolha o provedor e carregue modelos (GET /v1/models). Salva no seu navegador.</div>
+          <div class="text-sm font-semibold">AI provider</div>
+          <div class="text-xs text-muted">Select provider + model. Loads models via <span class="mono">GET /v1/models</span>.</div>
         </div>
-        <a class="text-xs text-brand-2 underline" href="{{ url_for('admin.ui_lab') if current_user.is_admin else '#' }}">UI Lab</a>
+        {% if current_user.is_admin %}
+          <a class="text-xs text-brand-2 underline" href="{{ url_for('admin.ui_lab') }}">UI Lab</a>
+        {% endif %}
       </div>
       <div class="mt-3 grid grid-cols-1 md:grid-cols-3 gap-2">
         <input id="llmBase" class="input rounded-xl px-3 py-2 text-sm" placeholder="https://seu-provedor/v1" value="{{ llm_defaults.base_url_v1 or config['LLM_BASE_URL_V1'] }}"/>
@@ -18,28 +20,28 @@
           {% set _m = (llm_defaults.model or config['LLM_DEFAULT_MODEL']) %}
           <option value="{{ _m }}">{{ _m }}</option>
         </select>
-        <button type="button" class="btn-secondary bg-surface rounded-xl px-4 py-2 font-extrabold" onclick="loadModels()">Carregar modelos</button>
+        <button type="button" class="btn-secondary" onclick="loadModels()">Load models</button>
       </div>
-      <div class="mt-2 text-[11px] text-muted">Dica: use somente o base <span class="mono">.../v1</span> (não cole <span class="mono">/chat/completions</span>).</div>
+      <div class="mt-2 text-xs text-muted">Tip: use only the base <span class="mono">.../v1</span> (do not paste <span class="mono">/chat/completions</span>).</div>
     </div>
 
     <!-- KPI cards -->
-    <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
-      <div class="card2 p-4">
-        <div class="text-[11px] text-muted">Sites</div>
-        <div class="mt-1 text-3xl font-extrabold">{{ kpi.sites }}</div>
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div class="card p-6">
+        <div class="text-xs text-muted">Sites</div>
+        <div class="mt-2 text-2xl font-semibold">{{ kpi.sites }}</div>
       </div>
-      <div class="card2 p-4">
-        <div class="text-[11px] text-muted">Auditorias</div>
-        <div class="mt-1 text-3xl font-extrabold">{{ kpi.audits }}</div>
+      <div class="card p-6">
+        <div class="text-xs text-muted">Audits</div>
+        <div class="mt-2 text-2xl font-semibold">{{ kpi.audits }}</div>
       </div>
-      <div class="card2 p-4">
-        <div class="text-[11px] text-muted">Concluídas</div>
-        <div class="mt-1 text-3xl font-extrabold text-brand-2">{{ kpi.done }}</div>
+      <div class="card p-6">
+        <div class="text-xs text-muted">Done</div>
+        <div class="mt-2 text-2xl font-semibold">{{ kpi.done }}</div>
       </div>
-      <div class="card2 p-4">
-        <div class="text-[11px] text-muted">Erros</div>
-        <div class="mt-1 text-3xl font-extrabold" style="color:#fb7185">{{ kpi.errors }}</div>
+      <div class="card p-6">
+        <div class="text-xs text-muted">Errors</div>
+        <div class="mt-2 text-2xl font-semibold">{{ kpi.errors }}</div>
       </div>
     </div>
 
@@ -139,7 +141,7 @@
                 {% elif a.status == 'error' %}
                   <span class="badge badge-err"><span class="dot" style="background:#fb7185"></span>ERROR</span>
                 {% elif a.status == 'running' %}
-                  <span class="badge badge-run"><span class="dot" style="background:#03A9F4"></span>RUNNING</span>
+                  <span class="badge badge-run"><span class="dot" style="background:#4F46E5"></span>RUNNING</span>
                 {% else %}
                   <span class="badge badge-muted"><span class="dot" style="background:#94a3b8"></span>QUEUED</span>
                 {% endif %}
@@ -155,9 +157,11 @@
                     <summary class="list-none cursor-pointer btn-secondary rounded-xl px-3 py-2 text-xs font-extrabold bg-surface">⋯</summary>
                     <div class="absolute right-0 mt-2 w-48 card2 p-2 z-10">
                       <form method="post" action="{{ url_for('admin.admin_audit_publish_github', audit_id=a.id) }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <button class="w-full text-left px-3 py-2 rounded-xl hover:bg-surface text-xs font-extrabold">Publicar no Git</button>
                       </form>
                       <form method="post" action="{{ url_for('admin.admin_audit_delete', audit_id=a.id) }}" onsubmit="return confirm('Excluir esta auditoria?');">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                         <button class="w-full text-left px-3 py-2 rounded-xl hover:bg-surface text-xs font-extrabold">Excluir</button>
                       </form>
                     </div>
@@ -187,7 +191,7 @@
                 {% elif a.status == 'error' %}
                   <span class="badge badge-err"><span class="dot" style="background:#fb7185"></span>ERROR</span>
                 {% elif a.status == 'running' %}
-                  <span class="badge badge-run"><span class="dot" style="background:#03A9F4"></span>RUNNING</span>
+                  <span class="badge badge-run"><span class="dot" style="background:#4F46E5"></span>RUNNING</span>
                 {% else %}
                   <span class="badge badge-muted"><span class="dot" style="background:#94a3b8"></span>QUEUED</span>
                 {% endif %}
@@ -200,9 +204,11 @@
                   <summary class="list-none cursor-pointer btn-secondary rounded-xl px-3 py-2 text-xs font-extrabold bg-surface">⋯</summary>
                   <div class="absolute right-0 mt-2 w-48 card2 p-2 z-10">
                     <form method="post" action="{{ url_for('admin.admin_audit_publish_github', audit_id=a.id) }}">
+                      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                       <button class="w-full text-left px-3 py-2 rounded-xl hover:bg-surface text-xs font-extrabold">Publicar no Git</button>
                     </form>
                     <form method="post" action="{{ url_for('admin.admin_audit_delete', audit_id=a.id) }}" onsubmit="return confirm('Excluir esta auditoria?');">
+                      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                       <button class="w-full text-left px-3 py-2 rounded-xl hover:bg-surface text-xs font-extrabold">Excluir</button>
                     </form>
                   </div>
@@ -225,6 +231,7 @@
         </div>
       </div>
       <form class="mt-4 grid grid-cols-1 md:grid-cols-3 gap-2" method="post" action="{{ url_for('audit.create_site') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <input name="name" placeholder="Nome (ex.: Loja X)" class="input rounded-xl px-3 py-2 text-sm" />
         <input name="base_url" placeholder="https://exemplo.com" class="input md:col-span-2 rounded-xl px-3 py-2 text-sm" />
         <button class="auditStartBtn btn-primary md:col-span-3 rounded-xl px-4 py-2 font-extrabold">Salvar site</button>
@@ -240,6 +247,7 @@
               </div>
               <div class="flex flex-col md:flex-row items-stretch md:items-center gap-2 w-full md:w-auto">
                 <form method="post" action="{{ url_for('audit.start_audit') }}" class="grid grid-cols-1 md:grid-cols-3 gap-2 items-center w-full md:w-auto">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                   <input type="hidden" name="site_id" value="{{ s.id }}"/>
                   <input name="provider_base_url_v1" value="{{ llm_defaults.base_url_v1 or config['LLM_BASE_URL_V1'] }}" class="mono hidden md:block w-64 input rounded-xl px-3 py-2 text-xs llmBaseField"/>
                   <input name="model" value="{{ llm_defaults.model or config['LLM_DEFAULT_MODEL'] }}" class="mono hidden md:block w-44 input rounded-xl px-3 py-2 text-xs llmModelField"/>
@@ -255,6 +263,7 @@
 
                 {% if current_user.is_admin %}
                   <form method="post" action="{{ url_for('audit.delete_site', site_id=s.id) }}" onsubmit="return confirm('Excluir este site e TODAS as auditorias dele?');">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <button class="btn-secondary rounded-xl px-4 py-2 font-extrabold">Excluir</button>
                   </form>
                 {% endif %}
@@ -284,6 +293,7 @@
         </div>
       {% endif %}
       <form class="mt-4" method="post" action="{{ url_for('billing.create_checkout') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <button class="btn-primary w-full rounded-xl px-4 py-2 font-extrabold">Ativar/Alterar (Stripe)</button>
       </form>
       <div class="mt-3 text-[11px] text-muted">Você pode vender por relatório no começo e ativar recorrência depois.</div>
@@ -337,7 +347,7 @@
       gradient.addColorStop(1, "rgba(26,35,126,0.05)");
       new Chart(ctx, {
         type: "line",
-        data: { labels, datasets: [{ label: "Auditorias", data, fill: true, tension: 0.35, borderColor: "#03A9F4", backgroundColor: gradient, pointRadius: 3, pointBackgroundColor: "#03A9F4" }]},
+        data: { labels, datasets: [{ label: "Audits", data, fill: true, tension: 0.35, borderColor: "#4F46E5", backgroundColor: gradient, pointRadius: 3, pointBackgroundColor: "#4F46E5" }]},
         options: {
           responsive: true,
           maintainAspectRatio: false,
