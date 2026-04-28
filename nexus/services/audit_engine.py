@@ -20,6 +20,23 @@ LLM_TIMEOUT_S = 600
 LLM_HEARTBEAT_S = 10
 
 
+def normalize_base_url_v1(base_url_v1: str) -> str:
+    """
+    Normaliza o endpoint OpenAI-compatible.
+    O usuário deve passar algo como:
+      - https://host/v1
+    (NÃO a rota completa /chat/completions)
+    """
+    u = (base_url_v1 or "").strip()
+    if not u:
+        return ""
+    u = u.split("#", 1)[0].split("?", 1)[0].rstrip("/")
+    # Se o usuário colar a rota completa, removemos para evitar duplicação
+    if u.endswith("/chat/completions"):
+        u = u[: -len("/chat/completions")].rstrip("/")
+    return u
+
+
 MICRO_LAYERS = [
     "1. Headers & SSL (Infra)",
     "2. Vulnerabilidades de Script (Segurança)",
@@ -144,7 +161,7 @@ def stream_llm_events(
     if api_key:
         headers["Authorization"] = f"Bearer {api_key}"
 
-    url = base_url_v1.rstrip("/") + "/chat/completions"
+    url = normalize_base_url_v1(base_url_v1).rstrip("/") + "/chat/completions"
     payload = {
         "model": model,
         "temperature": float(temperature),
@@ -234,19 +251,39 @@ def call_llm_non_stream(
     if api_key:
         headers["Authorization"] = f"Bearer {api_key}"
 
-    url = base_url_v1.rstrip("/") + "/chat/completions"
+    url = normalize_base_url_v1(base_url_v1).rstrip("/") + "/chat/completions"
     payload = {
         "model": model,
         "temperature": float(temperature),
         "stream": False,
         "messages": [{"role": "system", "content": system_prompt}, {"role": "user", "content": user_prompt}],
     }
-    r = requests.post(url, headers=headers, json=payload, timeout=timeout_s)
-    r.encoding = "utf-8"
-    r.raise_for_status()
-    data = r.json()
+
+    last_exc: Exception | None = None
+    for attempt in range(3):
+        try:
+            r = requests.post(url, headers=headers, json=payload, timeout=timeout_s)
+            r.encoding = "utf-8"
+            # Cloudflare / upstream timeouts
+            if r.status_code in (520, 524, 502, 503, 504):
+                time.sleep(1.5 * (attempt + 1))
+                last_exc = requests.HTTPError(f"{r.status_code} Server Error for url: {url}")
+                continue
+            r.raise_for_status()
+            data = r.json()
+            try:
+                return str(((data.get("choices") or [None])[0] or {}).get("message", {}).get("content") or "")
+            except Exception:
+                return ""
+        except Exception as e:
+            last_exc = e
+            time.sleep(1.5 * (attempt + 1))
+            continue
+
+    if last_exc:
+        raise last_exc
     try:
-        return str(((data.get("choices") or [None])[0] or {}).get("message", {}).get("content") or "")
+        return ""
     except Exception:
         return ""
 
