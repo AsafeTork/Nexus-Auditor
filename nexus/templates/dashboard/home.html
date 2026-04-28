@@ -2,10 +2,15 @@
 {% set title = "Dashboard" %}
 {% set subtitle = "Run audits. Manage sites. Stay focused." %}
 {% block page_actions %}
-  <a class="btn-primary" href="#sites">New audit</a>
+  <a class="btn-primary flex items-center gap-2" href="#sites">
+    <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+    </svg>
+    New audit
+  </a>
 {% endblock %}
 {% block content %}
-<div class="flex flex-col gap-6">
+<div class="flex flex-col gap-8">
   <!-- Primary card: create site + run audits -->
   <section class="card card-focus" id="sites">
     <div class="flex items-start justify-between gap-6">
@@ -18,15 +23,18 @@
       {% endif %}
     </div>
 
-    <!-- AI settings (quiet) -->
-    <div class="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
-      <input id="llmBase" class="input text-sm" placeholder="https://provider/v1" value="{{ llm_defaults.base_url_v1 or config['LLM_BASE_URL_V1'] }}"/>
-      <select id="llmModel" class="input text-sm">
-        {% set _m = (llm_defaults.model or config['LLM_DEFAULT_MODEL']) %}
-        <option value="{{ _m }}">{{ _m }}</option>
-      </select>
-      <button type="button" class="btn-secondary" onclick="loadModels()">Models</button>
-    </div>
+    <!-- AI settings (advanced, de-emphasized) -->
+    <details class="mt-6">
+      <summary class="cursor-pointer body-text">AI settings (advanced)</summary>
+      <div class="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
+        <input id="llmBase" class="input text-sm" placeholder="https://provider/v1" value="{{ llm_defaults.base_url_v1 or config['LLM_BASE_URL_V1'] }}"/>
+        <select id="llmModel" class="input text-sm">
+          {% set _m = (llm_defaults.model or config['LLM_DEFAULT_MODEL']) %}
+          <option value="{{ _m }}">{{ _m }}</option>
+        </select>
+        <button type="button" class="btn-secondary" onclick="loadModels()">Models</button>
+      </div>
+    </details>
 
     <!-- Create site -->
     <form class="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4" method="post" action="{{ url_for('audit.create_site') }}">

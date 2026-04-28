@@ -29,7 +29,7 @@
             </div>
           </a>
           <details class="relative" aria-haspopup="menu">
-            <summary class="list-none cursor-pointer btn-secondary" aria-label="Opções da auditoria" aria-haspopup="menu">⋯</summary>
+            <summary class="list-none cursor-pointer btn-secondary icon-btn" aria-label="Opções da auditoria" aria-haspopup="menu">⋯</summary>
             <div class="absolute right-0 mt-2 w-44 menu z-10" role="menu">
               <form method="post" action="{{ url_for('admin.admin_audit_publish_github', audit_id=a.id) }}">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">

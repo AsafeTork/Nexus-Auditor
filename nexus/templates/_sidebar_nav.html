@@ -1,12 +1,14 @@
 {% set ep = (request.endpoint or '') %}
 <nav class="flex flex-col gap-4">
   <a class="nav-link {% if ep.startswith('dashboard.') %}nav-link-active{% endif %}"
+     {% if ep.startswith('dashboard.') %}aria-current="page"{% endif %}
      href="{{ url_for('dashboard.home') }}">
     <svg class="opacity-90" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 13h8V3H3v10Zm10 8h8V11h-8v10ZM3 21h8v-6H3v6Zm10-12h8V3h-8v6Z"/></svg>
     <span>Dashboard</span>
   </a>
 
   <a class="nav-link {% if ep.startswith('settings.') %}nav-link-active{% endif %}"
+     {% if ep.startswith('settings.') %}aria-current="page"{% endif %}
      href="{{ url_for('settings.settings_home') }}">
     <svg class="opacity-90" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15.5A3.5 3.5 0 1 0 12 8.5a3.5 3.5 0 0 0 0 7Zm7.4-2.5a7.9 7.9 0 0 0 0-2l2-1.5-2-3.5-2.4 1a8 8 0 0 0-1.7-1l-.4-2.6H10l-.4 2.6c-.6.3-1.2.6-1.7 1l-2.4-1-2 3.5 2 1.5a7.9 7.9 0 0 0 0 2l-2 1.5 2 3.5 2.4-1c.5.4 1.1.7 1.7 1l.4 2.6h4.2l.4-2.6c.6-.3 1.2-.6 1.7-1l2.4 1 2-3.5-2-1.5Z"/></svg>
     <span>Settings</span>
@@ -16,24 +18,28 @@
     <div class="nav-section">
       <div class="nav-label">Admin</div>
       <a class="nav-link {% if ep.startswith('admin.admin_home') %}nav-link-active{% endif %}"
+         {% if ep.startswith('admin.admin_home') %}aria-current="page"{% endif %}
          href="{{ url_for('admin.admin_home') }}">
         <svg class="opacity-90" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6M9 8h6M7 4h10a2 2 0 0 1 2 2v14l-3-2-3 2-3-2-3 2V6a2 2 0 0 1 2-2Z"/></svg>
         <span>Console</span>
       </a>
 
       <a class="nav-link {% if ep.startswith('admin.ui_lab') %}nav-link-active{% endif %}"
+         {% if ep.startswith('admin.ui_lab') %}aria-current="page"{% endif %}
          href="{{ url_for('admin.ui_lab') }}">
         <svg class="opacity-90" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 2a4 4 0 0 0-4 4v1H7a3 3 0 0 0-3 3v3h2v-3a1 1 0 0 1 1-1h1v2a4 4 0 0 0 8 0V9h1a1 1 0 0 1 1 1v3h2v-3a3 3 0 0 0-3-3h-1V6a4 4 0 0 0-4-4Zm-2 7V6a2 2 0 1 1 4 0v3a2 2 0 1 1-4 0Z"/></svg>
         <span>UI Lab</span>
       </a>
 
       <a class="nav-link {% if ep.startswith('admin.backend_lab') %}nav-link-active{% endif %}"
+         {% if ep.startswith('admin.backend_lab') %}aria-current="page"{% endif %}
          href="{{ url_for('admin.backend_lab') }}">
         <svg class="opacity-90" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7h16M4 12h16M4 17h16"/></svg>
         <span>Backend Lab</span>
       </a>
 
       <a class="nav-link {% if ep.startswith('admin.admin_logs') %}nav-link-active{% endif %}"
+         {% if ep.startswith('admin.admin_logs') %}aria-current="page"{% endif %}
          href="{{ url_for('admin.admin_logs') }}">
         <svg class="opacity-90" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4h16v16H4V4Zm4 12h8M8 8h8M8 12h6"/></svg>
         <span>Logs</span>

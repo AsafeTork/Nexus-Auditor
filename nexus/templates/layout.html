@@ -19,10 +19,10 @@
       --app-surface: #111113;
       --app-surface2: #141416;
       --app-border: rgba(148,163,184,.14);
-      --app-text: #EDEDED;
-      --app-muted: #9CA3AF;
-      --accent: #4F46E5;
-      --accent-weak: rgba(79,70,229,.14);
+      --app-text: #E2E8F0;
+      --app-muted: #94A3B8;
+      --accent: #6366F1;
+      --accent-weak: rgba(99,102,241,.12);
       --danger: #ef4444;
       --danger-weak: rgba(239,68,68,.14);
     }
@@ -40,9 +40,9 @@
     .border-app{ border-color: var(--app-border); }
     .text-muted{ color: var(--app-muted); }
     .text-brand-2{ color: var(--accent); }
-    .border-brand{ border-color: rgba(79,70,229,.35); }
+    .border-brand{ border-color: rgba(99,102,241,.35); }
     .bg-brand-weak{ background: var(--accent-weak); }
-    .bg-brand-weak2{ background: rgba(79,70,229,.20); }
+    .bg-brand-weak2{ background: rgba(99,102,241,.20); }
 
     .btn, .btn-primary, .btn-secondary, .btn-danger{
       display:inline-flex; align-items:center; justify-content:center; gap:8px;
@@ -60,15 +60,15 @@
     .btn-secondary:focus-visible,
     .btn-danger:focus-visible{
       outline: none;
-      box-shadow: 0 0 0 3px rgba(79,70,229,.25);
+      box-shadow: 0 0 0 3px rgba(99,102,241,.26);
     }
     .btn-primary{
-      background: linear-gradient(135deg, rgba(79,70,229,1), rgba(99,102,241,1));
+      background: linear-gradient(135deg, rgba(99,102,241,1), rgba(79,70,229,1));
       color: #fff;
       border: 1px solid rgba(255,255,255,.10);
     }
-    .btn-primary:hover{ opacity: .96; transform: translateY(-1px); box-shadow: 0 10px 26px rgba(79,70,229,.16); }
-    .btn-primary:focus{ box-shadow: 0 0 0 3px rgba(79,70,229,.25); }
+    .btn-primary:hover{ opacity: .98; transform: translateY(-1px); box-shadow: 0 12px 28px rgba(99,102,241,.25); }
+    .btn-primary:focus{ box-shadow: 0 0 0 3px rgba(99,102,241,.26); }
 
     .btn-secondary{
       background: rgba(255,255,255,.02);
@@ -147,7 +147,7 @@
     }
     .tabBtn:focus-visible{
       outline: none;
-      box-shadow: 0 0 0 3px rgba(79,70,229,.22);
+      box-shadow: 0 0 0 3px rgba(99,102,241,.22);
     }
 
     /* Lists */
@@ -181,8 +181,8 @@
     .nav-link:hover{ background: rgba(255,255,255,.04); color: var(--app-text); border-color: rgba(148,163,184,.12); }
     .nav-link:focus-visible{
       outline: none;
-      border-color: rgba(79,70,229,.32);
-      box-shadow: 0 0 0 3px rgba(79,70,229,.18);
+      border-color: rgba(99,102,241,.32);
+      box-shadow: 0 0 0 3px rgba(99,102,241,.18);
     }
     .nav-link-active{
       background: rgba(79,70,229,.12);
@@ -202,9 +202,9 @@
     }
 
     /* Typography hierarchy (3 levels) */
-    .page-title{ font-size: 22px; font-weight: 800; letter-spacing: -0.02em; }
-    .section-title{ font-size: 14px; font-weight: 600; letter-spacing: -0.01em; }
-    .body-text{ font-size: 13px; font-weight: 400; color: var(--app-muted); }
+    .page-title{ font-size: 24px; font-weight: 800; letter-spacing: -0.025em; }
+    .section-title{ font-size: 15px; font-weight: 600; letter-spacing: -0.01em; color: #c7d2fe; }
+    .body-text{ font-size: 13px; font-weight: 400; color: #a1a1aa; }
     .page-subtitle{ font-size: 13px; font-weight: 400; color: rgba(148,163,184,.92); }
 
     /* Layout helpers */
@@ -213,15 +213,39 @@
 
     /* Focal emphasis (subtle, minimal) */
     .card-focus{
-      border-color: rgba(79,70,229,.38);
-      box-shadow: 0 0 0 1px rgba(79,70,229,.12), 0 12px 32px rgba(0,0,0,.30);
+      border-color: rgba(99,102,241,.45);
+      box-shadow: 0 0 0 1px rgba(99,102,241,.15), 0 16px 40px rgba(0,0,0,.35);
       background:
-        radial-gradient(900px 400px at 20% 0%, rgba(79,70,229,.12), rgba(11,11,12,0) 60%),
+        radial-gradient(900px 400px at 20% 0%, rgba(99,102,241,.12), rgba(11,11,12,0) 60%),
         var(--app-surface);
     }
+
+    /* Button size variant (for primary CTA like Sign in) */
+    .btn-lg{ padding: 12px 16px; font-size: 15px; border-radius: 14px; }
+
+    /* KPI emphasis */
+    .kpi-value{ font-size: 30px; line-height: 1.05; font-weight: 800; letter-spacing: -0.02em; }
+    @media (min-width: 768px){
+      .kpi-value{ font-size: 34px; }
+    }
+
+    /* Minimal icon button (for Copy etc.) */
+    .icon-btn{
+      width: 36px;
+      height: 36px;
+      padding: 0;
+      border-radius: 12px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .icon-btn svg{ opacity: .92; }
   </style>
 </head>
 <body class="bg-app">
+  <a href="#mainContent" class="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-50 btn-secondary">
+    Pular para o conteúdo
+  </a>
   {% set logo_mark = ('logo_admin_mark_96.png' if current_user.is_authenticated and current_user.is_admin else 'logo_user_mark_96.png') %}
 
   {% block body %}
@@ -264,7 +288,7 @@
             </div>
           </header>
 
-          <main class="mx-auto max-w-5xl px-6 page-pad flex flex-col gap-6">
+          <main id="mainContent" class="mx-auto max-w-5xl px-6 page-pad flex flex-col gap-6">
             {% if show_page_header is not defined or show_page_header %}
               <div class="flex items-end justify-between gap-6">
                 <div class="min-w-0">
@@ -296,7 +320,7 @@
         </div>
       </div>
     {% else %}
-      <main class="min-h-screen">
+      <main id="mainContent" class="min-h-screen">
         {% with messages = get_flashed_messages(with_categories=true) %}
           {% if messages %}
             <div class="mx-auto max-w-lg px-6 page-pad flex flex-col gap-4">

@@ -29,18 +29,26 @@
     <section id="tab-logs" class="card" role="tabpanel" aria-labelledby="tabBtn-logs">
       <div class="flex items-center justify-between">
         <div class="text-sm font-semibold">Logs</div>
-        <button class="btn-secondary" onclick="copyText('logsBox')">Copy</button>
+        <button class="btn-secondary icon-btn text-brand-2 border-brand" aria-label="Copiar logs" onclick="copyText('logsBox')">
+          <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16h8M8 12h8m-7 8h6a2 2 0 0 0 2-2V8l-4-4H9a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2Z"/>
+          </svg>
+        </button>
       </div>
-      <textarea id="logsBox" aria-label="Logs" aria-readonly="true" class="mono mt-6 w-full h-[58vh] md:h-[60vh] input text-xs" readonly>{{ audit.logs }}</textarea>
+      <textarea id="logsBox" aria-label="Logs" aria-readonly="true" class="mono mt-6 w-full h-[60vh] md:h-[65vh] input text-xs border-brand" readonly>{{ audit.logs }}</textarea>
       <div class="mt-2 text-xs text-muted">Tip: copy/paste for support.</div>
     </section>
 
     <section id="tab-events" class="card hidden" role="tabpanel" aria-labelledby="tabBtn-events">
       <div class="flex items-center justify-between">
         <div class="text-sm font-semibold">Events (audit_events)</div>
-        <button class="btn-secondary" onclick="copyText('eventsBox')">Copy</button>
+        <button class="btn-secondary icon-btn text-brand-2 border-brand" aria-label="Copiar events" onclick="copyText('eventsBox')">
+          <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16h8M8 12h8m-7 8h6a2 2 0 0 0 2-2V8l-4-4H9a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2Z"/>
+          </svg>
+        </button>
       </div>
-      <textarea id="eventsBox" aria-label="Events" aria-readonly="true" class="mono mt-6 w-full h-[58vh] md:h-[60vh] input text-xs" readonly>{% for e in events %}{{ e.ts_ms }} {{ e.level }} {{ e.layer }} :: {{ e.message }}{% if not loop.last %}\n{% endif %}{% endfor %}</textarea>
+      <textarea id="eventsBox" aria-label="Events" aria-readonly="true" class="mono mt-6 w-full h-[60vh] md:h-[65vh] input text-xs border-brand" readonly>{% for e in events %}{{ e.ts_ms }} {{ e.level }} {{ e.layer }} :: {{ e.message }}{% if not loop.last %}\n{% endif %}{% endfor %}</textarea>
       <div class="mt-2 text-xs text-muted">Shows up to 5000 events.</div>
     </section>
   </div>

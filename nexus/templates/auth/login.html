@@ -1,15 +1,15 @@
 {% extends "layout.html" %}
 {% block body %}
-<div class="min-h-screen md:flex">
-  <!-- Desktop/Tablet left image (47%) -->
-  <div class="hidden md:block relative w-[47%] overflow-hidden">
-    <img src="{{ url_for('static', filename='login_bg.jpg') }}" alt="" class="absolute inset-0 w-full h-full object-cover opacity-50" style="object-position: 15% 50%;"/>
-    <div class="absolute inset-0" style="background: linear-gradient(90deg, rgba(11,11,12,0.10) 0%, rgba(11,11,12,0.20) 55%, rgba(11,11,12,1) 100%);"></div>
+<div class="min-h-screen grid grid-cols-1 md:grid-cols-2">
+  <!-- Image column (desktop) -->
+  <div class="hidden md:block relative overflow-hidden">
+    <img src="{{ url_for('static', filename='login_bg.jpg') }}" alt="" class="absolute inset-0 w-full h-full object-cover opacity-55"/>
+    <div class="absolute inset-0" style="background: linear-gradient(90deg, rgba(11,11,12,0.12) 0%, rgba(11,11,12,0.22) 55%, rgba(11,11,12,1) 100%);"></div>
   </div>
 
-  <!-- Right login panel -->
-  <div class="min-h-screen md:min-h-0 flex-1 md:w-[53%] flex items-center justify-center p-6 relative">
-    <div class="w-full max-w-md card">
+  <!-- Form column -->
+  <div class="flex items-center justify-center p-6">
+    <div class="w-full max-w-sm card card-focus">
       <div class="flex flex-col sm:flex-row sm:items-center gap-4">
         <img class="w-full sm:w-56 max-w-[320px] object-contain" alt="Nexus Auditor" src="{{ url_for('static', filename='logo_login_small.png') }}"/>
         <div class="sm:text-right">
@@ -28,7 +28,7 @@
           <label for="password" class="body-text">Password</label>
           <input id="password" aria-label="Password" type="password" name="password" autocomplete="current-password" class="input mt-4 text-sm" />
         </div>
-        <button class="btn-primary w-full">Sign in</button>
+        <button class="btn-primary btn-lg w-full">Sign in</button>
       </form>
 
       <div class="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -41,11 +41,5 @@
       </div>
     </div>
   </div>
-</div>
-
-<!-- Mobile: seção extra para revelar MAIS imagem ao rolar (sem empurrar o login para cima) -->
-<div class="md:hidden h-[55vh] relative overflow-hidden">
-  <img loading="lazy" src="{{ url_for('static', filename='login_bg.jpg') }}" alt="" class="absolute inset-0 w-full h-full object-cover opacity-45" style="object-position: 15% 50%;"/>
-  <div class="absolute inset-0" style="background: linear-gradient(180deg, rgba(11,11,12,0.98) 0%, rgba(11,11,12,0.35) 45%, rgba(11,11,12,0.96) 100%);"></div>
 </div>
 {% endblock %}
