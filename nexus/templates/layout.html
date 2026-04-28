@@ -116,14 +116,11 @@
   </style>
 </head>
 <body class="bg-app">
-  {% set is_auth_page = (not current_user.is_authenticated) and (request.endpoint or "").startswith("auth.") %}
   {% set logo_mark = ('logo_admin_mark_96.png' if current_user.is_authenticated and current_user.is_admin else 'logo_user_mark_96.png') %}
   {% set logo_wrap_class = ('logo-admin-wrap' if current_user.is_authenticated and current_user.is_admin else 'bg-surface') %}
 
+  {% block body %}
   <div class="min-h-screen">
-    {% if is_auth_page %}
-      {% block content %}{% endblock %}
-    {% else %}
     <div class="max-w-7xl mx-auto px-4 py-5">
 
       <!-- Top bar -->
@@ -193,7 +190,7 @@
       </div>
     </div>
   </div>
-  {% endif %}
+  {% endblock %}
 
   <script>
     // Wait DOM ready so mobile sidebar elements exist even if rendered after this script.
