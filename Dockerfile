@@ -1,4 +1,6 @@
-FROM python:3.12-slim
+# NOTE: Playwright's "--with-deps" script currently expects Debian packages
+# that are present on bookworm, but not on trixie.
+FROM python:3.12-slim-bookworm
 
 WORKDIR /app
 
