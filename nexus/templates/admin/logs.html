@@ -1,6 +1,7 @@
 {% extends "layout.html" %}
+{% set title = "Logs" %}
 {% block content %}
-<div class="letterhead p-6">
+<div class="letterhead">
   <div class="flex items-start justify-between gap-6">
     <div>
       <div class="page-title text-brand-2">Logs</div>
@@ -10,12 +11,12 @@
   </div>
 
   <div class="mt-6 flex flex-wrap gap-4">
-    <button class="tabBtn text-xs font-semibold px-3 py-2 rounded-xl bg-surface2 border border-app text-muted" data-tab="events">Events</button>
-    <button class="tabBtn text-xs font-semibold px-3 py-2 rounded-xl bg-surface2 border border-app text-muted" data-tab="uilab">UI Lab</button>
-    <button class="tabBtn text-xs font-semibold px-3 py-2 rounded-xl bg-surface2 border border-app text-muted" data-tab="diag">Diagnostics</button>
+    <button class="tabBtn text-xs font-semibold bg-surface2 border border-app text-muted" data-tab="events">Events</button>
+    <button class="tabBtn text-xs font-semibold bg-surface2 border border-app text-muted" data-tab="uilab">UI Lab</button>
+    <button class="tabBtn text-xs font-semibold bg-surface2 border border-app text-muted" data-tab="diag">Diagnostics</button>
   </div>
 
-  <section id="tab-events" class="mt-3 card p-4">
+  <section id="tab-events" class="mt-3 card">
     <div class="flex items-center justify-between gap-6">
       <div>
         <div class="section-title">Audit events</div>
@@ -23,13 +24,13 @@
       </div>
       <button class="btn-secondary" onclick="copyText('eventsBox')">Copy</button>
     </div>
-    <textarea id="eventsBox" class="mono mt-6 w-full h-[60vh] input rounded-xl p-4 text-xs" readonly>{% for e in events %}{% set a = audit_map.get(e.audit_run_id) %}{{ e.ts_ms }} {{ e.level }} {{ e.layer }} :: {{ (a.target_domain if a else e.audit_run_id) }} :: {{ e.message }}{% if not loop.last %}\n{% endif %}{% endfor %}</textarea>
+    <textarea id="eventsBox" class="mono mt-6 w-full h-[60vh] input text-xs" readonly>{% for e in events %}{% set a = audit_map.get(e.audit_run_id) %}{{ e.ts_ms }} {{ e.level }} {{ e.layer }} :: {{ (a.target_domain if a else e.audit_run_id) }} :: {{ e.message }}{% if not loop.last %}\n{% endif %}{% endfor %}</textarea>
   </section>
 
-  <section id="tab-uilab" class="mt-3 card p-4 hidden">
+  <section id="tab-uilab" class="mt-3 card hidden">
     <div class="section-title">UI Lab runs</div>
     <div class="body-text mt-4">Open a run to view output.</div>
-    <div class="mt-6 space-y-4">
+    <div class="mt-6 flex flex-col gap-4">
       {% for r in ui_runs %}
         <a class="block bg-surface2 rounded-xl p-4 hover:bg-surface border border-app" href="{{ url_for('admin.ui_lab', run=r.id) }}">
           <div class="flex items-center justify-between">
@@ -44,20 +45,20 @@
     </div>
   </section>
 
-  <section id="tab-diag" class="mt-3 card p-4 hidden">
+  <section id="tab-diag" class="mt-3 card hidden">
     <div class="section-title">Diagnostics</div>
     <div class="mt-6 grid grid-cols-1 md:grid-cols-3 gap-6">
-      <div class="card2 p-4">
+      <div class="card">
         <div class="text-[11px] text-muted">DB</div>
         <div class="text-lg font-extrabold {% if diag.db.ok %}text-emerald-300{% else %}text-rose-300{% endif %}">{{ "OK" if diag.db.ok else "ERRO" }}</div>
         {% if not diag.db.ok %}<div class="mono text-[11px] mt-2">{{ diag.db.error }}</div>{% endif %}
       </div>
-      <div class="card2 p-4">
+      <div class="card">
         <div class="text-[11px] text-muted">Redis</div>
         <div class="text-lg font-extrabold {% if diag.redis.ok %}text-emerald-300{% else %}text-rose-300{% endif %}">{{ "OK" if diag.redis.ok else "ERRO" }}</div>
         {% if not diag.redis.ok %}<div class="mono text-[11px] mt-2">{{ diag.redis.error }}</div>{% endif %}
       </div>
-      <div class="card2 p-4">
+      <div class="card">
         <div class="text-[11px] text-muted">LLM</div>
         <div class="text-lg font-extrabold {% if diag.llm.ok %}text-emerald-300{% else %}text-rose-300{% endif %}">{{ "OK" if diag.llm.ok else "ERRO" }}</div>
         <div class="mono text-[11px] mt-2">model={{ diag.llm.model }}</div>
@@ -76,7 +77,7 @@
     }
     document.querySelectorAll(".tabBtn").forEach(b => {
       const on = b.getAttribute("data-tab") === name;
-      b.className = "tabBtn text-xs font-semibold px-3 py-2 rounded-xl border " + (on ? "border-brand bg-brand-weak text-brand-2" : "border-app bg-surface2 text-muted");
+      b.className = "tabBtn text-xs font-semibold border " + (on ? "border-brand bg-brand-weak text-brand-2" : "border-app bg-surface2 text-muted");
     });
   }
   document.querySelectorAll(".tabBtn").forEach(b => b.addEventListener("click", () => setTab(b.getAttribute("data-tab"))));

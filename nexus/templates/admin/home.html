@@ -1,6 +1,7 @@
 {% extends "layout.html" %}
+{% set title = "Admin" %}
 {% block content %}
-<div class="letterhead p-6">
+<div class="letterhead">
   <div class="flex items-start justify-between gap-6">
     <div>
       <div class="text-sm font-semibold text-brand-2">Admin Console</div>
@@ -14,7 +15,7 @@
   </div>
 
   <!-- Simulator -->
-  <div class="mt-6 card p-6">
+  <div class="mt-6 card">
     <div class="flex items-start justify-between gap-6">
       <div>
         <div class="text-sm font-semibold">Simulation</div>
@@ -27,7 +28,7 @@
     </div>
     <form class="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4" method="post" action="{{ url_for('admin.admin_set_sim') }}">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-      <select name="sub_status" class="input rounded-xl px-3 py-2 text-sm">
+      <select name="sub_status" class="input text-sm">
         <option value="">Plano real (sem simulação)</option>
         <option value="inactive" {% if sim and sim.sub_status=='inactive' %}selected{% endif %}>inactive</option>
         <option value="trialing" {% if sim and sim.sub_status=='trialing' %}selected{% endif %}>trialing</option>
@@ -35,7 +36,7 @@
         <option value="past_due" {% if sim and sim.sub_status=='past_due' %}selected{% endif %}>past_due</option>
         <option value="canceled" {% if sim and sim.sub_status=='canceled' %}selected{% endif %}>canceled</option>
       </select>
-      <select name="role" class="input rounded-xl px-3 py-2 text-sm">
+      <select name="role" class="input text-sm">
         <option value="">Role real (sem simulação)</option>
         <option value="member" {% if sim and sim.role=='member' %}selected{% endif %}>member</option>
         <option value="admin" {% if sim and sim.role=='admin' %}selected{% endif %}>admin</option>
@@ -48,7 +49,7 @@
   </div>
 
   <!-- LLM Defaults -->
-  <div class="mt-6 card p-6">
+  <div class="mt-6 card">
     <div class="flex items-start justify-between gap-6">
       <div>
         <div class="text-sm font-semibold">AI defaults (org)</div>
@@ -58,15 +59,15 @@
     </div>
     <form class="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4" method="post" action="{{ url_for('admin.admin_llm_save') }}">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-      <input name="base_url_v1" class="input rounded-xl px-3 py-2 text-sm" placeholder="https://seu-provedor/v1" value="{{ llm_defaults.base_url_v1 or diag.llm.base_url_v1 }}"/>
-      <input name="model" class="input rounded-xl px-3 py-2 text-sm" placeholder="modelo (ex.: deepseek-chat)" value="{{ llm_defaults.model or diag.llm.model }}"/>
+      <input name="base_url_v1" class="input text-sm" placeholder="https://seu-provedor/v1" value="{{ llm_defaults.base_url_v1 or diag.llm.base_url_v1 }}"/>
+      <input name="model" class="input text-sm" placeholder="modelo (ex.: deepseek-chat)" value="{{ llm_defaults.model or diag.llm.model }}"/>
       <button class="btn-primary">Save</button>
     </form>
     <div class="mt-2 text-xs text-muted">Tip: use only <span class="mono">.../v1</span> (do not paste <span class="mono">/chat/completions</span>).</div>
   </div>
 
   <div class="mt-6 grid grid-cols-1 md:grid-cols-3 gap-6">
-    <div class="card2 p-4">
+    <div class="card">
       <div class="text-[11px] text-muted">DB</div>
       <div class="text-lg font-extrabold {% if diag.db.ok %}text-emerald-300{% else %}text-rose-300{% endif %}">
         {{ "OK" if diag.db.ok else "ERRO" }}
@@ -75,7 +76,7 @@
         <div class="mono text-[11px] mt-2">{{ diag.db.error }}</div>
       {% endif %}
     </div>
-    <div class="card2 p-4">
+    <div class="card">
       <div class="text-[11px] text-muted">Redis</div>
       <div class="text-lg font-extrabold {% if diag.redis.ok %}text-emerald-300{% else %}text-rose-300{% endif %}">
         {{ "OK" if diag.redis.ok else "ERRO" }}
@@ -85,7 +86,7 @@
         <div class="mono text-[11px] mt-2">{{ diag.redis.error }}</div>
       {% endif %}
     </div>
-    <div class="card2 p-4">
+    <div class="card">
       <div class="text-[11px] text-muted">LLM</div>
       <div class="text-lg font-extrabold {% if diag.llm.ok %}text-emerald-300{% else %}text-rose-300{% endif %}">
         {{ "OK" if diag.llm.ok else "ERRO" }}
@@ -102,7 +103,7 @@
 
   <div class="mt-5">
     <div class="text-xs font-extrabold text-brand-2">Últimas auditorias</div>
-    <div class="mt-6 space-y-4">
+    <div class="mt-6 flex flex-col gap-4">
       {% for a in audits %}
         <a href="{{ url_for('admin.admin_audit_detail', audit_id=a.id) }}" class="block bg-surface2 rounded-xl p-4 hover:bg-surface border border-app">
           <div class="flex items-center justify-between">

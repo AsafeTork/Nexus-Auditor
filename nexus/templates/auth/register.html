@@ -1,7 +1,7 @@
 {% extends "layout.html" %}
 {% block content %}
 <div class="min-h-screen flex items-center justify-center p-6">
-  <div class="w-full max-w-md card p-6">
+  <div class="w-full max-w-md card">
     <div class="flex items-center justify-between gap-4">
       <img class="h-9 w-auto object-contain" alt="Nexus Auditor" src="{{ url_for('static', filename='logo_login_small.png') }}"/>
       <div class="text-right">
@@ -10,19 +10,19 @@
       </div>
     </div>
 
-    <form class="mt-6 space-y-4" method="post" action="{{ url_for('auth.register_post') }}">
+    <form class="mt-6 flex flex-col gap-4" method="post" action="{{ url_for('auth.register_post') }}">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <div>
         <label class="body-text">Organization</label>
-        <input name="org_name" class="input mt-4 w-full rounded-xl px-3 py-2 text-sm" />
+        <input name="org_name" class="input mt-4 text-sm" />
       </div>
       <div>
         <label class="body-text">Email</label>
-        <input name="email" autocomplete="email" class="input mt-4 w-full rounded-xl px-3 py-2 text-sm" />
+        <input name="email" autocomplete="email" class="input mt-4 text-sm" />
       </div>
       <div>
         <label class="body-text">Password</label>
-        <input type="password" name="password" autocomplete="new-password" class="input mt-4 w-full rounded-xl px-3 py-2 text-sm" />
+        <input type="password" name="password" autocomplete="new-password" class="input mt-4 text-sm" />
         <div class="mt-4 body-text">Minimum 8 characters.</div>
       </div>
       <button class="btn-primary w-full">Create</button>

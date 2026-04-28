@@ -1,6 +1,7 @@
 {% extends "layout.html" %}
+{% set title = "Audit detail" %}
 {% block content %}
-<div class="letterhead p-6">
+<div class="letterhead">
   <div class="flex items-start justify-between gap-6">
     <div>
       <div class="text-sm font-semibold text-brand-2">Audit Debug</div>
@@ -23,12 +24,12 @@
 
   <!-- Tabs (full width for mobile) -->
   <div class="mt-6 flex flex-wrap gap-4">
-    <button class="tabBtn text-xs font-semibold px-3 py-2 rounded-xl border border-app bg-surface2 text-muted" data-tab="logs">Logs</button>
-    <button class="tabBtn text-xs font-semibold px-3 py-2 rounded-xl border border-app bg-surface2 text-muted" data-tab="events">Events</button>
+    <button class="tabBtn text-xs font-semibold rounded-xl border border-app bg-surface2 text-muted" data-tab="logs">Logs</button>
+    <button class="tabBtn text-xs font-semibold rounded-xl border border-app bg-surface2 text-muted" data-tab="events">Events</button>
   </div>
 
   <div class="mt-6">
-    <section id="tab-logs" class="card2 p-4">
+    <section id="tab-logs" class="card">
       <div class="flex items-center justify-between">
         <div class="text-sm font-semibold">Logs</div>
         <button class="btn-secondary" onclick="copyText('logsBox')">Copy</button>
@@ -37,7 +38,7 @@
       <div class="mt-2 text-xs text-muted">Tip: copy/paste for support.</div>
     </section>
 
-    <section id="tab-events" class="card2 p-4 hidden">
+    <section id="tab-events" class="card hidden">
       <div class="flex items-center justify-between">
         <div class="text-sm font-semibold">Events (audit_events)</div>
         <button class="btn-secondary" onclick="copyText('eventsBox')">Copy</button>
@@ -57,7 +58,7 @@
     }
     document.querySelectorAll(".tabBtn").forEach(b => {
       const on = b.getAttribute("data-tab") === name;
-      b.className = "tabBtn text-xs font-semibold px-3 py-2 rounded-xl border " + (on ? "border-brand bg-brand-weak text-brand-2" : "border-app bg-surface2 text-muted");
+      b.className = "tabBtn text-xs font-semibold border " + (on ? "border-brand bg-brand-weak text-brand-2" : "border-app bg-surface2 text-muted");
     });
   }
   document.querySelectorAll(".tabBtn").forEach(b => b.addEventListener("click", () => setTab(b.getAttribute("data-tab"))));

@@ -76,33 +76,53 @@
       border: 1px solid var(--app-border);
       color: var(--app-text);
       outline: none;
+      border-radius: 12px;
+      padding: 10px 12px;
+      width: 100%;
     }
     .input:focus{
       box-shadow: 0 0 0 3px rgba(79,70,229,.20);
       border-color: rgba(79,70,229,.45);
     }
 
-    /* Cards */
+    /* Cards (single, consistent) */
     .card{
       background: var(--app-surface);
       border: 1px solid var(--app-border);
-      border-radius: 12px;
+      border-radius: 12px; /* rounded-xl */
+      padding: 24px; /* p-6 */
     }
-    .card2{
+
+    /* Letterhead is kept as an alias of card (no visual variation allowed) */
+    .letterhead{
       background: var(--app-surface);
       border: 1px solid var(--app-border);
       border-radius: 12px;
+      padding: 24px;
     }
 
-    /* Premium but minimal "letterhead" */
-    .letterhead{
-      background:
-        radial-gradient(900px 450px at 20% 0%, rgba(79,70,229,.14), rgba(11,11,12,0) 60%),
-        radial-gradient(900px 450px at 100% 20%, rgba(79,70,229,.10), rgba(11,11,12,0) 55%),
-        var(--app-surface);
+    /* Menus (not cards) */
+    .menu{
+      background: var(--app-surface);
       border: 1px solid var(--app-border);
       border-radius: 12px;
+      padding: 16px;
     }
+
+    /* Sidebar section rhythm */
+    .nav-section{ margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--app-border); }
+    .nav-label{ padding: 0 8px 8px; font-size: 11px; color: var(--app-muted); font-weight: 600; letter-spacing: .02em; text-transform: uppercase; }
+
+    /* Tabs */
+    .tabBtn{
+      padding: 10px 12px;
+      border-radius: 12px;
+      transition: background .2s ease, border-color .2s ease, color .2s ease;
+      user-select: none;
+    }
+
+    /* Lists */
+    .ui-list{ padding-left: 20px; display: flex; flex-direction: column; gap: 16px; }
 
     /* Minimal markdown styling */
     .md-render{ color: var(--app-text); font-size: 14px; line-height: 1.65; }
@@ -123,9 +143,13 @@
     .nav-link-active{ background: var(--accent-weak); color: var(--app-text); border: 1px solid rgba(79,70,229,.25); }
 
     /* Typography hierarchy (3 levels) */
-    .page-title{ font-size: 18px; font-weight: 600; letter-spacing: -0.01em; }
+    .page-title{ font-size: 20px; font-weight: 800; letter-spacing: -0.02em; }
     .section-title{ font-size: 14px; font-weight: 600; letter-spacing: -0.01em; }
     .body-text{ font-size: 13px; font-weight: 400; color: var(--app-muted); }
+
+    /* Layout helpers */
+    .topbar-pad{ padding: 16px 0; }
+    .page-pad{ padding: 24px 0; }
   </style>
 </head>
 <body class="bg-app">
@@ -157,26 +181,39 @@
         <div class="flex-1 min-w-0">
           <!-- Top navbar -->
           <header class="sticky top-0 z-40 border-b border-app" style="background: rgba(11,11,12,.72); backdrop-filter: blur(10px);">
-            <div class="mx-auto max-w-6xl px-6 py-4 flex items-center justify-between gap-6">
+            <div class="mx-auto max-w-5xl px-6 topbar-pad flex items-center justify-between gap-6">
               <div class="flex items-center gap-4 min-w-0">
-                <button id="menuBtn" class="lg:hidden btn btn-secondary px-3 py-2" type="button">Menu</button>
+                <button id="menuBtn" class="lg:hidden btn btn-secondary" type="button">Menu</button>
                 <div class="min-w-0">
-                  <div class="page-title truncate">{{ title or "Dashboard" }}</div>
+                  <div class="section-title truncate">Nexus Auditor</div>
                   <div class="body-text truncate">Org {{ current_user.org_id }}</div>
                 </div>
               </div>
               <div class="flex items-center gap-4">
-                <a class="btn btn-secondary px-3 py-2" href="{{ url_for('auth.logout') }}">Logout</a>
+                <a class="btn btn-secondary" href="{{ url_for('auth.logout') }}">Logout</a>
               </div>
             </div>
           </header>
 
-          <main class="mx-auto max-w-6xl px-6 py-6">
+          <main class="mx-auto max-w-5xl px-6 page-pad flex flex-col gap-6">
+            {% if show_page_header is not defined or show_page_header %}
+              <div class="flex items-end justify-between gap-6">
+                <div class="min-w-0">
+                  <div class="page-title truncate">{{ title or "Dashboard" }}</div>
+                  {% if subtitle %}
+                    <div class="body-text truncate">{{ subtitle }}</div>
+                  {% endif %}
+                </div>
+                <div class="shrink-0">
+                  {% block page_actions %}{% endblock %}
+                </div>
+              </div>
+            {% endif %}
             {% with messages = get_flashed_messages(with_categories=true) %}
               {% if messages %}
-                <div class="mb-6 space-y-4">
+                <div class="flex flex-col gap-4">
                   {% for cat, msg in messages %}
-                    <div class="card px-4 py-4 text-sm">
+                    <div class="card text-sm">
                       <span class="font-semibold">{{ cat }}</span>
                       <span class="text-muted">—</span>
                       {{ msg }}
@@ -193,9 +230,9 @@
       <main class="min-h-screen">
         {% with messages = get_flashed_messages(with_categories=true) %}
           {% if messages %}
-            <div class="mx-auto max-w-lg px-6 pt-6 space-y-4">
+            <div class="mx-auto max-w-lg px-6 page-pad flex flex-col gap-4">
               {% for cat, msg in messages %}
-                <div class="card px-4 py-4 text-sm">
+                <div class="card text-sm">
                   <span class="font-semibold">{{ cat }}</span>
                   <span class="text-muted">—</span>
                   {{ msg }}
@@ -250,7 +287,7 @@
             <div class="text-xs text-muted truncate">{{ current_user.email }}</div>
           </div>
         </div>
-        <button id="sidebarClose" class="btn btn-secondary px-3 py-2" type="button">Close</button>
+        <button id="sidebarClose" class="btn btn-secondary" type="button">Close</button>
       </div>
       <div class="mt-4">
         {% include "_sidebar_nav.html" %}

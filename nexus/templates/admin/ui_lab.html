@@ -1,6 +1,7 @@
 {% extends "layout.html" %}
+{% set title = "UI Lab" %}
 {% block content %}
-<div class="letterhead p-6">
+<div class="letterhead">
   <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
     <div>
       <div class="page-title text-brand-2">UI Lab</div>
@@ -10,68 +11,68 @@
   </div>
 
   <div class="mt-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
-    <div class="card p-4">
+    <div class="card">
       <div class="section-title">Analyze templates</div>
       <div class="body-text mt-4">Best for file-level suggestions.</div>
-      <form class="mt-6 space-y-4" method="post" action="{{ url_for('admin.ui_lab_templates') }}">
+      <form class="mt-6 flex flex-col gap-4" method="post" action="{{ url_for('admin.ui_lab_templates') }}">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="grid grid-cols-1 gap-4">
-          <input id="uiBase1" name="base_url_v1" class="input w-full rounded-xl px-3 py-2 text-xs" placeholder="Provedor (ex.: https://host/v1)" />
+          <input id="uiBase1" name="base_url_v1" class="input text-xs" placeholder="Provedor (ex.: https://host/v1)" />
           <div class="flex gap-4">
-            <select id="uiModel1" name="model" class="input w-full rounded-xl px-3 py-2 text-xs">
+            <select id="uiModel1" name="model" class="input text-xs">
               <option value="">Modelo (carregue a lista)</option>
             </select>
             <button type="button" class="btn-secondary" onclick="loadModels('uiBase1','uiModel1')">Models</button>
           </div>
         </div>
-        <textarea name="goal" class="input w-full rounded-xl p-4 text-xs" rows="3" placeholder="What should be improved?"></textarea>
+        <textarea name="goal" class="input text-xs" rows="3" placeholder="What should be improved?"></textarea>
         <button class="btn-primary w-full">Run</button>
       </form>
     </div>
 
-    <div class="card p-4">
+    <div class="card">
       <div class="section-title">Analyze URL</div>
       <div class="body-text mt-4">Fetches HTML and suggests improvements.</div>
-      <form class="mt-6 space-y-4" method="post" action="{{ url_for('admin.ui_lab_url') }}">
+      <form class="mt-6 flex flex-col gap-4" method="post" action="{{ url_for('admin.ui_lab_url') }}">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <input id="uiBase2" name="base_url_v1" class="input w-full rounded-xl px-3 py-2 text-xs" placeholder="Provedor (ex.: https://host/v1)" />
+        <input id="uiBase2" name="base_url_v1" class="input text-xs" placeholder="Provedor (ex.: https://host/v1)" />
         <div class="flex gap-4">
-          <select id="uiModel2" name="model" class="input w-full rounded-xl px-3 py-2 text-xs">
+          <select id="uiModel2" name="model" class="input text-xs">
             <option value="">Modelo (carregue a lista)</option>
           </select>
           <button type="button" class="btn-secondary" onclick="loadModels('uiBase2','uiModel2')">Models</button>
         </div>
-        <input name="url" class="input w-full rounded-xl px-3 py-2 text-xs" placeholder="https://seu-site/pagina" />
-        <textarea name="goal" class="input w-full rounded-xl p-4 text-xs" rows="2" placeholder="Goal (optional)"></textarea>
+        <input name="url" class="input text-xs" placeholder="https://seu-site/pagina" />
+        <textarea name="goal" class="input text-xs" rows="2" placeholder="Goal (optional)"></textarea>
         <button class="btn-primary w-full">Run</button>
       </form>
     </div>
 
-    <div class="card p-4">
+    <div class="card">
       <div class="section-title">Analyze screenshot</div>
       <div class="body-text mt-4">Uses metadata + your notes.</div>
-      <form class="mt-6 space-y-4" method="post" enctype="multipart/form-data" action="{{ url_for('admin.ui_lab_screenshot') }}">
+      <form class="mt-6 flex flex-col gap-4" method="post" enctype="multipart/form-data" action="{{ url_for('admin.ui_lab_screenshot') }}">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <input id="uiBase3" name="base_url_v1" class="input w-full rounded-xl px-3 py-2 text-xs" placeholder="Provedor (ex.: https://host/v1)" />
+        <input id="uiBase3" name="base_url_v1" class="input text-xs" placeholder="Provedor (ex.: https://host/v1)" />
         <div class="flex gap-4">
-          <select id="uiModel3" name="model" class="input w-full rounded-xl px-3 py-2 text-xs">
+          <select id="uiModel3" name="model" class="input text-xs">
             <option value="">Modelo (carregue a lista)</option>
           </select>
           <button type="button" class="btn-secondary" onclick="loadModels('uiBase3','uiModel3')">Models</button>
         </div>
-        <input type="file" name="screenshot" accept="image/*" class="input w-full rounded-xl px-3 py-2 text-xs" />
-        <textarea name="notes" class="input w-full rounded-xl p-4 text-xs" rows="2" placeholder="Describe what you see and what to improve."></textarea>
-        <textarea name="goal" class="input w-full rounded-xl p-4 text-xs" rows="2" placeholder="Goal (optional)"></textarea>
+        <input type="file" name="screenshot" accept="image/*" class="input text-xs" />
+        <textarea name="notes" class="input text-xs" rows="2" placeholder="Describe what you see and what to improve."></textarea>
+        <textarea name="goal" class="input text-xs" rows="2" placeholder="Goal (optional)"></textarea>
         <button class="btn-primary w-full">Run</button>
       </form>
     </div>
   </div>
 
   <div class="mt-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
-    <div class="card p-4">
+    <div class="card">
       <div class="section-title">Recent runs</div>
       <div class="body-text mt-4">Open a run to view logs/output.</div>
-      <div class="mt-6 space-y-4">
+      <div class="mt-6 flex flex-col gap-4">
         {% for r in runs %}
           <a class="block bg-surface2 rounded-xl p-4 hover:bg-surface border border-app" href="{{ url_for('admin.ui_lab', run=r.id) }}">
             <div class="flex items-center justify-between">
@@ -86,7 +87,7 @@
       </div>
     </div>
 
-    <div class="card p-4 lg:col-span-2">
+    <div class="card lg:col-span-2">
     <div class="flex items-center justify-between gap-6">
       <div>
         <div class="section-title">Logs + Output</div>
@@ -95,8 +96,8 @@
       <button class="btn-secondary" onclick="copyText('outBox')">Copy</button>
     </div>
     <div class="mt-4 body-text">Run: <span class="mono" id="runId">{{ run_id or "—" }}</span> · status: <span class="mono" id="runStatus">—</span></div>
-    <textarea id="logBox" class="mono mt-4 w-full h-40 input rounded-xl p-4 text-xs" readonly></textarea>
-    <textarea id="outBox" class="mono mt-4 w-full h-[42vh] input rounded-xl p-4 text-xs" readonly></textarea>
+    <textarea id="logBox" class="mono mt-4 w-full h-40 input text-xs" readonly></textarea>
+    <textarea id="outBox" class="mono mt-4 w-full h-[42vh] input text-xs" readonly></textarea>
   </div>
   </div>
 </div>

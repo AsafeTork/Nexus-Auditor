@@ -1,319 +1,188 @@
 {% extends "layout.html" %}
+{% set title = "Dashboard" %}
 {% block content %}
-<div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-  <!-- Main -->
-  <section class="lg:col-span-8 space-y-6">
-    <!-- LLM config (provider + model) -->
-    <div class="card p-6">
-      <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div>
-          <div class="section-title">AI provider</div>
-          <div class="body-text">Select provider + model. Loads models via <span class="mono">GET /v1/models</span>.</div>
-        </div>
-        {% if current_user.is_admin %}
-          <a class="text-xs text-brand-2 underline" href="{{ url_for('admin.ui_lab') }}">UI Lab</a>
-        {% endif %}
+<div class="flex flex-col gap-6">
+  <!-- Primary card: create site + run audits -->
+  <section class="card" id="sites">
+    <div class="flex items-start justify-between gap-6">
+      <div class="min-w-0">
+        <div class="section-title">Run an audit</div>
+        <div class="body-text">Create a site, then run a full or fast audit.</div>
       </div>
-      <div class="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
-        <input id="llmBase" class="input rounded-xl px-3 py-2 text-sm" placeholder="https://seu-provedor/v1" value="{{ llm_defaults.base_url_v1 or config['LLM_BASE_URL_V1'] }}"/>
-        <select id="llmModel" class="input rounded-xl px-3 py-2 text-sm">
-          {% set _m = (llm_defaults.model or config['LLM_DEFAULT_MODEL']) %}
-          <option value="{{ _m }}">{{ _m }}</option>
-        </select>
-        <button type="button" class="btn-secondary" onclick="loadModels()">Load models</button>
-      </div>
-      <div class="mt-4 body-text">Tip: use only the base <span class="mono">.../v1</span> (do not paste <span class="mono">/chat/completions</span>).</div>
+      {% if current_user.is_admin %}
+        <a class="btn-secondary" href="{{ url_for('admin.admin_home') }}">Admin</a>
+      {% endif %}
     </div>
 
-    <!-- KPI cards -->
-    <div class="grid grid-cols-2 md:grid-cols-4 gap-6">
-      <div class="card p-6">
-        <div class="body-text">Sites</div>
-        <div class="mt-4 page-title">{{ kpi.sites }}</div>
-      </div>
-      <div class="card p-6">
-        <div class="body-text">Audits</div>
-        <div class="mt-4 page-title">{{ kpi.audits }}</div>
-      </div>
-      <div class="card p-6">
-        <div class="body-text">Done</div>
-        <div class="mt-4 page-title">{{ kpi.done }}</div>
-      </div>
-      <div class="card p-6">
-        <div class="body-text">Errors</div>
-        <div class="mt-4 page-title">{{ kpi.errors }}</div>
-      </div>
+    <!-- AI settings (quiet) -->
+    <div class="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+      <input id="llmBase" class="input text-sm" placeholder="https://provider/v1" value="{{ llm_defaults.base_url_v1 or config['LLM_BASE_URL_V1'] }}"/>
+      <select id="llmModel" class="input text-sm">
+        {% set _m = (llm_defaults.model or config['LLM_DEFAULT_MODEL']) %}
+        <option value="{{ _m }}">{{ _m }}</option>
+      </select>
+      <button type="button" class="btn-secondary" onclick="loadModels()">Models</button>
     </div>
 
-    <!-- Trend + debug widgets -->
-    <div class="grid grid-cols-1 md:grid-cols-12 gap-6">
-      <div class="md:col-span-8 letterhead p-6">
-        <div class="flex items-center justify-between">
-          <div>
-            <div class="section-title">Audits (last 7 days)</div>
-            <div class="body-text">Volume and stability</div>
-          </div>
-          <div class="body-text mono">tenant {{ current_user.org_id }}</div>
-        </div>
-        <div class="mt-4">
-          <canvas id="trendChart" height="110"></canvas>
-        </div>
-      </div>
+    <!-- Create site -->
+    <form class="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4" method="post" action="{{ url_for('audit.create_site') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input name="name" placeholder="Site name" class="input text-sm" />
+      <input name="base_url" placeholder="https://example.com" class="input md:col-span-2 text-sm" />
+      <button class="btn-primary md:col-span-3">Save site</button>
+    </form>
 
-      <div class="md:col-span-4 space-y-6">
-        <div class="card p-6">
-          <div class="flex items-center justify-between">
-            <div class="section-title">Debug</div>
-            {% if current_user.is_admin %}
-              <a class="text-xs text-brand-2 underline" href="{{ url_for('admin.admin_logs') }}">ver logs</a>
-            {% endif %}
-          </div>
-          <div class="mt-4 grid grid-cols-2 gap-4">
-            <div class="bg-surface2 rounded-xl p-4 border border-app">
-              <div class="body-text">Queued</div><div class="mt-4 section-title">{{ status_counts.queued }}</div>
+    <!-- Sites list -->
+    <div class="mt-6 flex flex-col gap-4">
+      {% for s in sites %}
+        <div class="bg-surface2 border border-app rounded-xl p-4">
+          <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div class="min-w-0">
+              <div class="section-title truncate">{{ s.name }}</div>
+              <div class="body-text mono truncate">{{ s.base_url }}</div>
             </div>
-            <div class="bg-surface2 rounded-xl p-4 border border-app">
-              <div class="body-text">Running</div><div class="mt-4 section-title">{{ status_counts.running }}</div>
-            </div>
-            <div class="bg-surface2 rounded-xl p-4 border border-app">
-              <div class="body-text">Done</div><div class="mt-4 section-title">{{ status_counts.done }}</div>
-            </div>
-            <div class="bg-surface2 rounded-xl p-4 border border-app">
-              <div class="body-text">Error</div><div class="mt-4 section-title">{{ status_counts.error }}</div>
-            </div>
-          </div>
-          {% if current_user.is_admin %}
-            <div class="mt-4 flex flex-wrap gap-4">
-              <a class="btn-secondary" href="{{ url_for('admin.ui_lab') }}">UI Lab</a>
-              <a class="btn-secondary" href="{{ url_for('admin.admin_home') }}">Admin</a>
-            </div>
-          {% endif %}
-        </div>
-
-        <div class="card p-6">
-          <div class="section-title">Quick actions</div>
-          <div class="mt-4 body-text">Create a site and run audits.</div>
-          <a href="#addSite" class="mt-4 inline-block btn-primary">Add site</a>
-        </div>
-      </div>
-    </div>
-
-    <!-- Auditorias (enterprise table on desktop, cards on mobile) -->
-    <div class="card p-6">
-      <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
-        <div>
-          <div class="section-title">Audits</div>
-          <div class="body-text">Status, target and actions. Mobile uses cards.</div>
-        </div>
-        <div class="flex items-center gap-4">
-          <select id="auditFilter" class="input rounded-xl px-3 py-2 text-xs">
-            <option value="all">Todos</option>
-            <option value="queued">Queued</option>
-            <option value="running">Running</option>
-            <option value="done">Done</option>
-            <option value="error">Error</option>
-          </select>
-          <button type="button" class="btn-secondary" onclick="applyAuditFilter()">Filter</button>
-        </div>
-      </div>
-
-      <!-- Desktop table -->
-      <div class="mt-4 hidden md:block table-wrap">
-        <table class="table">
-          <thead>
-            <tr>
-              <th>Alvo</th>
-              <th>Status</th>
-              <th>Data</th>
-              <th class="text-right">Ações</th>
-            </tr>
-          </thead>
-          <tbody id="auditTbody">
-          {% for a in audits %}
-            <tr data-status="{{ a.status }}">
-              <td class="min-w-[220px]">
-                <div class="mono text-xs">{{ a.target_domain or a.id }}</div>
-                <div class="text-[11px] text-muted">{{ a.id }}</div>
-              </td>
-              <td class="min-w-[140px]">
-                {% if a.status == 'done' %}
-                  <span class="badge badge-ok"><span class="dot" style="background:#34d399"></span>DONE</span>
-                {% elif a.status == 'error' %}
-                  <span class="badge badge-err"><span class="dot" style="background:#fb7185"></span>ERROR</span>
-                {% elif a.status == 'running' %}
-                  <span class="badge badge-run"><span class="dot" style="background:#4F46E5"></span>RUNNING</span>
-                {% else %}
-                  <span class="badge badge-muted"><span class="dot" style="background:#94a3b8"></span>QUEUED</span>
-                {% endif %}
-              </td>
-              <td class="min-w-[180px]">
-                <div class="text-[11px] text-muted">{{ a.created_utc }}</div>
-                <div class="text-[11px] text-muted">model={{ a.model }}</div>
-              </td>
-              <td class="text-right min-w-[170px]">
-                <a class="btn-secondary" href="{{ url_for('audit.view_audit', audit_id=a.id) }}">Open</a>
-                {% if current_user.is_admin %}
-                  <details class="relative inline-block ml-2">
-                    <summary class="list-none cursor-pointer btn-secondary">⋯</summary>
-                    <div class="absolute right-0 mt-4 w-48 card2 p-4 z-10">
-                      <form method="post" action="{{ url_for('admin.admin_audit_publish_github', audit_id=a.id) }}">
-                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                        <button class="w-full text-left btn-secondary">Publish to Git</button>
-                      </form>
-                      <form method="post" action="{{ url_for('admin.admin_audit_delete', audit_id=a.id) }}" onsubmit="return confirm('Excluir esta auditoria?');">
-                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                        <button class="w-full text-left btn-danger">Delete</button>
-                      </form>
-                    </div>
-                  </details>
-                {% endif %}
-              </td>
-            </tr>
-          {% else %}
-            <tr><td colspan="4" class="text-xs text-muted p-4">Nenhuma auditoria ainda.</td></tr>
-          {% endfor %}
-          </tbody>
-        </table>
-      </div>
-
-      <!-- Mobile cards -->
-      <div class="mt-4 md:hidden space-y-4" id="auditCards">
-        {% for a in audits %}
-          <div class="bg-surface2 rounded-xl p-4 border border-app" data-status="{{ a.status }}">
-            <div class="flex items-start justify-between gap-6">
-              <div class="min-w-0">
-                <div class="mono text-xs truncate">{{ a.target_domain or a.id }}</div>
-                <div class="text-[11px] text-muted truncate">{{ a.created_utc }}</div>
-              </div>
-              <div class="shrink-0">
-                {% if a.status == 'done' %}
-                  <span class="badge badge-ok"><span class="dot" style="background:#34d399"></span>DONE</span>
-                {% elif a.status == 'error' %}
-                  <span class="badge badge-err"><span class="dot" style="background:#fb7185"></span>ERROR</span>
-                {% elif a.status == 'running' %}
-                  <span class="badge badge-run"><span class="dot" style="background:#4F46E5"></span>RUNNING</span>
-                {% else %}
-                  <span class="badge badge-muted"><span class="dot" style="background:#94a3b8"></span>QUEUED</span>
-                {% endif %}
-              </div>
-            </div>
-            <div class="mt-4 flex items-center gap-4">
-              <a class="btn-primary" href="{{ url_for('audit.view_audit', audit_id=a.id) }}">Open</a>
+            <div class="flex flex-col md:flex-row items-stretch md:items-center gap-4">
+              <form method="post" action="{{ url_for('audit.start_audit') }}" class="flex flex-col md:flex-row gap-4 items-stretch md:items-center">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="site_id" value="{{ s.id }}"/>
+                <input name="provider_base_url_v1" value="{{ llm_defaults.base_url_v1 or config['LLM_BASE_URL_V1'] }}" class="mono hidden md:block w-64 input text-xs llmBaseField"/>
+                <input name="model" value="{{ llm_defaults.model or config['LLM_DEFAULT_MODEL'] }}" class="mono hidden md:block w-44 input text-xs llmModelField"/>
+                <div class="flex gap-4">
+                  <button name="mode" value="full" class="auditStartBtn btn-primary">
+                    <span class="btnText">Full</span>
+                  </button>
+                  <button name="mode" value="fast" class="btn-secondary">Fast</button>
+                </div>
+              </form>
               {% if current_user.is_admin %}
-                <details class="relative">
-                  <summary class="list-none cursor-pointer btn-secondary">⋯</summary>
-                  <div class="absolute right-0 mt-4 w-48 card2 p-4 z-10">
-                    <form method="post" action="{{ url_for('admin.admin_audit_publish_github', audit_id=a.id) }}">
-                      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                      <button class="w-full text-left btn-secondary">Publish to Git</button>
-                    </form>
-                    <form method="post" action="{{ url_for('admin.admin_audit_delete', audit_id=a.id) }}" onsubmit="return confirm('Excluir esta auditoria?');">
-                      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                      <button class="w-full text-left btn-danger">Delete</button>
-                    </form>
-                  </div>
-                </details>
+                <form method="post" action="{{ url_for('audit.delete_site', site_id=s.id) }}" onsubmit="return confirm('Delete this site and all audits?');">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <button class="btn-danger">Delete</button>
+                </form>
               {% endif %}
             </div>
           </div>
-        {% else %}
-          <div class="text-xs text-muted">Nenhuma auditoria ainda.</div>
-        {% endfor %}
-      </div>
-    </div>
-
-    <!-- Sites -->
-    <div class="card p-6" id="addSite">
-      <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div>
-          <div class="section-title">Sites</div>
-          <div class="body-text">Create sites and run audits in one click.</div>
         </div>
-      </div>
-      <form class="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4" method="post" action="{{ url_for('audit.create_site') }}">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <input name="name" placeholder="Nome (ex.: Loja X)" class="input rounded-xl px-3 py-2 text-sm" />
-        <input name="base_url" placeholder="https://exemplo.com" class="input md:col-span-2 rounded-xl px-3 py-2 text-sm" />
-        <button class="auditStartBtn btn-primary md:col-span-3">Save site</button>
-      </form>
-
-      <div class="mt-6 space-y-4">
-        {% for s in sites %}
-          <div class="card2 p-4">
-            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
-              <div class="min-w-0">
-                <div class="section-title truncate">{{ s.name }}</div>
-                <div class="body-text mono truncate">{{ s.base_url }}</div>
-              </div>
-              <div class="flex flex-col md:flex-row items-stretch md:items-center gap-4 w-full md:w-auto">
-                <form method="post" action="{{ url_for('audit.start_audit') }}" class="grid grid-cols-1 md:grid-cols-3 gap-4 items-center w-full md:w-auto">
-                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                  <input type="hidden" name="site_id" value="{{ s.id }}"/>
-                  <input name="provider_base_url_v1" value="{{ llm_defaults.base_url_v1 or config['LLM_BASE_URL_V1'] }}" class="mono hidden md:block w-64 input rounded-xl px-3 py-2 text-xs llmBaseField"/>
-                  <input name="model" value="{{ llm_defaults.model or config['LLM_DEFAULT_MODEL'] }}" class="mono hidden md:block w-44 input rounded-xl px-3 py-2 text-xs llmModelField"/>
-                  <div class="flex gap-4">
-                    <button name="mode" value="full" class="auditStartBtn btn-primary w-full md:w-auto">
-                      <span class="btnText">Auditoria completa</span>
-                    </button>
-                    <button name="mode" value="fast" class="btn-secondary w-full md:w-auto">
-                      Rápida
-                    </button>
-                  </div>
-                </form>
-
-                {% if current_user.is_admin %}
-                  <form method="post" action="{{ url_for('audit.delete_site', site_id=s.id) }}" onsubmit="return confirm('Excluir este site e TODAS as auditorias dele?');">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <button class="btn-danger">Delete</button>
-                  </form>
-                {% endif %}
-              </div>
-            </div>
-          </div>
-        {% else %}
-          <div class="text-xs text-muted">Nenhum site cadastrado ainda.</div>
-        {% endfor %}
-      </div>
+      {% else %}
+        <div class="body-text">No sites yet.</div>
+      {% endfor %}
     </div>
   </section>
 
-  <!-- Right column -->
-  <aside class="lg:col-span-4 space-y-6">
-    <section class="card p-6">
-      <div class="flex items-start justify-between gap-6">
-        <div>
-          <div class="section-title">Billing</div>
-          <div class="mt-4 body-text">Status: <span class="section-title">{{ sub.status if sub else "inactive" }}</span></div>
-        </div>
-        <div class="body-text mono">SaaS</div>
+  <!-- Audits -->
+  <section class="card" id="audits">
+    <div class="flex flex-col md:flex-row md:items-end md:justify-between gap-6">
+      <div>
+        <div class="section-title">Audits</div>
+        <div class="body-text">Recent runs and status.</div>
       </div>
-      {% if request.args.get('billing') == 'required' %}
-        <div class="mt-4 body-text p-4 rounded-xl bg-brand-weak text-brand-2 border border-brand">
-          Para rodar auditoria completa, ative a assinatura (ou use trial).
-        </div>
-      {% endif %}
-      <form class="mt-6" method="post" action="{{ url_for('billing.create_checkout') }}">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <button class="btn-primary w-full">Manage (Stripe)</button>
-      </form>
-      <div class="mt-4 body-text">You can start with per-report pricing and enable recurring later.</div>
-    </section>
+      <div class="flex items-center gap-4">
+        <select id="auditFilter" class="input text-xs">
+          <option value="all">All</option>
+          <option value="queued">Queued</option>
+          <option value="running">Running</option>
+          <option value="done">Done</option>
+          <option value="error">Error</option>
+        </select>
+        <button type="button" class="btn-secondary" onclick="applyAuditFilter()">Filter</button>
+      </div>
+    </div>
 
-    <section class="card p-6">
-      <div class="section-title">Help</div>
-      <div class="mt-4 body-text">If the AI is slow, try “Fast”, check provider/model and Admin logs.</div>
-      {% if current_user.is_admin %}
-        <div class="mt-4 flex flex-wrap gap-4">
-          <a class="btn-secondary" href="{{ url_for('admin.admin_logs') }}">Logs</a>
-          <a class="btn-secondary" href="{{ url_for('admin.ui_lab') }}">UI Lab</a>
+    <div class="mt-6 hidden md:block table-wrap">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Target</th>
+            <th>Status</th>
+            <th>Created</th>
+            <th class="text-right">Action</th>
+          </tr>
+        </thead>
+        <tbody id="auditTbody">
+        {% for a in audits %}
+          <tr data-status="{{ a.status }}">
+            <td class="min-w-[220px]">
+              <div class="mono text-xs">{{ a.target_domain or a.id }}</div>
+              <div class="text-[11px] text-muted">{{ a.id }}</div>
+            </td>
+            <td class="min-w-[140px]">
+              {% if a.status == 'done' %}
+                <span class="badge badge-ok"><span class="dot" style="background:#34d399"></span>DONE</span>
+              {% elif a.status == 'error' %}
+                <span class="badge badge-err"><span class="dot" style="background:#fb7185"></span>ERROR</span>
+              {% elif a.status == 'running' %}
+                <span class="badge badge-run"><span class="dot" style="background:#4F46E5"></span>RUNNING</span>
+              {% else %}
+                <span class="badge badge-muted"><span class="dot" style="background:#94a3b8"></span>QUEUED</span>
+              {% endif %}
+            </td>
+            <td class="min-w-[180px]">
+              <div class="text-[11px] text-muted">{{ a.created_utc }}</div>
+              <div class="text-[11px] text-muted">model={{ a.model }}</div>
+            </td>
+            <td class="text-right min-w-[170px]">
+              <a class="btn-secondary" href="{{ url_for('audit.view_audit', audit_id=a.id) }}">Open</a>
+            </td>
+          </tr>
+        {% else %}
+          <tr><td colspan="4" class="text-xs text-muted p-4">No audits yet.</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="mt-6 md:hidden flex flex-col gap-4" id="auditCards">
+      {% for a in audits %}
+        <div class="bg-surface2 rounded-xl p-4 border border-app" data-status="{{ a.status }}">
+          <div class="flex items-start justify-between gap-6">
+            <div class="min-w-0">
+              <div class="mono text-xs truncate">{{ a.target_domain or a.id }}</div>
+              <div class="text-[11px] text-muted truncate">{{ a.created_utc }}</div>
+            </div>
+            <div class="shrink-0">
+              {% if a.status == 'done' %}
+                <span class="badge badge-ok"><span class="dot" style="background:#34d399"></span>DONE</span>
+              {% elif a.status == 'error' %}
+                <span class="badge badge-err"><span class="dot" style="background:#fb7185"></span>ERROR</span>
+              {% elif a.status == 'running' %}
+                <span class="badge badge-run"><span class="dot" style="background:#4F46E5"></span>RUNNING</span>
+              {% else %}
+                <span class="badge badge-muted"><span class="dot" style="background:#94a3b8"></span>QUEUED</span>
+              {% endif %}
+            </div>
+          </div>
+          <div class="mt-4">
+            <a class="btn-primary" href="{{ url_for('audit.view_audit', audit_id=a.id) }}">Open</a>
+          </div>
         </div>
-      {% endif %}
-    </section>
-  </aside>
+      {% else %}
+        <div class="body-text">No audits yet.</div>
+      {% endfor %}
+    </div>
+  </section>
+
+  <!-- Billing -->
+  <section class="card" id="billing">
+    <div class="flex items-start justify-between gap-6">
+      <div>
+        <div class="section-title">Billing</div>
+        <div class="body-text">Status: <span class="section-title">{{ sub.status if sub else "inactive" }}</span></div>
+      </div>
+      <a class="btn-secondary" href="{{ url_for('settings.settings_home') }}">Settings</a>
+    </div>
+    {% if request.args.get('billing') == 'required' %}
+      <div class="mt-6 body-text p-4 rounded-xl bg-brand-weak text-brand-2 border border-brand">
+        Full audit requires an active subscription (or trial).
+      </div>
+    {% endif %}
+    <form class="mt-6" method="post" action="{{ url_for('billing.create_checkout') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button class="btn-primary w-full">Manage plan</button>
+    </form>
+  </section>
 </div>
 
 <script>
-  // Loading spinner for audit buttons (mobile-friendly)
   function spinnerSvg(){
     return '<svg class="animate-spin h-4 w-4 inline-block mr-2 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">' +
       '<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>' +
@@ -327,40 +196,9 @@
       btn.disabled = true;
       btn.classList.add("opacity-80");
       const span = btn.querySelector(".btnText");
-      if(span) span.innerHTML = spinnerSvg() + "Iniciando...";
+      if(span) span.innerHTML = spinnerSvg() + "Starting...";
     });
   });
-
-  // Trend chart (Chart.js)
-  (function(){
-    const labels = {{ trend.labels | tojson }};
-    const data = {{ trend.counts | tojson }};
-    const canvas = document.getElementById("trendChart");
-    if(!canvas) return;
-    const ctx = canvas.getContext("2d");
-    // Load Chart.js on demand
-    const s = document.createElement("script");
-    s.src = "https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js";
-    s.onload = () => {
-      const gradient = ctx.createLinearGradient(0, 0, 0, 220);
-      gradient.addColorStop(0, "rgba(79,70,229,0.35)");
-      gradient.addColorStop(1, "rgba(79,70,229,0.02)");
-      new Chart(ctx, {
-        type: "line",
-        data: { labels, datasets: [{ label: "Audits", data, fill: true, tension: 0.35, borderColor: "#4F46E5", backgroundColor: gradient, pointRadius: 3, pointBackgroundColor: "#4F46E5" }]},
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: { legend: { display: false } },
-          scales: {
-            x: { ticks: { color: "rgba(148,163,184,.9)" }, grid: { color: "rgba(148,163,184,.08)" } },
-            y: { ticks: { color: "rgba(148,163,184,.9)" }, grid: { color: "rgba(148,163,184,.08)" } },
-          }
-        }
-      });
-    };
-    document.head.appendChild(s);
-  })();
 
   // LLM config persistence + model fetch (admin endpoint)
   (function(){
@@ -386,23 +224,23 @@
 
     window.loadModels = async function(){
       const base = (baseEl?.value || "").trim();
-      if(!base) { alert("Informe o provedor (ex.: https://host/v1)"); return; }
+      if(!base) { alert("Enter the provider base URL (e.g. https://host/v1)"); return; }
       localStorage.setItem(storeBaseKey, base);
-      if(modelEl) modelEl.innerHTML = "<option>Carregando…</option>";
+      if(modelEl) modelEl.innerHTML = "<option>Loading…</option>";
       try{
         const r = await fetch(`/admin/llm/models.json?base_url_v1=${encodeURIComponent(base)}`);
         const j = await r.json();
-        if(!j.ok) throw new Error(j.error || "erro");
+        if(!j.ok) throw new Error(j.error || "error");
         const models = j.models || [];
         if(modelEl){
           const current = localStorage.getItem(storeModelKey) || "";
-          modelEl.innerHTML = "<option value=''>Selecionar modelo</option>" + models.map(m => `<option value=\"${m}\">${m}</option>`).join("");
+          modelEl.innerHTML = "<option value=''>Select model</option>" + models.map(m => `<option value=\"${m}\">${m}</option>`).join("");
           if(current) modelEl.value = current;
         }
         applyToForms();
       }catch(e){
-        if(modelEl) modelEl.innerHTML = "<option value=''>Falha ao carregar</option>";
-        alert("Falha ao carregar modelos: " + (e.message || e));
+        if(modelEl) modelEl.innerHTML = "<option value=''>Failed to load</option>";
+        alert("Failed to load models: " + (e.message || e));
       }
     }
   })();
@@ -423,3 +261,4 @@
   }
 </script>
 {% endblock %}
+

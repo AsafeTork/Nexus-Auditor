@@ -1,66 +1,63 @@
 {% extends "layout.html" %}
+{% set title = "Settings" %}
 {% block content %}
-<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-  <section class="lg:col-span-2 card p-6">
-    <div class="flex items-start justify-between gap-4">
-      <div>
-        <div class="text-sm font-semibold">Organization</div>
-        <div class="mt-2 text-xs text-muted">Org ID: <span class="mono">{{ current_user.org_id }}</span></div>
-        <div class="mt-1 text-xs text-muted">Role: <span class="font-semibold">{{ current_user.role or "member" }}</span></div>
-        <div class="mt-1 text-xs text-muted">Master: <span class="mono">{{ master_email or "—" }}</span></div>
-      </div>
-    </div>
+<div class="flex flex-col gap-6">
+  <section class="card">
+    <div class="section-title">Organization</div>
+    <div class="mt-4 body-text">Org ID: <span class="mono">{{ current_user.org_id }}</span></div>
+    <div class="mt-4 body-text">Role: <span class="section-title">{{ current_user.role or "member" }}</span></div>
+    <div class="mt-4 body-text">Master: <span class="mono">{{ master_email or "—" }}</span></div>
+  </section>
 
-    <div class="mt-6">
-      <div class="text-sm font-semibold">Users</div>
-      <div class="mt-3 table-wrap">
-        <table class="table">
-          <thead>
+  <section class="card">
+    <div class="section-title">Users</div>
+    <div class="mt-6 table-wrap">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Email</th>
+            <th>Role</th>
+            <th>Created</th>
+            <th class="text-right">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for u in users %}
             <tr>
-              <th>Email</th>
-              <th>Role</th>
-              <th>Created</th>
-              <th class="text-right">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for u in users %}
-              <tr>
-                <td class="mono text-xs">{{ u.email }}</td>
-                <td class="text-sm text-muted">{{ u.role }}</td>
-                <td class="text-sm text-muted">{{ u.created_utc }}</td>
-                <td class="text-right">
-                  {% if is_master and u.email != master_email %}
-                    {% if u.role == 'admin' %}
-                      <form class="inline" method="post" action="{{ url_for('settings.make_member', user_id=u.id) }}">
-                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                        <button class="btn-secondary">Remove admin</button>
-                      </form>
-                    {% else %}
-                      <form class="inline" method="post" action="{{ url_for('settings.make_admin', user_id=u.id) }}">
-                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                        <button class="btn-primary">Make admin</button>
-                      </form>
-                    {% endif %}
+              <td class="mono text-xs">{{ u.email }}</td>
+              <td class="text-sm text-muted">{{ u.role }}</td>
+              <td class="text-sm text-muted">{{ u.created_utc }}</td>
+              <td class="text-right">
+                {% if is_master and u.email != master_email %}
+                  {% if u.role == 'admin' %}
+                    <form class="inline" method="post" action="{{ url_for('settings.make_member', user_id=u.id) }}">
+                      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                      <button class="btn-secondary">Remove admin</button>
+                    </form>
                   {% else %}
-                    <span class="text-xs text-muted">—</span>
+                    <form class="inline" method="post" action="{{ url_for('settings.make_admin', user_id=u.id) }}">
+                      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                      <button class="btn-primary">Make admin</button>
+                    </form>
                   {% endif %}
-                </td>
-              </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
+                {% else %}
+                  <span class="text-xs text-muted">—</span>
+                {% endif %}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
     </div>
 
     {% if is_admin %}
       <div class="mt-6">
-        <div class="text-sm font-semibold">Create user</div>
+        <div class="section-title">Create user</div>
         <form class="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4" method="post" action="{{ url_for('settings.create_user') }}">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-          <input name="email" placeholder="email@domain.com" class="input rounded-xl px-3 py-2 text-sm" />
-          <input name="password" placeholder="password (min 8)" class="input rounded-xl px-3 py-2 text-sm" />
-          <select name="role" class="input rounded-xl px-3 py-2 text-sm">
+          <input name="email" placeholder="email@domain.com" class="input text-sm" />
+          <input name="password" placeholder="password (min 8)" class="input text-sm" />
+          <select name="role" class="input text-sm">
             <option value="member">member</option>
             <option value="admin">admin</option>
           </select>
@@ -70,22 +67,19 @@
     {% endif %}
   </section>
 
-  <aside class="lg:col-span-1 card p-6">
-    <div class="text-sm font-semibold">Billing</div>
-    <div class="mt-2 text-xs text-muted">Status: <span class="font-semibold">{{ sub.status if sub else "inactive" }}</span></div>
-    <div class="mt-3 text-xs text-muted">Stripe customer: <span class="mono">{{ sub.stripe_customer_id if sub else "" }}</span></div>
-    <div class="mt-1 text-xs text-muted">Stripe subscription: <span class="mono">{{ sub.stripe_subscription_id if sub else "" }}</span></div>
-
+  <section class="card">
+    <div class="section-title">Billing</div>
+    <div class="mt-4 body-text">Status: <span class="section-title">{{ sub.status if sub else "inactive" }}</span></div>
     {% if is_admin %}
-      <form class="mt-5" method="post" action="{{ url_for('billing.create_checkout') }}">
+      <form class="mt-6" method="post" action="{{ url_for('billing.create_checkout') }}">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <button class="btn-primary w-full">Manage plan</button>
       </form>
-      <form class="mt-3" method="post" action="{{ url_for('settings.reset_subscription') }}">
+      <form class="mt-6" method="post" action="{{ url_for('settings.reset_subscription') }}">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <button class="btn-danger w-full">Reset (debug)</button>
       </form>
     {% endif %}
-  </aside>
+  </section>
 </div>
 {% endblock %}

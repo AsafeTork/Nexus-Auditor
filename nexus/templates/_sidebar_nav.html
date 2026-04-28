@@ -1,5 +1,5 @@
 {% set ep = (request.endpoint or '') %}
-<nav class="space-y-4">
+<nav class="flex flex-col gap-4">
   <a class="nav-link {% if ep.startswith('dashboard.') %}nav-link-active{% endif %}"
      href="{{ url_for('dashboard.home') }}">
     <svg class="opacity-90" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 13h8V3H3v10Zm10 8h8V11h-8v10ZM3 21h8v-6H3v6Zm10-12h8V3h-8v6Z"/></svg>
@@ -13,8 +13,8 @@
   </a>
 
   {% if current_user.is_admin %}
-    <div class="pt-4 mt-4 border-t border-app">
-      <div class="px-2 pb-2 text-xs text-muted">Admin</div>
+    <div class="nav-section">
+      <div class="nav-label">Admin</div>
       <a class="nav-link {% if ep.startswith('admin.admin_home') %}nav-link-active{% endif %}"
          href="{{ url_for('admin.admin_home') }}">
         <svg class="opacity-90" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6M9 8h6M7 4h10a2 2 0 0 1 2 2v14l-3-2-3 2-3-2-3 2V6a2 2 0 0 1 2-2Z"/></svg>
@@ -35,7 +35,7 @@
     </div>
   {% endif %}
 
-  <div class="pt-4 mt-4 border-t border-app">
+  <div class="nav-section">
     <a class="nav-link" href="{{ url_for('auth.logout') }}">
       <svg class="opacity-90" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 17l5-5-5-5M15 12H3m12 9a9 9 0 1 0 0-18"/></svg>
       <span>Logout</span>
