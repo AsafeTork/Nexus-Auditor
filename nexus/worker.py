@@ -18,6 +18,8 @@ from .services.audit_engine import (
     clean_html,
     estimate_ltv_loss_from_rows,
     fetch_url_html,
+    stream_llm_events,
+    stream_llm_text,
 )
 from .services.ui_review import read_text_files
 
@@ -106,13 +108,19 @@ def run_ui_lab_job(run_id: str, org_id: str, mode: str, payload: dict) -> None:
 
         goal = str(payload.get("goal") or "").strip() or "Melhorar a UI para ficar moderna, limpa e premium."
 
-        # Call LLM
+        # Call LLM (streaming -> UI updates while generating)
         try:
-            append_log("[ui-lab] chamando LLM (non-stream)…")
-            md = call_llm_non_stream(
-                base_url_v1=app.config.get("LLM_BASE_URL_V1", ""),
-                api_key=app.config.get("LLM_API_KEY", ""),
-                model=app.config.get("LLM_DEFAULT_MODEL", "deepseek-chat"),
+            base_url_v1 = str(payload.get("base_url_v1") or app.config.get("LLM_BASE_URL_V1", "")).strip()
+            model = str(payload.get("model") or app.config.get("LLM_DEFAULT_MODEL", "deepseek-chat")).strip()
+            api_key = app.config.get("LLM_API_KEY", "")
+            append_log(f"[ui-lab] chamando LLM (stream)… model={model}")
+
+            acc = ""
+            last_flush = time.time()
+            for delta in stream_llm_text(
+                base_url_v1=base_url_v1,
+                api_key=api_key,
+                model=model,
                 temperature=0.2,
                 system_prompt=(
                     "Você é um especialista em UX/UI e Frontend. Analise a UI descrita e produza melhorias práticas, "
@@ -121,10 +129,15 @@ def run_ui_lab_job(run_id: str, org_id: str, mode: str, payload: dict) -> None:
                 ),
                 user_prompt=f"Objetivo: {goal}\n\nContexto:\n{context}\n",
                 timeout_s=240,
-            )
-            if not md.strip():
+            ):
+                acc += delta
+                if time.time() - last_flush > 1.0:
+                    conn.set(key + ":result", acc, ex=60 * 60 * 24 * 7)
+                    last_flush = time.time()
+
+            if not acc.strip():
                 raise RuntimeError("Resposta vazia do LLM.")
-            conn.set(key + ":result", md, ex=60 * 60 * 24 * 7)  # keep 7 days
+            conn.set(key + ":result", acc, ex=60 * 60 * 24 * 7)
             conn.hset(key, mapping={"status": "done"})
             append_log("[ui-lab] done")
         except Exception as e:
@@ -230,8 +243,33 @@ def run_audit_job(audit_id: str) -> None:
                 continue
 
             prompt = build_user_prompt(layer, fetch, cleaned)
+            # Prefer streaming so the audit page updates in real time.
             try:
-                # Non-stream mode is more reliable in hosted environments.
+                log(layer, "INFO", "Chamando modelo (stream)…")
+                for kind, text in stream_llm_events(
+                    base_url_v1=base_url_v1,
+                    api_key=api_key,
+                    model=model,
+                    temperature=0.2,
+                    system_prompt=system_prompt,
+                    user_prompt=prompt,
+                ):
+                    if kind == "HEARTBEAT":
+                        log(layer, "INFO", text)
+                    elif kind == "DATA":
+                        md(text)
+                    elif kind == "CSV_ROW":
+                        row = (text or "").strip("\r").strip()
+                        if not row or row.lower().startswith("categoria;"):
+                            continue
+                        if row.count(";") >= 6:
+                            csv(row)
+                            rows.append(row)
+                continue
+            except Exception as e:
+                log(layer, "WARN", f"Streaming falhou, fallback non-stream: {type(e).__name__}: {e}")
+
+            try:
                 content = call_llm_non_stream(
                     base_url_v1=base_url_v1,
                     api_key=api_key,
@@ -245,7 +283,6 @@ def run_audit_job(audit_id: str) -> None:
                     log(layer, "ERROR", "Resposta vazia do provedor LLM.")
                     continue
 
-                # Parse sections: ---REPORT--- ... ---CSV---
                 report = ""
                 csv_block = ""
                 if "---REPORT---" in content:
@@ -263,16 +300,13 @@ def run_audit_job(audit_id: str) -> None:
 
                 for ln in csv_block.splitlines():
                     row = ln.strip("\r").strip()
-                    if not row:
-                        continue
-                    if row.lower().startswith("categoria;"):
+                    if not row or row.lower().startswith("categoria;"):
                         continue
                     if row.count(";") >= 6:
                         csv(row)
                         rows.append(row)
             except Exception as e:
                 log(layer, "ERROR", f"Falha no provedor LLM: {type(e).__name__}: {e}")
-                # Continue to next layer; report remains useful even if one layer fails.
                 continue
 
         audit.status = "done" if audit.status != "error" else "error"

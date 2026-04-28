@@ -37,6 +37,75 @@ def normalize_base_url_v1(base_url_v1: str) -> str:
     return u
 
 
+def list_models(*, base_url_v1: str, api_key: str, timeout_s: int = 12) -> List[str]:
+    """
+    Busca lista de modelos em provider OpenAI-compatible.
+    GET {base}/models
+    Retorna uma lista de IDs.
+    """
+    base = normalize_base_url_v1(base_url_v1)
+    if not base:
+        return []
+    url = base.rstrip("/") + "/models"
+    headers = {"Accept": "application/json"}
+    if api_key:
+        headers["Authorization"] = f"Bearer {api_key}"
+    r = requests.get(url, headers=headers, timeout=timeout_s)
+    r.raise_for_status()
+    j = r.json() or {}
+    data = j.get("data") or []
+    out: List[str] = []
+    if isinstance(data, list):
+        for it in data:
+            if isinstance(it, dict) and it.get("id"):
+                out.append(str(it["id"]))
+    return out
+
+
+def stream_llm_text(
+    *,
+    base_url_v1: str,
+    api_key: str,
+    model: str,
+    temperature: float,
+    system_prompt: str,
+    user_prompt: str,
+    timeout_s: int = LLM_TIMEOUT_S,
+) -> Generator[str, None, None]:
+    """
+    Streaming genérico (delta text) para providers OpenAI-compatible.
+    """
+    headers = {"Content-Type": "application/json"}
+    if api_key:
+        headers["Authorization"] = f"Bearer {api_key}"
+
+    url = normalize_base_url_v1(base_url_v1).rstrip("/") + "/chat/completions"
+    payload = {
+        "model": model,
+        "temperature": float(temperature),
+        "stream": True,
+        "messages": [{"role": "system", "content": system_prompt}, {"role": "user", "content": user_prompt}],
+    }
+    r = requests.post(url, headers=headers, json=payload, stream=True, timeout=timeout_s)
+    r.encoding = "utf-8"
+    r.raise_for_status()
+    for raw in r.iter_lines(decode_unicode=True, chunk_size=2048):
+        if not raw:
+            continue
+        line = str(raw).strip()
+        if line.startswith("data:"):
+            line = line[5:].strip()
+        if line == "[DONE]":
+            break
+        try:
+            obj = json.loads(line)
+            delta = (((obj.get("choices") or [None])[0] or {}).get("delta") or {}).get("content") or ""
+        except Exception:
+            delta = ""
+        if delta:
+            yield str(delta)
+
+
 MICRO_LAYERS = [
     "1. Headers & SSL (Infra)",
     "2. Vulnerabilidades de Script (Segurança)",

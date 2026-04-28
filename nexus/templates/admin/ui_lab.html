@@ -14,6 +14,15 @@
       <div class="text-xs font-extrabold">Analisar templates do projeto</div>
       <div class="text-[11px] text-muted mt-1">Melhor para sugerir mudanças em arquivos específicos.</div>
       <form class="mt-3 space-y-2" method="post" action="{{ url_for('admin.ui_lab_templates') }}">
+        <div class="grid grid-cols-1 gap-2">
+          <input id="uiBase1" name="base_url_v1" class="input w-full rounded-xl px-3 py-2 text-xs" placeholder="Provedor (ex.: https://host/v1)" />
+          <div class="flex gap-2">
+            <select id="uiModel1" name="model" class="input w-full rounded-xl px-3 py-2 text-xs">
+              <option value="">Modelo (carregue a lista)</option>
+            </select>
+            <button type="button" class="btn-secondary bg-surface rounded-xl px-3 py-2 text-xs font-extrabold" onclick="loadModels('uiBase1','uiModel1')">Modelos</button>
+          </div>
+        </div>
         <textarea name="goal" class="input w-full rounded-xl p-3 text-xs" rows="3" placeholder="Ex.: Deixar mais moderno, reduzir contornos, melhorar grid e responsivo."></textarea>
         <button class="btn-primary w-full rounded-xl px-4 py-2 text-xs font-extrabold">Rodar análise</button>
       </form>
@@ -23,6 +32,13 @@
       <div class="text-xs font-extrabold">Analisar por URL</div>
       <div class="text-[11px] text-muted mt-1">Busca HTML e sugere melhorias (pode falhar se a página bloquear).</div>
       <form class="mt-3 space-y-2" method="post" action="{{ url_for('admin.ui_lab_url') }}">
+        <input id="uiBase2" name="base_url_v1" class="input w-full rounded-xl px-3 py-2 text-xs" placeholder="Provedor (ex.: https://host/v1)" />
+        <div class="flex gap-2">
+          <select id="uiModel2" name="model" class="input w-full rounded-xl px-3 py-2 text-xs">
+            <option value="">Modelo (carregue a lista)</option>
+          </select>
+          <button type="button" class="btn-secondary bg-surface rounded-xl px-3 py-2 text-xs font-extrabold" onclick="loadModels('uiBase2','uiModel2')">Modelos</button>
+        </div>
         <input name="url" class="input w-full rounded-xl px-3 py-2 text-xs" placeholder="https://seu-site/pagina" />
         <textarea name="goal" class="input w-full rounded-xl p-3 text-xs" rows="2" placeholder="Objetivo (opcional)"></textarea>
         <button class="btn-primary w-full rounded-xl px-4 py-2 text-xs font-extrabold">Rodar análise</button>
@@ -33,6 +49,13 @@
       <div class="text-xs font-extrabold">Analisar por screenshot</div>
       <div class="text-[11px] text-muted mt-1">Usa metadados + suas notas (não é visão real).</div>
       <form class="mt-3 space-y-2" method="post" enctype="multipart/form-data" action="{{ url_for('admin.ui_lab_screenshot') }}">
+        <input id="uiBase3" name="base_url_v1" class="input w-full rounded-xl px-3 py-2 text-xs" placeholder="Provedor (ex.: https://host/v1)" />
+        <div class="flex gap-2">
+          <select id="uiModel3" name="model" class="input w-full rounded-xl px-3 py-2 text-xs">
+            <option value="">Modelo (carregue a lista)</option>
+          </select>
+          <button type="button" class="btn-secondary bg-surface rounded-xl px-3 py-2 text-xs font-extrabold" onclick="loadModels('uiBase3','uiModel3')">Modelos</button>
+        </div>
         <input type="file" name="screenshot" accept="image/*" class="input w-full rounded-xl px-3 py-2 text-xs" />
         <textarea name="notes" class="input w-full rounded-xl p-3 text-xs" rows="2" placeholder="Descreva o que aparece no screenshot e o que quer melhorar."></textarea>
         <textarea name="goal" class="input w-full rounded-xl p-3 text-xs" rows="2" placeholder="Objetivo (opcional)"></textarea>
@@ -92,6 +115,41 @@
 </script>
 
 <script>
+  function getDefaultBase(){
+    return localStorage.getItem("llm_base_url_v1") || "";
+  }
+  function setDefaultBase(v){
+    localStorage.setItem("llm_base_url_v1", v || "");
+  }
+  function fillBases(){
+    const v = getDefaultBase();
+    ["uiBase1","uiBase2","uiBase3"].forEach(id => {
+      const el = document.getElementById(id);
+      if(el && !el.value) el.value = v;
+    });
+  }
+  fillBases();
+
+  async function loadModels(baseId, modelId){
+    const baseEl = document.getElementById(baseId);
+    const modelEl = document.getElementById(modelId);
+    if(!baseEl || !modelEl) return;
+    const base = (baseEl.value || "").trim();
+    if(!base) { alert("Informe o provedor (ex.: https://host/v1)"); return; }
+    setDefaultBase(base);
+    modelEl.innerHTML = "<option>Carregando…</option>";
+    try{
+      const r = await fetch(`/admin/llm/models.json?base_url_v1=${encodeURIComponent(base)}`);
+      const j = await r.json();
+      if(!j.ok) throw new Error(j.error || "erro");
+      const models = j.models || [];
+      modelEl.innerHTML = "<option value=''>Modelo (opcional)</option>" + models.map(m => `<option value=\"${m}\">${m}</option>`).join("");
+    }catch(e){
+      modelEl.innerHTML = "<option value=''>Falha ao carregar</option>";
+      alert("Falha ao carregar modelos: " + (e.message || e));
+    }
+  }
+
   // Live poll
   (function(){
     const runId = "{{ run_id or '' }}";

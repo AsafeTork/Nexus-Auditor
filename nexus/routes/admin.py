@@ -17,6 +17,7 @@ from ..security import require_admin
 from ..services.queueing import enqueue_ui_lab
 from ..services.ui_review import summarize_screenshot
 from ..services.github import create_issue
+from ..services.audit_engine import list_models
 
 bp = Blueprint("admin", __name__)
 
@@ -285,11 +286,26 @@ def ui_lab_run_json(run_id: str):
     )
 
 
+@bp.get("/admin/llm/models.json")
+@login_required
+@require_admin
+def admin_llm_models():
+    base_url = (request.args.get("base_url_v1") or "").strip() or current_app.config.get("LLM_BASE_URL_V1", "")
+    api_key = current_app.config.get("LLM_API_KEY", "")
+    try:
+        models = list_models(base_url_v1=base_url, api_key=api_key, timeout_s=12)
+        return jsonify({"ok": True, "models": models})
+    except Exception as e:
+        return jsonify({"ok": False, "error": f"{type(e).__name__}: {e}", "models": []}), 400
+
+
 @bp.post("/admin/ui-lab/templates")
 @login_required
 @require_admin
 def ui_lab_templates():
     goal = (request.form.get("goal") or "").strip() or "Melhorar a UI para ficar moderna, limpa e premium."
+    base_url_v1 = (request.form.get("base_url_v1") or "").strip()
+    model = (request.form.get("model") or "").strip()
     run_id = str(uuid.uuid4())
     conn = _redis_conn()
     conn.hset(
@@ -304,7 +320,12 @@ def ui_lab_templates():
     conn.delete(_ui_key(current_user.org_id, run_id) + ":logs")
     conn.delete(_ui_key(current_user.org_id, run_id) + ":result")
     conn.rpush(_ui_index_key(current_user.org_id), run_id)
-    enqueue_ui_lab(run_id, current_user.org_id, "templates", {"goal": goal})
+    payload = {"goal": goal}
+    if base_url_v1:
+        payload["base_url_v1"] = base_url_v1
+    if model:
+        payload["model"] = model
+    enqueue_ui_lab(run_id, current_user.org_id, "templates", payload)
     flash("UI Lab enfileirado (templates). Veja logs/resultado abaixo.", "ok")
     return redirect(url_for("admin.ui_lab", run=run_id))
 
@@ -315,6 +336,8 @@ def ui_lab_templates():
 def ui_lab_url():
     goal = (request.form.get("goal") or "").strip() or "Avaliar e sugerir melhorias de layout e responsividade."
     url = (request.form.get("url") or "").strip()
+    base_url_v1 = (request.form.get("base_url_v1") or "").strip()
+    model = (request.form.get("model") or "").strip()
     if not url:
         flash("Informe uma URL.", "error")
         return redirect(url_for("admin.ui_lab"))
@@ -332,7 +355,12 @@ def ui_lab_url():
     conn.delete(_ui_key(current_user.org_id, run_id) + ":logs")
     conn.delete(_ui_key(current_user.org_id, run_id) + ":result")
     conn.rpush(_ui_index_key(current_user.org_id), run_id)
-    enqueue_ui_lab(run_id, current_user.org_id, "url", {"goal": goal, "url": url})
+    payload = {"goal": goal, "url": url}
+    if base_url_v1:
+        payload["base_url_v1"] = base_url_v1
+    if model:
+        payload["model"] = model
+    enqueue_ui_lab(run_id, current_user.org_id, "url", payload)
     flash("UI Lab enfileirado (URL). Veja logs/resultado abaixo.", "ok")
     return redirect(url_for("admin.ui_lab", run=run_id))
 
@@ -343,6 +371,8 @@ def ui_lab_url():
 def ui_lab_screenshot():
     goal = (request.form.get("goal") or "").strip() or "Sugerir melhorias de layout e hierarquia visual."
     notes = (request.form.get("notes") or "").strip()
+    base_url_v1 = (request.form.get("base_url_v1") or "").strip()
+    model = (request.form.get("model") or "").strip()
     f = request.files.get("screenshot")
     if not f:
         flash("Envie um screenshot (PNG/JPG).", "error")
@@ -377,6 +407,8 @@ def ui_lab_screenshot():
                     "size_bytes": meta.size_bytes,
                     "dominant_hex": meta.dominant_hex,
                 },
+                "base_url_v1": base_url_v1,
+                "model": model,
             },
         )
         flash("UI Lab enfileirado (screenshot). Veja logs/resultado abaixo.", "ok")
