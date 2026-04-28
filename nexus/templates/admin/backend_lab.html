@@ -50,9 +50,9 @@
         </div>
         <button class="btn-secondary" onclick="copyText('outBox')">Copy</button>
       </div>
-      <div class="mt-4 body-text">Run: <span class="mono" id="runId">{{ run_id or "—" }}</span> · status: <span class="mono" id="runStatus">—</span></div>
-      <textarea id="logBox" class="mono mt-4 w-full h-40 input text-xs" readonly></textarea>
-      <textarea id="outBox" class="mono mt-4 w-full h-[42vh] input text-xs" readonly></textarea>
+      <div class="mt-4 body-text">Run: <span class="mono" id="runId">{{ run_id or "—" }}</span> · status: <span class="mono" id="runStatus" aria-live="polite">—</span></div>
+      <textarea id="logBox" aria-label="Logs" aria-readonly="true" aria-live="polite" class="mono mt-4 w-full h-40 input text-xs" readonly></textarea>
+      <textarea id="outBox" aria-label="Output" aria-readonly="true" aria-live="polite" class="mono mt-4 w-full h-[42vh] input text-xs" readonly></textarea>
     </div>
   </div>
 </div>
@@ -96,4 +96,3 @@
   })();
 </script>
 {% endblock %}
-

@@ -5,46 +5,42 @@
 <div class="letterhead">
   <div class="flex items-start justify-between gap-6">
     <div>
-      <div class="text-sm font-semibold text-brand-2">Audit Debug</div>
-      <div class="mono text-xs text-muted">{{ audit.id }}</div>
-      <div class="text-xs text-muted">
-        status={{ audit.status }} · domain={{ audit.target_domain }} · model={{ audit.model }} · provider={{ audit.provider_base_url_v1 }}
-      </div>
-      {% if site %}
-        <div class="text-xs text-muted">{{ site.base_url }}</div>
-      {% endif %}
+      <div class="section-title">Audit Debug</div>
+      <div class="body-text mono">audit={{ audit.id }}</div>
+      <div class="body-text">status={{ audit.status }} · domain={{ audit.target_domain }} · model={{ audit.model }}</div>
+      {% if site %}<div class="body-text mono">{{ site.base_url }}</div>{% endif %}
     </div>
     <div class="flex items-center gap-4">
       <form method="post" action="{{ url_for('admin.admin_audit_delete', audit_id=audit.id) }}" onsubmit="return confirm('Excluir esta auditoria?');">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <button class="btn-danger">Delete</button>
+        <button class="btn-danger" aria-label="Excluir auditoria">Delete</button>
       </form>
-      <a class="btn-secondary" href="{{ url_for('admin.admin_audits') }}">Back</a>
+      <a class="btn-secondary" aria-label="Voltar" href="{{ url_for('admin.admin_audits') }}">Back</a>
     </div>
   </div>
 
   <!-- Tabs (full width for mobile) -->
-  <div class="mt-6 flex flex-wrap gap-4">
-    <button class="tabBtn text-xs font-semibold rounded-xl border border-app bg-surface2 text-muted" data-tab="logs">Logs</button>
-    <button class="tabBtn text-xs font-semibold rounded-xl border border-app bg-surface2 text-muted" data-tab="events">Events</button>
+  <div class="mt-6 flex flex-wrap gap-4" role="tablist" aria-label="Audit tabs">
+    <button class="tabBtn text-xs font-semibold rounded-xl border border-app bg-surface2 text-muted" data-tab="logs" role="tab" aria-selected="false" tabindex="-1" id="tabBtn-logs">Logs</button>
+    <button class="tabBtn text-xs font-semibold rounded-xl border border-app bg-surface2 text-muted" data-tab="events" role="tab" aria-selected="false" tabindex="-1" id="tabBtn-events">Events</button>
   </div>
 
   <div class="mt-6">
-    <section id="tab-logs" class="card">
+    <section id="tab-logs" class="card" role="tabpanel" aria-labelledby="tabBtn-logs">
       <div class="flex items-center justify-between">
         <div class="text-sm font-semibold">Logs</div>
         <button class="btn-secondary" onclick="copyText('logsBox')">Copy</button>
       </div>
-      <textarea id="logsBox" class="mono mt-6 w-full h-[62vh] input rounded-xl p-4 text-xs" readonly>{{ audit.logs }}</textarea>
+      <textarea id="logsBox" aria-label="Logs" aria-readonly="true" class="mono mt-6 w-full h-[58vh] md:h-[60vh] input text-xs" readonly>{{ audit.logs }}</textarea>
       <div class="mt-2 text-xs text-muted">Tip: copy/paste for support.</div>
     </section>
 
-    <section id="tab-events" class="card hidden">
+    <section id="tab-events" class="card hidden" role="tabpanel" aria-labelledby="tabBtn-events">
       <div class="flex items-center justify-between">
         <div class="text-sm font-semibold">Events (audit_events)</div>
         <button class="btn-secondary" onclick="copyText('eventsBox')">Copy</button>
       </div>
-      <textarea id="eventsBox" class="mono mt-6 w-full h-[62vh] input rounded-xl p-4 text-xs" readonly>{% for e in events %}{{ e.ts_ms }} {{ e.level }} {{ e.layer }} :: {{ e.message }}{% if not loop.last %}\n{% endif %}{% endfor %}</textarea>
+      <textarea id="eventsBox" aria-label="Events" aria-readonly="true" class="mono mt-6 w-full h-[58vh] md:h-[60vh] input text-xs" readonly>{% for e in events %}{{ e.ts_ms }} {{ e.level }} {{ e.layer }} :: {{ e.message }}{% if not loop.last %}\n{% endif %}{% endfor %}</textarea>
       <div class="mt-2 text-xs text-muted">Shows up to 5000 events.</div>
     </section>
   </div>
@@ -60,9 +56,35 @@
     document.querySelectorAll(".tabBtn").forEach(b => {
       const on = b.getAttribute("data-tab") === name;
       b.className = "tabBtn text-xs font-semibold border " + (on ? "border-brand bg-brand-weak text-brand-2" : "border-app bg-surface2 text-muted");
+      b.setAttribute("aria-selected", on ? "true" : "false");
+      b.setAttribute("tabindex", on ? "0" : "-1");
     });
   }
-  document.querySelectorAll(".tabBtn").forEach(b => b.addEventListener("click", () => setTab(b.getAttribute("data-tab"))));
+  function onTabKeydown(e){
+    const keys = ["ArrowLeft","ArrowRight","Home","End","Enter"," "];
+    if(!keys.includes(e.key)) return;
+    const btns = Array.from(document.querySelectorAll(".tabBtn"));
+    const cur = e.currentTarget;
+    const idx = btns.indexOf(cur);
+    if(idx < 0) return;
+    if(e.key === "Enter" || e.key === " "){
+      e.preventDefault();
+      setTab(cur.getAttribute("data-tab"));
+      return;
+    }
+    let next = idx;
+    if(e.key === "ArrowLeft") next = (idx - 1 + btns.length) % btns.length;
+    if(e.key === "ArrowRight") next = (idx + 1) % btns.length;
+    if(e.key === "Home") next = 0;
+    if(e.key === "End") next = btns.length - 1;
+    e.preventDefault();
+    btns[next].focus();
+    setTab(btns[next].getAttribute("data-tab"));
+  }
+  document.querySelectorAll(".tabBtn").forEach(b => {
+    b.addEventListener("click", () => setTab(b.getAttribute("data-tab")));
+    b.addEventListener("keydown", onTabKeydown);
+  });
   setTab("logs");
 
   async function copyText(id){

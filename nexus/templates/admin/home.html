@@ -68,7 +68,7 @@
   </div>
 
   <div class="mt-6 grid grid-cols-1 md:grid-cols-3 gap-6">
-    <div class="card">
+    <div class="card flex flex-col items-center justify-center text-center">
       <div class="text-[11px] text-muted">DB</div>
       <div class="text-lg font-extrabold {% if diag.db.ok %}text-emerald-300{% else %}text-rose-300{% endif %}">
         {{ "OK" if diag.db.ok else "ERRO" }}
@@ -77,7 +77,7 @@
         <div class="mono text-[11px] mt-2">{{ diag.db.error }}</div>
       {% endif %}
     </div>
-    <div class="card">
+    <div class="card flex flex-col items-center justify-center text-center">
       <div class="text-[11px] text-muted">Redis</div>
       <div class="text-lg font-extrabold {% if diag.redis.ok %}text-emerald-300{% else %}text-rose-300{% endif %}">
         {{ "OK" if diag.redis.ok else "ERRO" }}
@@ -87,7 +87,7 @@
         <div class="mono text-[11px] mt-2">{{ diag.redis.error }}</div>
       {% endif %}
     </div>
-    <div class="card">
+    <div class="card flex flex-col items-center justify-center text-center">
       <div class="text-[11px] text-muted">LLM</div>
       <div class="text-lg font-extrabold {% if diag.llm.ok %}text-emerald-300{% else %}text-rose-300{% endif %}">
         {{ "OK" if diag.llm.ok else "ERRO" }}
@@ -106,7 +106,7 @@
     <div class="text-xs font-extrabold text-brand-2">Últimas auditorias</div>
     <div class="mt-6 flex flex-col gap-4">
       {% for a in audits %}
-        <a href="{{ url_for('admin.admin_audit_detail', audit_id=a.id) }}" class="block bg-surface2 rounded-xl p-4 hover:bg-surface border border-app">
+        <a aria-label="Abrir auditoria {{ a.id }}" href="{{ url_for('admin.admin_audit_detail', audit_id=a.id) }}" class="block bg-surface2 rounded-xl p-4 hover:bg-surface border border-app">
           <div class="flex items-center justify-between">
             <div class="mono text-xs">{{ a.target_domain }}</div>
             <div class="text-[11px] text-muted">{{ a.status }}</div>

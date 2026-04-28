@@ -5,8 +5,8 @@
 <div class="letterhead">
   <div class="flex items-start justify-between gap-6">
     <div>
-      <div class="text-sm font-semibold text-brand-2">Audits</div>
-      <div class="text-xs text-muted">Open an audit to view logs/events.</div>
+      <div class="section-title">Audits</div>
+      <div class="body-text">Open an audit to view logs/events.</div>
     </div>
     <a class="btn-secondary" href="{{ url_for('admin.admin_home') }}">Back</a>
   </div>
@@ -19,25 +19,25 @@
           <a href="{{ url_for('admin.admin_audit_detail', audit_id=a.id) }}" class="flex-1 min-w-0 hover:opacity-90">
             <div class="flex items-center justify-between gap-6">
               <div class="min-w-0">
-                <div class="mono text-xs truncate">{{ a.target_domain }}</div>
-                <div class="text-[11px] text-muted truncate">{{ s.base_url if s else a.site_id }}</div>
+                <div class="section-title truncate">{{ a.target_domain }}</div>
+                <div class="body-text mono truncate">{{ s.base_url if s else a.site_id }}</div>
               </div>
               <div class="text-right shrink-0">
-                <div class="text-[11px] text-muted">{{ a.status }}</div>
+                <div class="body-text">{{ a.status }}</div>
                 <div class="text-[11px] text-muted">{{ a.created_utc }}</div>
               </div>
             </div>
           </a>
-          <details class="relative">
-            <summary class="list-none cursor-pointer btn-secondary">⋯</summary>
-            <div class="absolute right-0 mt-4 w-44 menu z-10">
+          <details class="relative" aria-haspopup="menu">
+            <summary class="list-none cursor-pointer btn-secondary" aria-label="Opções da auditoria" aria-haspopup="menu">⋯</summary>
+            <div class="absolute right-0 mt-2 w-44 menu z-10" role="menu">
               <form method="post" action="{{ url_for('admin.admin_audit_publish_github', audit_id=a.id) }}">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <button class="w-full text-left btn-secondary">Publish to Git</button>
+                <button class="w-full text-left btn-secondary" role="menuitem">Publish to Git</button>
               </form>
               <form method="post" action="{{ url_for('admin.admin_audit_delete', audit_id=a.id) }}" onsubmit="return confirm('Excluir esta auditoria?');">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <button class="w-full text-left btn-danger">Delete</button>
+                <button class="w-full text-left btn-danger" role="menuitem">Delete</button>
               </form>
             </div>
           </details>

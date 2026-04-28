@@ -52,10 +52,10 @@
                 <input name="provider_base_url_v1" value="{{ llm_defaults.base_url_v1 or config['LLM_BASE_URL_V1'] }}" class="mono hidden md:block w-64 input text-xs llmBaseField"/>
                 <input name="model" value="{{ llm_defaults.model or config['LLM_DEFAULT_MODEL'] }}" class="mono hidden md:block w-44 input text-xs llmModelField"/>
                 <div class="flex gap-4">
-                  <button name="mode" value="full" class="auditStartBtn btn-primary">
+                  <button aria-label="Full audit" name="mode" value="full" class="auditStartBtn btn-primary">
                     <span class="btnText">Full</span>
                   </button>
-                  <button name="mode" value="fast" class="btn-secondary">Fast</button>
+                  <button aria-label="Fast audit" name="mode" value="fast" class="btn-secondary">Fast</button>
                 </div>
               </form>
               {% if current_user.is_admin %}

@@ -13,17 +13,17 @@
     <form class="mt-6 flex flex-col gap-4" method="post" action="{{ url_for('auth.register_post') }}">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <div>
-        <label class="body-text">Organization</label>
-        <input name="org_name" class="input mt-4 text-sm" />
+        <label for="org_name" class="body-text">Organization</label>
+        <input id="org_name" aria-label="Organization" name="org_name" class="input mt-4 text-sm" />
       </div>
       <div>
-        <label class="body-text">Email</label>
-        <input name="email" autocomplete="email" class="input mt-4 text-sm" />
+        <label for="email" class="body-text">Email</label>
+        <input id="email" aria-label="Email" name="email" autocomplete="email" class="input mt-4 text-sm" />
       </div>
       <div>
-        <label class="body-text">Password</label>
-        <input type="password" name="password" autocomplete="new-password" class="input mt-4 text-sm" />
-        <div class="mt-4 body-text">Minimum 8 characters.</div>
+        <label for="password" class="body-text">Password</label>
+        <input id="password" aria-label="Password" aria-describedby="pwdHelp" type="password" name="password" autocomplete="new-password" class="input mt-4 text-sm" />
+        <div id="pwdHelp" class="mt-4 body-text">Minimum 8 characters.</div>
       </div>
       <button class="btn-primary w-full">Create</button>
     </form>

@@ -21,19 +21,19 @@
       <form class="mt-6 flex flex-col gap-4" method="post" action="{{ url_for('auth.login_post') }}">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div>
-          <label class="body-text">Email</label>
-          <input name="email" autocomplete="email" class="input mt-4 text-sm" />
+          <label for="email" class="body-text">Email</label>
+          <input id="email" aria-label="Email" name="email" autocomplete="email" class="input mt-4 text-sm" />
         </div>
         <div>
-          <label class="body-text">Password</label>
-          <input type="password" name="password" autocomplete="current-password" class="input mt-4 text-sm" />
+          <label for="password" class="body-text">Password</label>
+          <input id="password" aria-label="Password" type="password" name="password" autocomplete="current-password" class="input mt-4 text-sm" />
         </div>
         <button class="btn-primary w-full">Sign in</button>
       </form>
 
       <div class="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <a class="btn-secondary w-full text-center" href="{{ url_for('auth.oauth_start', provider='google') }}">Google</a>
-        <a class="btn-secondary w-full text-center" href="{{ url_for('auth.oauth_start', provider='github') }}">GitHub</a>
+        <a class="btn-secondary w-full text-center" aria-label="Entrar com Google" href="{{ url_for('auth.oauth_start', provider='google') }}">Google</a>
+        <a class="btn-secondary w-full text-center" aria-label="Entrar com GitHub" href="{{ url_for('auth.oauth_start', provider='github') }}">GitHub</a>
       </div>
 
       <div class="mt-6 body-text">

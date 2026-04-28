@@ -55,6 +55,13 @@
       user-select: none;
     }
     .btn:active{ transform: scale(.98); }
+    .btn:focus-visible,
+    .btn-primary:focus-visible,
+    .btn-secondary:focus-visible,
+    .btn-danger:focus-visible{
+      outline: none;
+      box-shadow: 0 0 0 3px rgba(79,70,229,.25);
+    }
     .btn-primary{
       background: linear-gradient(135deg, rgba(79,70,229,1), rgba(99,102,241,1));
       color: #fff;
@@ -138,6 +145,10 @@
       transition: background .2s ease, border-color .2s ease, color .2s ease;
       user-select: none;
     }
+    .tabBtn:focus-visible{
+      outline: none;
+      box-shadow: 0 0 0 3px rgba(79,70,229,.22);
+    }
 
     /* Lists */
     .ui-list{ padding-left: 20px; display: flex; flex-direction: column; gap: 16px; }
@@ -168,6 +179,11 @@
       transition: background .2s ease, border-color .2s ease, color .2s ease, box-shadow .2s ease;
     }
     .nav-link:hover{ background: rgba(255,255,255,.04); color: var(--app-text); border-color: rgba(148,163,184,.12); }
+    .nav-link:focus-visible{
+      outline: none;
+      border-color: rgba(79,70,229,.32);
+      box-shadow: 0 0 0 3px rgba(79,70,229,.18);
+    }
     .nav-link-active{
       background: rgba(79,70,229,.12);
       color: var(--app-text);

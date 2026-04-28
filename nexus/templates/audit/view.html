@@ -11,21 +11,21 @@
       <div class="text-[11px] text-muted">Audit ID: <span class="mono">{{ audit.id }}</span> · Status: <span id="statusBadge">{{ audit.status }}</span></div>
     </div>
     <div class="flex flex-wrap items-center gap-4 justify-end">
-      <button class="mono text-xs font-bold btn-secondary" onclick="downloadMD()">Download .md</button>
-      <button class="mono text-xs font-bold btn-secondary" onclick="downloadCSV()">Download .csv</button>
+      <button class="mono text-xs font-bold btn-secondary" aria-label="Baixar relatório em Markdown" onclick="downloadMD()">Download .md</button>
+      <button class="mono text-xs font-bold btn-secondary" aria-label="Baixar matriz CSV" onclick="downloadCSV()">Download .csv</button>
     </div>
   </div>
 
   <!-- Tabs -->
-  <div class="mt-4 flex flex-wrap gap-4">
-    <button class="tabBtn text-xs font-semibold bg-surface2 border border-app text-muted" data-tab="exec">Resumo Executivo</button>
-    <button class="tabBtn text-xs font-semibold bg-surface2 border border-app text-muted" data-tab="tech">Auditoria Técnica</button>
-    <button class="tabBtn text-xs font-semibold bg-surface2 border border-app text-muted" data-tab="data">Dados brutos</button>
+  <div class="mt-4 flex flex-wrap gap-4" role="tablist" aria-label="Audit tabs">
+    <button class="tabBtn text-xs font-semibold bg-surface2 border border-app text-muted" data-tab="exec" role="tab" aria-selected="false" tabindex="-1" id="tabBtn-exec">Resumo Executivo</button>
+    <button class="tabBtn text-xs font-semibold bg-surface2 border border-app text-muted" data-tab="tech" role="tab" aria-selected="false" tabindex="-1" id="tabBtn-tech">Auditoria Técnica</button>
+    <button class="tabBtn text-xs font-semibold bg-surface2 border border-app text-muted" data-tab="data" role="tab" aria-selected="false" tabindex="-1" id="tabBtn-data">Dados brutos</button>
   </div>
 
   <div class="mt-6 grid grid-cols-1 gap-6">
     <!-- Exec summary -->
-    <section id="tab-exec" class="letterhead">
+    <section id="tab-exec" class="letterhead" role="tabpanel" aria-labelledby="tabBtn-exec">
       <div class="text-xs font-semibold text-brand-2">Resumo Executivo</div>
       <div class="mt-6 grid grid-cols-1 md:grid-cols-3 gap-6">
         <div class="card">
@@ -50,7 +50,7 @@
     </section>
 
     <!-- Technical report -->
-    <section id="tab-tech" class="letterhead hidden">
+    <section id="tab-tech" class="letterhead hidden" role="tabpanel" aria-labelledby="tabBtn-tech">
       <div class="text-xs font-semibold text-brand-2">Relatório (Markdown)</div>
       <div class="mt-6 border border-app rounded-xl bg-surface2 p-4 h-[52vh] md:h-[60vh] lg:h-[62vh] overflow-auto">
         <div id="md" class="md-render"></div>
@@ -73,7 +73,7 @@
     </section>
 
     <!-- Raw data (still available as separate tab) -->
-    <section id="tab-data" class="letterhead hidden">
+    <section id="tab-data" class="letterhead hidden" role="tabpanel" aria-labelledby="tabBtn-data">
       <div class="text-xs font-semibold text-brand-2">Dados brutos</div>
       <div class="mt-6 grid grid-cols-1 gap-6">
         <div class="card">
@@ -135,9 +135,35 @@
     btns.forEach(b => {
       const on = b.getAttribute("data-tab") === name;
       b.className = "tabBtn text-xs font-semibold border " + (on ? "border-brand bg-brand-weak text-brand-2" : "border-app bg-surface2 text-muted");
+      b.setAttribute("aria-selected", on ? "true" : "false");
+      b.setAttribute("tabindex", on ? "0" : "-1");
     });
   }
-  document.querySelectorAll(".tabBtn").forEach(b => b.addEventListener("click", () => setTab(b.getAttribute("data-tab"))));
+  function onTabKeydown(e){
+    const keys = ["ArrowLeft","ArrowRight","Home","End","Enter"," "];
+    if(!keys.includes(e.key)) return;
+    const btns = Array.from(document.querySelectorAll(".tabBtn"));
+    const cur = e.currentTarget;
+    const idx = btns.indexOf(cur);
+    if(idx < 0) return;
+    if(e.key === "Enter" || e.key === " "){
+      e.preventDefault();
+      setTab(cur.getAttribute("data-tab"));
+      return;
+    }
+    let next = idx;
+    if(e.key === "ArrowLeft") next = (idx - 1 + btns.length) % btns.length;
+    if(e.key === "ArrowRight") next = (idx + 1) % btns.length;
+    if(e.key === "Home") next = 0;
+    if(e.key === "End") next = btns.length - 1;
+    e.preventDefault();
+    btns[next].focus();
+    setTab(btns[next].getAttribute("data-tab"));
+  }
+  document.querySelectorAll(".tabBtn").forEach(b => {
+    b.addEventListener("click", () => setTab(b.getAttribute("data-tab")));
+    b.addEventListener("keydown", onTabKeydown);
+  });
   setTab("exec");
 
   function refreshKpis(status){
