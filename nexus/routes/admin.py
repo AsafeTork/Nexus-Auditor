@@ -262,7 +262,7 @@ def admin_logs():
         .limit(200)
         .all()
     )
-    # UI lab runs from redis
+    # UI/Backend lab runs from redis
     conn = _redis_conn()
     runs = []
     try:
@@ -281,6 +281,38 @@ def admin_logs():
             )
     except Exception:
         runs = []
+
+    # Tail of logs for failed UI/Backend runs (so errors don't "disappear")
+    tail_chars = int(os.getenv("ADMIN_LOGS_RUN_TAIL_CHARS", "6000"))
+    max_error_tails = int(os.getenv("ADMIN_LOGS_MAX_ERROR_RUN_TAILS", "12"))
+    run_error_tails = []
+    try:
+        count = 0
+        for r in runs:
+            if count >= max_error_tails:
+                break
+            if str(r.get("status")) != "error":
+                continue
+            rid = str(r.get("id") or "")
+            if not rid:
+                continue
+            key = _ui_key(current_user.org_id, rid)
+            raw = conn.get(key + ":logs") or b""
+            txt = raw.decode("utf-8", "ignore")
+            if tail_chars > 0 and len(txt) > tail_chars:
+                txt = txt[-tail_chars:]
+            run_error_tails.append(
+                {
+                    "id": rid,
+                    "mode": r.get("mode") or "",
+                    "created_utc": r.get("created_utc") or "",
+                    "error": r.get("error") or "",
+                    "tail": txt,
+                }
+            )
+            count += 1
+    except Exception:
+        run_error_tails = []
     # id->domain map
     audit_map = {a.id: a for a in audits}
     return render_template(
@@ -292,6 +324,7 @@ def admin_logs():
         audits=audits,
         audit_map=audit_map,
         ui_runs=runs,
+        run_error_tails=run_error_tails,
     )
 
 
