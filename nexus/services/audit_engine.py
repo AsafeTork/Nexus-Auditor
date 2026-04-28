@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import re
 import time
 from dataclasses import dataclass
@@ -17,7 +18,8 @@ MAX_CLEAN_HTML_CHARS = 100_000
 CLEAN_HTML_TO_LLM_CHARS = 80_000
 
 FETCH_TIMEOUT_S = 35
-LLM_TIMEOUT_S = 600
+# LLM timeouts (tuneable via env to avoid long hangs on unstable providers)
+LLM_TIMEOUT_S = int(os.getenv("LLM_TIMEOUT_S", "180"))
 LLM_HEARTBEAT_S = 10
 
 # Shared HTTP session for connection pooling (avoid creating a new TCP connection per call)

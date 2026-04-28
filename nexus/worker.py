@@ -241,6 +241,7 @@ def run_audit_job(audit_id: str) -> None:
         md("")
 
         rows: list[str] = []
+        consecutive_llm_failures = 0
 
         # Mode
         mode = "full"
@@ -291,6 +292,7 @@ def run_audit_job(audit_id: str) -> None:
                         if row.count(";") >= 6:
                             csv(row)
                             rows.append(row)
+                consecutive_llm_failures = 0
                 continue
             except Exception as e:
                 log(layer, "WARN", f"Streaming falhou, fallback non-stream: {type(e).__name__}: {e}")
@@ -303,10 +305,15 @@ def run_audit_job(audit_id: str) -> None:
                     temperature=0.2,
                     system_prompt=system_prompt,
                     user_prompt=prompt,
-                    timeout_s=240,
+                    timeout_s=120,
                 )
                 if not content.strip():
                     log(layer, "ERROR", "Resposta vazia do provedor LLM.")
+                    consecutive_llm_failures += 1
+                    if consecutive_llm_failures >= 2:
+                        log("system", "ERROR", "Abortando auditoria: provedor LLM falhou repetidamente (>=2).")
+                        audit.status = "error"
+                        break
                     continue
 
                 report = ""
@@ -331,8 +338,14 @@ def run_audit_job(audit_id: str) -> None:
                     if row.count(";") >= 6:
                         csv(row)
                         rows.append(row)
+                consecutive_llm_failures = 0
             except Exception as e:
                 log(layer, "ERROR", f"Falha no provedor LLM: {type(e).__name__}: {e}")
+                consecutive_llm_failures += 1
+                if consecutive_llm_failures >= 2:
+                    log("system", "ERROR", "Abortando auditoria: provedor LLM falhou repetidamente (>=2).")
+                    audit.status = "error"
+                    break
                 continue
 
             flush(force=True)
