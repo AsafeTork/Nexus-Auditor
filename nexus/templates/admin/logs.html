@@ -1,37 +1,37 @@
 {% extends "layout.html" %}
 {% block content %}
-<div class="letterhead p-5">
-  <div class="flex items-start justify-between gap-3">
+<div class="letterhead p-6">
+  <div class="flex items-start justify-between gap-6">
     <div>
-      <div class="text-sm font-extrabold text-brand-2">Admin · Log Geral</div>
-      <div class="text-xs text-muted">Auditorias + UI Lab + diagnóstico. Copiável para suporte.</div>
+      <div class="page-title text-brand-2">Logs</div>
+      <div class="body-text">Audits + UI Lab + diagnostics (copyable for support).</div>
     </div>
-    <a class="btn-secondary rounded-xl px-3 py-2 text-xs font-extrabold bg-surface" href="{{ url_for('admin.admin_home') }}">Voltar</a>
+    <a class="btn-secondary" href="{{ url_for('admin.admin_home') }}">Back</a>
   </div>
 
-  <div class="mt-4 flex flex-wrap gap-2">
-    <button class="tabBtn text-xs font-extrabold px-3 py-2 rounded-xl bg-surface2" data-tab="events">Eventos</button>
-    <button class="tabBtn text-xs font-extrabold px-3 py-2 rounded-xl bg-surface2" data-tab="uilab">UI Lab</button>
-    <button class="tabBtn text-xs font-extrabold px-3 py-2 rounded-xl bg-surface2" data-tab="diag">Diagnóstico</button>
+  <div class="mt-6 flex flex-wrap gap-4">
+    <button class="tabBtn text-xs font-semibold px-3 py-2 rounded-xl bg-surface2 border border-app text-muted" data-tab="events">Events</button>
+    <button class="tabBtn text-xs font-semibold px-3 py-2 rounded-xl bg-surface2 border border-app text-muted" data-tab="uilab">UI Lab</button>
+    <button class="tabBtn text-xs font-semibold px-3 py-2 rounded-xl bg-surface2 border border-app text-muted" data-tab="diag">Diagnostics</button>
   </div>
 
   <section id="tab-events" class="mt-3 card p-4">
-    <div class="flex items-center justify-between gap-3">
+    <div class="flex items-center justify-between gap-6">
       <div>
-        <div class="text-xs font-extrabold">Últimos eventos de auditoria</div>
-        <div class="text-[11px] text-muted">Até 800 eventos, escopo do seu org.</div>
+        <div class="section-title">Audit events</div>
+        <div class="body-text">Up to 800 events (org scope).</div>
       </div>
-      <button class="btn-secondary rounded-xl px-3 py-2 text-xs font-extrabold bg-surface" onclick="copyText('eventsBox')">Copiar</button>
+      <button class="btn-secondary" onclick="copyText('eventsBox')">Copy</button>
     </div>
-    <textarea id="eventsBox" class="mono mt-3 w-full h-[60vh] input rounded-2xl p-3 text-xs" readonly>{% for e in events %}{% set a = audit_map.get(e.audit_run_id) %}{{ e.ts_ms }} {{ e.level }} {{ e.layer }} :: {{ (a.target_domain if a else e.audit_run_id) }} :: {{ e.message }}{% if not loop.last %}\n{% endif %}{% endfor %}</textarea>
+    <textarea id="eventsBox" class="mono mt-6 w-full h-[60vh] input rounded-xl p-4 text-xs" readonly>{% for e in events %}{% set a = audit_map.get(e.audit_run_id) %}{{ e.ts_ms }} {{ e.level }} {{ e.layer }} :: {{ (a.target_domain if a else e.audit_run_id) }} :: {{ e.message }}{% if not loop.last %}\n{% endif %}{% endfor %}</textarea>
   </section>
 
   <section id="tab-uilab" class="mt-3 card p-4 hidden">
-    <div class="text-xs font-extrabold">Execuções do UI Lab</div>
-    <div class="text-[11px] text-muted mt-1">Clique para abrir e ver logs/resultado.</div>
-    <div class="mt-3 space-y-2">
+    <div class="section-title">UI Lab runs</div>
+    <div class="body-text mt-4">Open a run to view output.</div>
+    <div class="mt-6 space-y-4">
       {% for r in ui_runs %}
-        <a class="block bg-surface2 rounded-xl p-3 hover:bg-surface" href="{{ url_for('admin.ui_lab', run=r.id) }}">
+        <a class="block bg-surface2 rounded-xl p-4 hover:bg-surface border border-app" href="{{ url_for('admin.ui_lab', run=r.id) }}">
           <div class="flex items-center justify-between">
             <div class="mono text-[11px] truncate">{{ r.id }}</div>
             <div class="text-[11px] text-muted">{{ r.status }}</div>
@@ -39,14 +39,14 @@
           <div class="text-[11px] text-muted">mode={{ r.mode }} · {{ r.created_utc }}</div>
         </a>
       {% else %}
-        <div class="text-xs text-muted">Sem execuções ainda.</div>
+        <div class="body-text">No runs yet.</div>
       {% endfor %}
     </div>
   </section>
 
   <section id="tab-diag" class="mt-3 card p-4 hidden">
-    <div class="text-xs font-extrabold">Diagnóstico</div>
-    <div class="mt-3 grid grid-cols-1 md:grid-cols-3 gap-3">
+    <div class="section-title">Diagnostics</div>
+    <div class="mt-6 grid grid-cols-1 md:grid-cols-3 gap-6">
       <div class="card2 p-4">
         <div class="text-[11px] text-muted">DB</div>
         <div class="text-lg font-extrabold {% if diag.db.ok %}text-emerald-300{% else %}text-rose-300{% endif %}">{{ "OK" if diag.db.ok else "ERRO" }}</div>
@@ -76,7 +76,7 @@
     }
     document.querySelectorAll(".tabBtn").forEach(b => {
       const on = b.getAttribute("data-tab") === name;
-      b.className = "tabBtn text-xs font-extrabold px-3 py-2 rounded-xl " + (on ? "bg-brand-weak text-brand-2" : "bg-surface2");
+      b.className = "tabBtn text-xs font-semibold px-3 py-2 rounded-xl border " + (on ? "border-brand bg-brand-weak text-brand-2" : "border-app bg-surface2 text-muted");
     });
   }
   document.querySelectorAll(".tabBtn").forEach(b => b.addEventListener("click", () => setTab(b.getAttribute("data-tab"))));
@@ -91,4 +91,3 @@
   }
 </script>
 {% endblock %}
-

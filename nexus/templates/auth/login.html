@@ -8,35 +8,35 @@
   </div>
 
   <!-- Right login panel -->
-  <div class="min-h-screen md:min-h-0 flex-1 md:w-[53%] flex items-center justify-center p-6 md:p-10 relative">
+  <div class="min-h-screen md:min-h-0 flex-1 md:w-[53%] flex items-center justify-center p-6 relative">
     <div class="w-full max-w-md card p-6">
       <div class="flex flex-col sm:flex-row sm:items-center gap-4">
         <img class="w-full sm:w-56 max-w-[320px] object-contain" alt="Nexus Auditor" src="{{ url_for('static', filename='logo_login_small.png') }}"/>
         <div class="sm:text-right">
-          <div class="text-base font-semibold tracking-tight">Sign in</div>
-          <div class="text-xs text-muted">Access your workspace</div>
+          <div class="page-title tracking-tight">Sign in</div>
+          <div class="body-text">Access your workspace</div>
         </div>
       </div>
 
-      <form class="mt-6 space-y-3" method="post" action="{{ url_for('auth.login_post') }}">
+      <form class="mt-6 space-y-4" method="post" action="{{ url_for('auth.login_post') }}">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div>
-          <label class="text-xs text-muted">Email</label>
-          <input name="email" autocomplete="email" class="input mt-1 w-full rounded-xl px-3 py-2 text-sm" />
+          <label class="body-text">Email</label>
+          <input name="email" autocomplete="email" class="input mt-4 w-full rounded-xl px-3 py-2 text-sm" />
         </div>
         <div>
-          <label class="text-xs text-muted">Password</label>
-          <input type="password" name="password" autocomplete="current-password" class="input mt-1 w-full rounded-xl px-3 py-2 text-sm" />
+          <label class="body-text">Password</label>
+          <input type="password" name="password" autocomplete="current-password" class="input mt-4 w-full rounded-xl px-3 py-2 text-sm" />
         </div>
         <button class="btn-primary w-full">Sign in</button>
       </form>
 
-      <div class="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-2">
+      <div class="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
         <a class="btn-secondary w-full text-center" href="{{ url_for('auth.oauth_start', provider='google') }}">Google</a>
         <a class="btn-secondary w-full text-center" href="{{ url_for('auth.oauth_start', provider='github') }}">GitHub</a>
       </div>
 
-      <div class="mt-5 text-sm text-muted">
+      <div class="mt-6 body-text">
         New here? <a class="text-brand-2 underline" href="{{ url_for('auth.register') }}">Create account</a>
       </div>
     </div>

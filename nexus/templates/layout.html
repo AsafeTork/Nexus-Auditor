@@ -121,6 +121,11 @@
     .nav-link{ display:flex; align-items:center; gap:10px; padding:10px 10px; border-radius: 10px; color: var(--app-muted); font-size: 13px; font-weight: 600; }
     .nav-link:hover{ background: rgba(255,255,255,.03); color: var(--app-text); }
     .nav-link-active{ background: var(--accent-weak); color: var(--app-text); border: 1px solid rgba(79,70,229,.25); }
+
+    /* Typography hierarchy (3 levels) */
+    .page-title{ font-size: 18px; font-weight: 600; letter-spacing: -0.01em; }
+    .section-title{ font-size: 14px; font-weight: 600; letter-spacing: -0.01em; }
+    .body-text{ font-size: 13px; font-weight: 400; color: var(--app-muted); }
   </style>
 </head>
 <body class="bg-app">
@@ -132,14 +137,14 @@
       <div class="flex min-h-screen">
         <!-- Sidebar (desktop) -->
         <aside class="hidden lg:flex w-60 shrink-0 border-r border-app">
-          <div class="w-full px-4 py-5">
-            <div class="flex items-center gap-3">
+          <div class="w-full p-6">
+            <div class="flex items-center gap-4">
               <div class="h-9 w-9 rounded-xl bg-brand-weak flex items-center justify-center overflow-hidden">
                 <img alt="Nexus" class="h-7 w-7 object-contain" src="{{ url_for('static', filename=logo_mark) }}"/>
               </div>
               <div class="min-w-0">
-                <div class="text-sm font-semibold tracking-tight truncate">Nexus Auditor</div>
-                <div class="text-xs text-muted truncate">{{ current_user.email }}</div>
+                <div class="section-title truncate">Nexus Auditor</div>
+                <div class="body-text truncate">{{ current_user.email }}</div>
               </div>
             </div>
             <div class="mt-5">
@@ -152,26 +157,26 @@
         <div class="flex-1 min-w-0">
           <!-- Top navbar -->
           <header class="sticky top-0 z-40 border-b border-app" style="background: rgba(11,11,12,.72); backdrop-filter: blur(10px);">
-            <div class="mx-auto max-w-6xl px-4 py-3 flex items-center justify-between gap-4">
-              <div class="flex items-center gap-3 min-w-0">
+            <div class="mx-auto max-w-6xl px-6 py-4 flex items-center justify-between gap-6">
+              <div class="flex items-center gap-4 min-w-0">
                 <button id="menuBtn" class="lg:hidden btn btn-secondary px-3 py-2" type="button">Menu</button>
                 <div class="min-w-0">
-                  <div class="text-sm font-semibold truncate">{{ title or "Dashboard" }}</div>
-                  <div class="text-xs text-muted truncate">Org {{ current_user.org_id }}</div>
+                  <div class="page-title truncate">{{ title or "Dashboard" }}</div>
+                  <div class="body-text truncate">Org {{ current_user.org_id }}</div>
                 </div>
               </div>
-              <div class="flex items-center gap-2">
+              <div class="flex items-center gap-4">
                 <a class="btn btn-secondary px-3 py-2" href="{{ url_for('auth.logout') }}">Logout</a>
               </div>
             </div>
           </header>
 
-          <main class="mx-auto max-w-6xl px-4 py-6">
+          <main class="mx-auto max-w-6xl px-6 py-6">
             {% with messages = get_flashed_messages(with_categories=true) %}
               {% if messages %}
-                <div class="mb-6 space-y-2">
+                <div class="mb-6 space-y-4">
                   {% for cat, msg in messages %}
-                    <div class="card px-4 py-3 text-sm">
+                    <div class="card px-4 py-4 text-sm">
                       <span class="font-semibold">{{ cat }}</span>
                       <span class="text-muted">—</span>
                       {{ msg }}
@@ -188,9 +193,9 @@
       <main class="min-h-screen">
         {% with messages = get_flashed_messages(with_categories=true) %}
           {% if messages %}
-            <div class="mx-auto max-w-lg px-4 pt-6 space-y-2">
+            <div class="mx-auto max-w-lg px-6 pt-6 space-y-4">
               {% for cat, msg in messages %}
-                <div class="card px-4 py-3 text-sm">
+                <div class="card px-4 py-4 text-sm">
                   <span class="font-semibold">{{ cat }}</span>
                   <span class="text-muted">—</span>
                   {{ msg }}
@@ -199,7 +204,7 @@
             </div>
           {% endif %}
         {% endwith %}
-        {% block content %}{% endblock %}
+        {{ self.content() }}
       </main>
     {% endif %}
   {% endblock %}
@@ -236,7 +241,7 @@
   <div id="sidebarOverlay" class="hidden lg:hidden fixed inset-0 z-50 bg-black/60">
     <div id="sidebarPanel" class="absolute left-0 top-0 h-full w-[86%] max-w-sm bg-app p-4 -translate-x-full transition-transform duration-200 border-r border-app">
       <div class="flex items-center justify-between">
-        <div class="flex items-center gap-3">
+        <div class="flex items-center gap-4">
           <div class="h-9 w-9 rounded-xl bg-brand-weak flex items-center justify-center overflow-hidden">
             <img class="h-7 w-7 object-contain" alt="Nexus" src="{{ url_for('static', filename=logo_mark) }}"/>
           </div>

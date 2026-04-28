@@ -5,7 +5,7 @@ import traceback
 import uuid
 
 from flask import Flask
-from flask import render_template, request
+from flask import render_template, request, send_from_directory
 from flask_login import LoginManager
 from flask_migrate import Migrate
 from flask_sqlalchemy import SQLAlchemy
@@ -42,7 +42,8 @@ def create_app() -> Flask:
     app.config["REDIS_URL"] = os.getenv("REDIS_URL", "redis://localhost:6379/0")
 
     # Master admin (hard rule)
-    app.config["MASTER_ADMIN_EMAIL"] = os.getenv("MASTER_ADMIN_EMAIL", "asafetork@gmail.com")
+    # Do NOT ship a default master email.
+    app.config["MASTER_ADMIN_EMAIL"] = os.getenv("MASTER_ADMIN_EMAIL", "")
 
     # Stripe
     app.config["STRIPE_SECRET_KEY"] = os.getenv("STRIPE_SECRET_KEY", "")
@@ -57,7 +58,7 @@ def create_app() -> Flask:
     oauth.init_app(app)
     csrf.init_app(app)
     # Rate limiting (prefer Redis if available)
-    limiter.storage_uri = os.getenv("REDIS_URL", "") or "memory://"
+    app.config.setdefault("RATELIMIT_STORAGE_URI", os.getenv("REDIS_URL", "") or "memory://")
     limiter.init_app(app)
 
     # OAuth providers (optional)
@@ -106,6 +107,11 @@ def create_app() -> Flask:
     from .cli import register_cli
 
     register_cli(app)
+
+    # Serve favicon without triggering the error handler.
+    @app.get("/favicon.ico")
+    def favicon():
+        return send_from_directory(app.static_folder, "favicon.png")
 
     # Security-ish headers (not "hiding", just good practice)
     @app.after_request

@@ -1,7 +1,7 @@
 {% extends "layout.html" %}
 {% block content %}
 <div class="letterhead p-6">
-  <div class="flex items-start justify-between gap-3">
+  <div class="flex items-start justify-between gap-6">
     <div>
       <div class="text-sm font-semibold text-brand-2">Audit Debug</div>
       <div class="mono text-xs text-muted">{{ audit.id }}</div>
@@ -12,7 +12,7 @@
         <div class="text-xs text-muted">{{ site.base_url }}</div>
       {% endif %}
     </div>
-    <div class="flex items-center gap-2">
+    <div class="flex items-center gap-4">
       <form method="post" action="{{ url_for('admin.admin_audit_delete', audit_id=audit.id) }}" onsubmit="return confirm('Excluir esta auditoria?');">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <button class="btn-danger">Delete</button>
@@ -22,18 +22,18 @@
   </div>
 
   <!-- Tabs (full width for mobile) -->
-  <div class="mt-4 flex flex-wrap gap-2">
+  <div class="mt-6 flex flex-wrap gap-4">
     <button class="tabBtn text-xs font-semibold px-3 py-2 rounded-xl border border-app bg-surface2 text-muted" data-tab="logs">Logs</button>
     <button class="tabBtn text-xs font-semibold px-3 py-2 rounded-xl border border-app bg-surface2 text-muted" data-tab="events">Events</button>
   </div>
 
-  <div class="mt-3">
+  <div class="mt-6">
     <section id="tab-logs" class="card2 p-4">
       <div class="flex items-center justify-between">
         <div class="text-sm font-semibold">Logs</div>
         <button class="btn-secondary" onclick="copyText('logsBox')">Copy</button>
       </div>
-      <textarea id="logsBox" class="mono mt-3 w-full h-[62vh] input rounded-xl p-3 text-xs" readonly>{{ audit.logs }}</textarea>
+      <textarea id="logsBox" class="mono mt-6 w-full h-[62vh] input rounded-xl p-4 text-xs" readonly>{{ audit.logs }}</textarea>
       <div class="mt-2 text-xs text-muted">Tip: copy/paste for support.</div>
     </section>
 
@@ -42,7 +42,7 @@
         <div class="text-sm font-semibold">Events (audit_events)</div>
         <button class="btn-secondary" onclick="copyText('eventsBox')">Copy</button>
       </div>
-      <textarea id="eventsBox" class="mono mt-3 w-full h-[62vh] input rounded-xl p-3 text-xs" readonly>{% for e in events %}{{ e.ts_ms }} {{ e.level }} {{ e.layer }} :: {{ e.message }}{% if not loop.last %}\n{% endif %}{% endfor %}</textarea>
+      <textarea id="eventsBox" class="mono mt-6 w-full h-[62vh] input rounded-xl p-4 text-xs" readonly>{% for e in events %}{{ e.ts_ms }} {{ e.level }} {{ e.layer }} :: {{ e.message }}{% if not loop.last %}\n{% endif %}{% endfor %}</textarea>
       <div class="mt-2 text-xs text-muted">Shows up to 5000 events.</div>
     </section>
   </div>
