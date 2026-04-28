@@ -28,24 +28,37 @@ REDIS={{ "OK" if diag.redis.ok else "ERRO" }}{% if not diag.redis.ok %} :: {{ di
 LLM={{ "OK" if diag.llm.ok else "ERRO" }} model={{ diag.llm.model }}{% if not diag.llm.ok %} :: {{ diag.llm.error }}{% endif %}
 
 === FAILED AUDITS (recent) ===
-{% for a in failed_audits %}{{ a.created_utc }} :: error :: {{ a.target_domain or a.id }} :: audit_id={{ a.id }} :: model={{ a.model }}{% if not loop.last %}\n{% endif %}{% else %}(none){% endfor %}
+{% if failed_audits %}
+{% for a in failed_audits %}{{ a.created_utc }} :: error :: {{ a.target_domain or a.id }} :: audit_id={{ a.id }} :: model={{ a.model }}
+{% endfor %}
+{% else %}(none)
+{% endif %}
 
 === ERRORS (audit events) ===
-{% for e in error_events %}{{ e.ts_ms }} {{ e.level }} {{ e.layer }} :: {{ e.target_domain }} :: {{ e.message }}{% if not loop.last %}\n{% endif %}{% endfor %}
+{% if error_events %}
+{% for e in error_events %}{{ e.ts_ms }} {{ e.level }} {{ e.layer }} :: {{ e.target_domain }} :: {{ e.message }}
+{% endfor %}
+{% endif %}
 
 === ERRORS (ui/backend lab runs) ===
-{% for r in ui_runs %}{% if r.status == "error" %}{{ r.created_utc }} :: {{ r.mode }} :: error :: {{ r.id }} :: {{ (r.error or '') | replace('\\n','\n') }}{% if not loop.last %}\n{% endif %}{% endif %}{% endfor %}
+{% for r in ui_runs %}{% if r.status == "error" %}{{ r.created_utc }} :: {{ r.mode }} :: error :: {{ r.id }} :: {{ (r.error or '') | replace('\\n','\n') }}
+{% endif %}{% endfor %}
 
 === RUN LOG TAILS (ui/backend errors) ===
 {% for t in run_error_tails %}--- {{ t.created_utc }} :: {{ t.mode }} :: {{ t.id }} ---
 {{ (t.tail or '') | replace('\\n','\n') }}
-{% if not loop.last %}\n{% endif %}{% else %}(none){% endfor %}
+{% if not loop.last %}
+
+{% endif %}{% else %}(none){% endfor %}
 
 === UI/Backend LAB RUNS (recent) ===
-{% for r in ui_runs %}{{ r.created_utc }} :: {{ r.mode }} :: {{ r.status }} :: {{ r.id }}{% if r.error %} :: {{ (r.error or '') | replace('\\n','\n') }}{% endif %}{% if not loop.last %}\n{% endif %}{% else %}(no runs){% endfor %}
+{% for r in ui_runs %}{{ r.created_utc }} :: {{ r.mode }} :: {{ r.status }} :: {{ r.id }}{% if r.error %} :: {{ (r.error or '') | replace('\\n','\n') }}{% endif %}
+{% else %}(no runs)
+{% endfor %}
 
 === AUDIT EVENTS (recent) ===
-{% for e in events %}{% set a = audit_map.get(e.audit_run_id) %}{{ e.ts_ms }} {{ e.level }} {{ e.layer }} :: {{ (a.target_domain if a else e.audit_run_id) }} :: {{ e.message }}{% if not loop.last %}\n{% endif %}{% endfor %}
+{% for e in events %}{% set a = audit_map.get(e.audit_run_id) %}{{ e.ts_ms }} {{ e.level }} {{ e.layer }} :: {{ (a.target_domain if a else e.audit_run_id) }} :: {{ e.message }}
+{% endfor %}
     </textarea>
   </section>
 </div>

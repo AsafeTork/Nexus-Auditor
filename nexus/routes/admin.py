@@ -233,12 +233,25 @@ def admin_logs():
         )
 
     # Error events across the whole org (JOIN avoids missing older errors)
+    # Some providers/loggers may write errors as INFO with "error/erro/exception" in message,
+    # so we also match by message keywords.
     err_levels = ["ERROR", "ERR", "WARN", "WARNING", "CRITICAL"]
+    msg = func.lower(AuditEvent.message)
+    msg_hit = (
+        msg.like("%error%")
+        | msg.like("%erro%")
+        | msg.like("%exception%")
+        | msg.like("%traceback%")
+        | msg.like("%forbidden%")
+        | msg.like("%timeout%")
+        | msg.like("%failed%")
+        | msg.like("%falha%")
+    )
     error_rows = (
         db.session.query(AuditEvent, AuditRun)
         .join(AuditRun, AuditRun.id == AuditEvent.audit_run_id)
         .filter(AuditRun.org_id == current_user.org_id)
-        .filter(func.upper(AuditEvent.level).in_(err_levels))
+        .filter(func.upper(AuditEvent.level).in_(err_levels) | msg_hit)
         .order_by(AuditEvent.id.desc())
         .limit(err_limit)
         .all()
