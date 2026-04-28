@@ -43,7 +43,7 @@ def enqueue_ui_lab(run_id: str, org_id: str, mode: str, payload: dict) -> str:
         org_id,
         mode,
         payload,
-        job_timeout=int(os.getenv("UI_JOB_TIMEOUT_S", "900")),
+        job_timeout=int(os.getenv("UI_JOB_TIMEOUT_S", "1800")),
         ttl=int(os.getenv("UI_JOB_TTL_S", "1800")),
         result_ttl=int(os.getenv("UI_JOB_RESULT_TTL_S", str(60 * 60 * 24 * 7))),
         failure_ttl=int(os.getenv("UI_JOB_FAILURE_TTL_S", "86400")),

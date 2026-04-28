@@ -6,65 +6,22 @@
   <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
     <div>
       <div class="page-title text-brand-2">UI Lab</div>
-      <div class="body-text">Review UI structure and get suggestions (desktop + mobile).</div>
+      <div class="body-text">Gera um PROMPT pronto para copiar/colar no SOLO (não é relatório).</div>
     </div>
     <a class="btn-secondary" href="{{ url_for('admin.admin_home') }}">Back</a>
   </div>
 
   <div class="mt-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
-    <div class="card">
-      <div class="section-title">Analyze templates</div>
-      <div class="body-text mt-4">Best for file-level suggestions.</div>
-      <form class="mt-6 flex flex-col gap-4" method="post" action="{{ url_for('admin.ui_lab_templates') }}">
+    <div class="card card-focus lg:col-span-3">
+      <div class="section-title">Rodar UI Lab (automático)</div>
+      <div class="body-text mt-4">
+        Ele analisa todos os templates do projeto (todas as páginas) e gera um único PROMPT para o SOLO executar.
+        Não há opção de URL/domínio nem upload de screenshot.
+      </div>
+      <form class="mt-6 flex flex-col gap-4" method="post" action="{{ url_for('admin.ui_lab_run') }}">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <div class="grid grid-cols-1 gap-4">
-          <input id="uiBase1" name="base_url_v1" class="input text-xs" placeholder="Provedor (ex.: https://host/v1)" />
-          <div class="flex gap-4">
-            <select id="uiModel1" name="model" class="input text-xs">
-              <option value="">Modelo (carregue a lista)</option>
-            </select>
-            <button type="button" class="btn-secondary" onclick="loadModels('uiBase1','uiModel1')">Models</button>
-          </div>
-        </div>
-        <textarea name="goal" class="input text-xs" rows="3" placeholder="What should be improved?"></textarea>
-        <button class="btn-primary w-full">Run</button>
-      </form>
-    </div>
-
-    <div class="card">
-      <div class="section-title">Analyze URL</div>
-      <div class="body-text mt-4">Fetches HTML and suggests improvements.</div>
-      <form class="mt-6 flex flex-col gap-4" method="post" action="{{ url_for('admin.ui_lab_url') }}">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <input id="uiBase2" name="base_url_v1" class="input text-xs" placeholder="Provedor (ex.: https://host/v1)" />
-        <div class="flex gap-4">
-          <select id="uiModel2" name="model" class="input text-xs">
-            <option value="">Modelo (carregue a lista)</option>
-          </select>
-          <button type="button" class="btn-secondary" onclick="loadModels('uiBase2','uiModel2')">Models</button>
-        </div>
-        <input name="url" class="input text-xs" placeholder="https://seu-site/pagina" />
-        <textarea name="goal" class="input text-xs" rows="2" placeholder="Goal (optional)"></textarea>
-        <button class="btn-primary w-full">Run</button>
-      </form>
-    </div>
-
-    <div class="card">
-      <div class="section-title">Analyze screenshot</div>
-      <div class="body-text mt-4">Uses metadata + your notes.</div>
-      <form class="mt-6 flex flex-col gap-4" method="post" enctype="multipart/form-data" action="{{ url_for('admin.ui_lab_screenshot') }}">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <input id="uiBase3" name="base_url_v1" class="input text-xs" placeholder="Provedor (ex.: https://host/v1)" />
-        <div class="flex gap-4">
-          <select id="uiModel3" name="model" class="input text-xs">
-            <option value="">Modelo (carregue a lista)</option>
-          </select>
-          <button type="button" class="btn-secondary" onclick="loadModels('uiBase3','uiModel3')">Models</button>
-        </div>
-        <input type="file" name="screenshot" accept="image/*" class="input text-xs" />
-        <textarea name="notes" class="input text-xs" rows="2" placeholder="Describe what you see and what to improve."></textarea>
-        <textarea name="goal" class="input text-xs" rows="2" placeholder="Goal (optional)"></textarea>
-        <button class="btn-primary w-full">Run</button>
+        <textarea name="goal" class="input text-xs" rows="2" placeholder="Opcional: foco da melhoria (ex.: sidebar, hierarquia, mobile, acessibilidade)."></textarea>
+        <button class="btn-primary w-full">Gerar PROMPT</button>
       </form>
     </div>
   </div>
@@ -120,41 +77,6 @@
 </script>
 
 <script>
-  function getDefaultBase(){
-    return localStorage.getItem("llm_base_url_v1") || "";
-  }
-  function setDefaultBase(v){
-    localStorage.setItem("llm_base_url_v1", v || "");
-  }
-  function fillBases(){
-    const v = getDefaultBase();
-    ["uiBase1","uiBase2","uiBase3"].forEach(id => {
-      const el = document.getElementById(id);
-      if(el && !el.value) el.value = v;
-    });
-  }
-  fillBases();
-
-  async function loadModels(baseId, modelId){
-    const baseEl = document.getElementById(baseId);
-    const modelEl = document.getElementById(modelId);
-    if(!baseEl || !modelEl) return;
-    const base = (baseEl.value || "").trim();
-    if(!base) { alert("Informe o provedor (ex.: https://host/v1)"); return; }
-    setDefaultBase(base);
-    modelEl.innerHTML = "<option>Carregando…</option>";
-    try{
-      const r = await fetch(`/admin/llm/models.json?base_url_v1=${encodeURIComponent(base)}`);
-      const j = await r.json();
-      if(!j.ok) throw new Error(j.error || "erro");
-      const models = j.models || [];
-      modelEl.innerHTML = "<option value=''>Modelo (opcional)</option>" + models.map(m => `<option value=\"${m}\">${m}</option>`).join("");
-    }catch(e){
-      modelEl.innerHTML = "<option value=''>Falha ao carregar</option>";
-      alert("Falha ao carregar modelos: " + (e.message || e));
-    }
-  }
-
   // Live poll
   (function(){
     const runId = "{{ run_id or '' }}";

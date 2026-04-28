@@ -9,7 +9,7 @@ from rq import Worker, Queue, Connection
 from rq.exceptions import NoSuchJobError
 
 from . import create_app, db
-from .models import AuditEvent, AuditRun, Site
+from .models import AuditEvent, AuditRun, Site, Organization
 from .services.audit_engine import (
     MICRO_LAYERS,
     SYSTEM_PROMPT_DEFAULT,
@@ -66,21 +66,28 @@ def run_ui_lab_job(run_id: str, org_id: str, mode: str, payload: dict) -> None:
         # Build context
         context = ""
         try:
-            if mode == "templates":
+            if mode in ("templates", "auto"):
+                # AUTO = analyze the whole UI surface (all templates).
                 root = os.path.abspath(os.path.join(os.path.dirname(__file__), "templates"))
-                targets = [
-                    os.path.join(root, "layout.html"),
-                    os.path.join(root, "dashboard", "home.html"),
-                    os.path.join(root, "audit", "view.html"),
-                    os.path.join(root, "admin", "home.html"),
-                    os.path.join(root, "admin", "audits.html"),
-                    os.path.join(root, "admin", "audit_detail.html"),
-                    os.path.join(root, "admin", "ui_lab.html"),
-                    os.path.join(root, "auth", "login.html"),
-                    os.path.join(root, "auth", "register.html"),
-                ]
-                append_log("[ui-lab] lendo templates…")
-                context = read_text_files([p for p in targets if os.path.exists(p)], max_chars_each=12000)
+                targets: list[str] = []
+                for r, _dirs, files in os.walk(root):
+                    for fn in files:
+                        if not fn.endswith(".html"):
+                            continue
+                        if fn.startswith("_"):
+                            continue
+                        targets.append(os.path.join(r, fn))
+                targets = sorted(set(targets))
+                append_log(f"[ui-lab] lendo templates ({len(targets)} arquivos)…")
+
+                # Keep per-file size bounded and also bound the whole context to avoid LLM failures.
+                max_each = int(os.getenv("UI_LAB_MAX_CHARS_EACH", "12000"))
+                max_total = int(os.getenv("UI_LAB_MAX_CONTEXT_CHARS", "180000"))
+                blob = read_text_files([p for p in targets if os.path.exists(p)], max_chars_each=max_each)
+                if len(blob) > max_total:
+                    blob = blob[:max_total] + "\n\n/* ... contexto truncado por tamanho ... */\n"
+                    append_log(f"[ui-lab] contexto truncado para {max_total} chars")
+                context = blob
             elif mode == "url":
                 import requests
 
@@ -106,27 +113,51 @@ def run_ui_lab_job(run_id: str, org_id: str, mode: str, payload: dict) -> None:
                 pass
             return
 
-        goal = str(payload.get("goal") or "").strip() or "Melhorar a UI para ficar moderna, limpa e premium."
+        goal = str(payload.get("goal") or "").strip() or "Deixar a UI mais premium, clara, consistente e com foco."
 
         # Call LLM (streaming -> UI updates while generating)
         try:
-            base_url_v1 = str(payload.get("base_url_v1") or app.config.get("LLM_BASE_URL_V1", "")).strip()
-            model = str(payload.get("model") or app.config.get("LLM_DEFAULT_MODEL", "deepseek-chat")).strip()
+            # Prefer org-level defaults if not explicitly passed in payload.
+            org = Organization.query.filter_by(id=org_id).first()
+            base_url_v1 = str(
+                payload.get("base_url_v1")
+                or (getattr(org, "llm_base_url_v1", "") if org else "")
+                or app.config.get("LLM_BASE_URL_V1", "")
+            ).strip()
+            model = str(
+                payload.get("model")
+                or (getattr(org, "llm_model", "") if org else "")
+                or app.config.get("LLM_DEFAULT_MODEL", "deepseek-chat")
+            ).strip()
             api_key = app.config.get("LLM_API_KEY", "")
             append_log(f"[ui-lab] chamando LLM (stream)… model={model}")
 
             acc = ""
             last_flush = time.time()
+            # UI Lab v2: output a single PROMPT to feed back into SOLO (not a long report).
+            system_prompt = (
+                "Você é um Product Designer + Frontend Engineer senior. "
+                "Sua saída NÃO é um relatório para humanos lerem. "
+                "Sua saída deve ser um ÚNICO PROMPT pronto para colar no SOLO, para ele implementar mudanças no código. "
+                "Requisitos: (1) foco/hierarquia/ritmo vertical, (2) espaçamento consistente, (3) responsivo mobile+desktop, "
+                "(4) acessibilidade (aria/keyboard/focus/contraste), (5) não inventar arquivos que não existem. "
+                "Formato obrigatório:\n"
+                "1) TÍTULO: \"PROMPT PARA SOLO\"\n"
+                "2) CONTEXTO (2-3 linhas)\n"
+                "3) OBJETIVO (bullet)\n"
+                "4) REGRAS (bullet)\n"
+                "5) PLANO DE ALTERAÇÕES POR ARQUIVO (checklist, com paths reais)\n"
+                "6) TRECHOS DE CÓDIGO (somente quando necessário, curtos)\n"
+                "7) COMO VALIDAR (passos rápidos)\n"
+                "Seja direto e acionável."
+            )
+
             for delta in stream_llm_text(
                 base_url_v1=base_url_v1,
                 api_key=api_key,
                 model=model,
                 temperature=0.2,
-                system_prompt=(
-                    "Você é um especialista em UX/UI e Frontend. Analise a UI descrita e produza melhorias práticas, "
-                    "priorizando layout, hierarquia visual, espaçamento, responsividade (mobile+desktop), tipografia e acessibilidade. "
-                    "Formato: Markdown com seções: Diagnóstico, Problemas, Propostas, Mobile, Desktop, Paleta, Checklist por arquivo."
-                ),
+                system_prompt=system_prompt,
                 user_prompt=f"Objetivo: {goal}\n\nContexto:\n{context}\n",
                 timeout_s=240,
             ):

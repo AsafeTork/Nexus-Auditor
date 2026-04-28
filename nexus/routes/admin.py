@@ -15,7 +15,6 @@ from .. import db
 from ..models import AuditEvent, AuditRun, Organization, Site, Subscription, is_org_admin
 from ..security import require_admin
 from ..services.queueing import enqueue_ui_lab
-from ..services.ui_review import summarize_screenshot
 from ..services.github import create_issue
 from ..services.audit_engine import list_models
 
@@ -323,20 +322,24 @@ def admin_llm_models():
         return jsonify({"ok": False, "error": f"{type(e).__name__}: {e}", "models": []}), 400
 
 
-@bp.post("/admin/ui-lab/templates")
+@bp.post("/admin/ui-lab/run")
 @login_required
 @require_admin
-def ui_lab_templates():
-    goal = (request.form.get("goal") or "").strip() or "Melhorar a UI para ficar moderna, limpa e premium."
-    base_url_v1 = (request.form.get("base_url_v1") or "").strip()
-    model = (request.form.get("model") or "").strip()
+def ui_lab_run():
+    """
+    UI Lab v2:
+    - No URL/domain input (always analyzes the whole UI surface)
+    - No screenshot upload (auto uses templates as source of truth)
+    - Output is a single PROMPT for SOLO to execute (not a long report)
+    """
+    goal = (request.form.get("goal") or "").strip() or "Deixar a UI mais premium, clara e consistente."
     run_id = str(uuid.uuid4())
     conn = _redis_conn()
     conn.hset(
         _ui_key(current_user.org_id, run_id),
         mapping={
             "status": "queued",
-            "mode": "templates",
+            "mode": "auto",
             "created_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
             "updated_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         },
@@ -344,102 +347,9 @@ def ui_lab_templates():
     conn.delete(_ui_key(current_user.org_id, run_id) + ":logs")
     conn.delete(_ui_key(current_user.org_id, run_id) + ":result")
     conn.rpush(_ui_index_key(current_user.org_id), run_id)
-    payload = {"goal": goal}
-    if base_url_v1:
-        payload["base_url_v1"] = base_url_v1
-    if model:
-        payload["model"] = model
-    enqueue_ui_lab(run_id, current_user.org_id, "templates", payload)
-    flash("UI Lab enfileirado (templates). Veja logs/resultado abaixo.", "ok")
+    enqueue_ui_lab(run_id, current_user.org_id, "auto", {"goal": goal})
+    flash("UI Lab enfileirado. Ele vai analisar TODA a UI e gerar um PROMPT pronto para copiar/colar.", "ok")
     return redirect(url_for("admin.ui_lab", run=run_id))
-
-
-@bp.post("/admin/ui-lab/url")
-@login_required
-@require_admin
-def ui_lab_url():
-    goal = (request.form.get("goal") or "").strip() or "Avaliar e sugerir melhorias de layout e responsividade."
-    url = (request.form.get("url") or "").strip()
-    base_url_v1 = (request.form.get("base_url_v1") or "").strip()
-    model = (request.form.get("model") or "").strip()
-    if not url:
-        flash("Informe uma URL.", "error")
-        return redirect(url_for("admin.ui_lab"))
-    run_id = str(uuid.uuid4())
-    conn = _redis_conn()
-    conn.hset(
-        _ui_key(current_user.org_id, run_id),
-        mapping={
-            "status": "queued",
-            "mode": "url",
-            "created_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
-            "updated_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
-        },
-    )
-    conn.delete(_ui_key(current_user.org_id, run_id) + ":logs")
-    conn.delete(_ui_key(current_user.org_id, run_id) + ":result")
-    conn.rpush(_ui_index_key(current_user.org_id), run_id)
-    payload = {"goal": goal, "url": url}
-    if base_url_v1:
-        payload["base_url_v1"] = base_url_v1
-    if model:
-        payload["model"] = model
-    enqueue_ui_lab(run_id, current_user.org_id, "url", payload)
-    flash("UI Lab enfileirado (URL). Veja logs/resultado abaixo.", "ok")
-    return redirect(url_for("admin.ui_lab", run=run_id))
-
-
-@bp.post("/admin/ui-lab/screenshot")
-@login_required
-@require_admin
-def ui_lab_screenshot():
-    goal = (request.form.get("goal") or "").strip() or "Sugerir melhorias de layout e hierarquia visual."
-    notes = (request.form.get("notes") or "").strip()
-    base_url_v1 = (request.form.get("base_url_v1") or "").strip()
-    model = (request.form.get("model") or "").strip()
-    f = request.files.get("screenshot")
-    if not f:
-        flash("Envie um screenshot (PNG/JPG).", "error")
-        return redirect(url_for("admin.ui_lab"))
-    try:
-        data = f.read()
-        meta = summarize_screenshot(data)
-        run_id = str(uuid.uuid4())
-        conn = _redis_conn()
-        conn.hset(
-            _ui_key(current_user.org_id, run_id),
-            mapping={
-                "status": "queued",
-                "mode": "screenshot",
-                "created_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
-                "updated_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
-            },
-        )
-        conn.delete(_ui_key(current_user.org_id, run_id) + ":logs")
-        conn.delete(_ui_key(current_user.org_id, run_id) + ":result")
-        conn.rpush(_ui_index_key(current_user.org_id), run_id)
-        enqueue_ui_lab(
-            run_id,
-            current_user.org_id,
-            "screenshot",
-            {
-                "goal": goal,
-                "notes": notes,
-                "meta": {
-                    "width": meta.width,
-                    "height": meta.height,
-                    "size_bytes": meta.size_bytes,
-                    "dominant_hex": meta.dominant_hex,
-                },
-                "base_url_v1": base_url_v1,
-                "model": model,
-            },
-        )
-        flash("UI Lab enfileirado (screenshot). Veja logs/resultado abaixo.", "ok")
-        return redirect(url_for("admin.ui_lab", run=run_id))
-    except Exception as e:
-        flash(f"Falha ao processar screenshot: {type(e).__name__}: {e}", "error")
-    return redirect(url_for("admin.ui_lab"))
 
 
 @bp.post("/admin/sim")

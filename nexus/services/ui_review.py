@@ -53,6 +53,5 @@ def read_text_files(paths: Iterable[str], max_chars_each: int = 12000) -> str:
             continue
         if len(txt) > max_chars_each:
             txt = txt[:max_chars_each] + "\n\n/* ... truncado ... */\n"
-        parts.append(f"\n\n===== FILE: {os.path.basename(p)} =====\n{txt}")
+        parts.append(f"\n\n===== FILE: {p} =====\n{txt}")
     return "\n".join(parts).strip()
-
