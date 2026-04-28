@@ -17,7 +17,8 @@
     :root{
       --app-bg: #0B0B0C;
       --app-surface: #111113;
-      --app-border: #1C1C1F;
+      --app-surface2: #141416;
+      --app-border: rgba(148,163,184,.14);
       --app-text: #EDEDED;
       --app-muted: #9CA3AF;
       --accent: #4F46E5;
@@ -27,9 +28,15 @@
     }
 
     /* Utility classes (avoid heavy Tailwind rewrites) */
-    .bg-app{ background: var(--app-bg); color: var(--app-text); }
+    .bg-app{
+      background:
+        radial-gradient(900px 520px at 15% -10%, rgba(79,70,229,.11), rgba(11,11,12,0) 62%),
+        radial-gradient(900px 520px at 100% 0%, rgba(99,102,241,.08), rgba(11,11,12,0) 55%),
+        var(--app-bg);
+      color: var(--app-text);
+    }
     .bg-surface{ background: var(--app-surface); }
-    .bg-surface2{ background: var(--app-surface); }
+    .bg-surface2{ background: var(--app-surface2); }
     .border-app{ border-color: var(--app-border); }
     .text-muted{ color: var(--app-muted); }
     .text-brand-2{ color: var(--accent); }
@@ -44,14 +51,24 @@
       font-size: 13px;
       font-weight: 600;
       line-height: 1;
-      transition: transform .12s ease, background .12s ease, border-color .12s ease, opacity .12s ease;
+      transition: transform .2s ease, background .2s ease, border-color .2s ease, opacity .2s ease, box-shadow .2s ease;
       user-select: none;
     }
     .btn:active{ transform: scale(.98); }
-    .btn-primary{ background: var(--accent); color: #fff; }
-    .btn-primary:hover{ opacity: .92; }
-    .btn-secondary{ background: transparent; border: 1px solid var(--app-border); color: var(--app-text); }
-    .btn-secondary:hover{ background: rgba(255,255,255,.03); }
+    .btn-primary{
+      background: linear-gradient(135deg, rgba(79,70,229,1), rgba(99,102,241,1));
+      color: #fff;
+      border: 1px solid rgba(255,255,255,.10);
+    }
+    .btn-primary:hover{ opacity: .96; transform: translateY(-1px); box-shadow: 0 10px 26px rgba(79,70,229,.16); }
+    .btn-primary:focus{ box-shadow: 0 0 0 3px rgba(79,70,229,.25); }
+
+    .btn-secondary{
+      background: rgba(255,255,255,.02);
+      border: 1px solid var(--app-border);
+      color: var(--app-text);
+    }
+    .btn-secondary:hover{ background: rgba(255,255,255,.05); border-color: rgba(148,163,184,.22); }
     .btn-danger{ background: var(--danger-weak); border: 1px solid rgba(239,68,68,.30); color: #fecaca; }
     .btn-danger:hover{ background: rgba(239,68,68,.18); }
 
@@ -69,7 +86,7 @@
     .table th{ text-align:left; font-size:11px; color: var(--app-muted); font-weight:600; padding:10px 12px; border-bottom: 1px solid var(--app-border); background: rgba(255,255,255,.01); }
     .table td{ padding:12px; vertical-align: top; border-bottom: 1px solid var(--app-border); }
     .table tr:hover td{ background: rgba(255,255,255,.02); }
-    .table-wrap{ overflow:auto; border-radius: 12px; border: 1px solid var(--app-border); background: var(--app-surface); }
+    .table-wrap{ overflow:auto; border-radius: 12px; border: 1px solid var(--app-border); background: rgba(255,255,255,.01); }
 
     .input{
       background: var(--app-surface);
@@ -91,6 +108,7 @@
       border: 1px solid var(--app-border);
       border-radius: 12px; /* rounded-xl */
       padding: 24px; /* p-6 */
+      box-shadow: 0 1px 0 rgba(255,255,255,.02);
     }
 
     /* Letterhead is kept as an alias of card (no visual variation allowed) */
@@ -138,18 +156,53 @@
     .md-render a{ color: #c7d2fe; text-decoration: underline; text-underline-offset: 3px; }
 
     /* Sidebar */
-    .nav-link{ display:flex; align-items:center; gap:10px; padding:10px 10px; border-radius: 10px; color: var(--app-muted); font-size: 13px; font-weight: 600; }
-    .nav-link:hover{ background: rgba(255,255,255,.03); color: var(--app-text); }
-    .nav-link-active{ background: var(--accent-weak); color: var(--app-text); border: 1px solid rgba(79,70,229,.25); }
+    .nav-link{
+      position: relative;
+      display:flex; align-items:center; gap:10px;
+      padding:10px 10px;
+      border-radius: 10px;
+      color: rgba(148,163,184,.92);
+      font-size: 13px;
+      font-weight: 600;
+      border: 1px solid transparent;
+      transition: background .2s ease, border-color .2s ease, color .2s ease, box-shadow .2s ease;
+    }
+    .nav-link:hover{ background: rgba(255,255,255,.04); color: var(--app-text); border-color: rgba(148,163,184,.12); }
+    .nav-link-active{
+      background: rgba(79,70,229,.12);
+      color: var(--app-text);
+      border-color: rgba(79,70,229,.28);
+      box-shadow: inset 0 0 0 1px rgba(79,70,229,.06);
+    }
+    .nav-link-active::before{
+      content:"";
+      position:absolute;
+      left:-1px;
+      top:8px;
+      bottom:8px;
+      width:3px;
+      border-radius: 999px;
+      background: linear-gradient(180deg, rgba(99,102,241,1), rgba(79,70,229,1));
+    }
 
     /* Typography hierarchy (3 levels) */
-    .page-title{ font-size: 20px; font-weight: 800; letter-spacing: -0.02em; }
+    .page-title{ font-size: 22px; font-weight: 800; letter-spacing: -0.02em; }
     .section-title{ font-size: 14px; font-weight: 600; letter-spacing: -0.01em; }
     .body-text{ font-size: 13px; font-weight: 400; color: var(--app-muted); }
+    .page-subtitle{ font-size: 13px; font-weight: 400; color: rgba(148,163,184,.92); }
 
     /* Layout helpers */
     .topbar-pad{ padding: 16px 0; }
     .page-pad{ padding: 24px 0; }
+
+    /* Focal emphasis (subtle, minimal) */
+    .card-focus{
+      border-color: rgba(79,70,229,.38);
+      box-shadow: 0 0 0 1px rgba(79,70,229,.12), 0 12px 32px rgba(0,0,0,.30);
+      background:
+        radial-gradient(900px 400px at 20% 0%, rgba(79,70,229,.12), rgba(11,11,12,0) 60%),
+        var(--app-surface);
+    }
   </style>
 </head>
 <body class="bg-app">
@@ -201,7 +254,7 @@
                 <div class="min-w-0">
                   <div class="page-title truncate">{{ title or "Dashboard" }}</div>
                   {% if subtitle %}
-                    <div class="body-text truncate">{{ subtitle }}</div>
+                    <div class="page-subtitle truncate">{{ subtitle }}</div>
                   {% endif %}
                 </div>
                 <div class="shrink-0">

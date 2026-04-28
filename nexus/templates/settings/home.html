@@ -1,8 +1,14 @@
 {% extends "layout.html" %}
 {% set title = "Settings" %}
+{% set subtitle = "Organization, users and billing" %}
+{% block page_actions %}
+  {% if is_admin %}
+    <a class="btn-primary" href="#billing">Manage plan</a>
+  {% endif %}
+{% endblock %}
 {% block content %}
 <div class="flex flex-col gap-6">
-  <section class="card">
+  <section class="card card-focus">
     <div class="section-title">Organization</div>
     <div class="mt-4 body-text">Org ID: <span class="mono">{{ current_user.org_id }}</span></div>
     <div class="mt-4 body-text">Role: <span class="section-title">{{ current_user.role or "member" }}</span></div>
@@ -67,7 +73,7 @@
     {% endif %}
   </section>
 
-  <section class="card">
+  <section class="card" id="billing">
     <div class="section-title">Billing</div>
     <div class="mt-4 body-text">Status: <span class="section-title">{{ sub.status if sub else "inactive" }}</span></div>
     {% if is_admin %}

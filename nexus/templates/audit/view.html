@@ -1,16 +1,18 @@
 {% extends "layout.html" %}
 {% set title = "Audit" %}
+{% set subtitle = (site.base_url if site else audit.site_id) %}
+{% block page_actions %}
+  <a class="btn-primary" href="/dossier/{{ audit.id }}" target="_blank">Open dossier</a>
+{% endblock %}
 {% block content %}
-<div class="card">
+<div class="card card-focus">
   <div class="flex items-start justify-between gap-6">
     <div>
-      <div class="mono text-xs text-muted">{{ site.base_url if site else audit.site_id }}</div>
       <div class="text-[11px] text-muted">Audit ID: <span class="mono">{{ audit.id }}</span> · Status: <span id="statusBadge">{{ audit.status }}</span></div>
     </div>
     <div class="flex flex-wrap items-center gap-4 justify-end">
       <button class="mono text-xs font-bold btn-secondary" onclick="downloadMD()">Download .md</button>
       <button class="mono text-xs font-bold btn-secondary" onclick="downloadCSV()">Download .csv</button>
-      <a class="mono text-xs font-bold btn-secondary" href="/dossier/{{ audit.id }}" target="_blank">Dossiê</a>
     </div>
   </div>
 
