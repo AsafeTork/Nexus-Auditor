@@ -9,7 +9,7 @@ import redis
 import requests
 from flask import Blueprint, current_app, jsonify, render_template, request, redirect, url_for, flash, session
 from flask_login import login_required, current_user
-from sqlalchemy import text
+from sqlalchemy import text, func
 
 from .. import db
 from ..models import AuditEvent, AuditRun, Organization, Site, Subscription, is_org_admin
@@ -207,27 +207,66 @@ def admin_logs():
     Admin log geral: eventos de auditoria + execuções do UI Lab + diagnóstico.
     """
     diag = _diagnostics()
-    # Recent audit events (scoped by org via recent audit ids)
+    # Limits (big by default, but bounded)
+    audits_limit = int(os.getenv("ADMIN_LOGS_AUDITS_LIMIT", "300"))
+    events_limit = int(os.getenv("ADMIN_LOGS_EVENTS_LIMIT", "2500"))
+    err_limit = int(os.getenv("ADMIN_LOGS_ERROR_EVENTS_LIMIT", "5000"))
+    runs_limit = int(os.getenv("ADMIN_LOGS_RUNS_LIMIT", "50"))
+
+    # Recent audits (org scope)
     audits = (
         AuditRun.query.filter_by(org_id=current_user.org_id)
         .order_by(AuditRun.created_utc.desc())
-        .limit(40)
+        .limit(audits_limit)
         .all()
     )
+
+    # Recent events (fast path using recent audits)
     audit_ids = [a.id for a in audits]
     events = []
     if audit_ids:
         events = (
             AuditEvent.query.filter(AuditEvent.audit_run_id.in_(audit_ids))
             .order_by(AuditEvent.id.desc())
-            .limit(800)
+            .limit(events_limit)
             .all()
         )
+
+    # Error events across the whole org (JOIN avoids missing older errors)
+    err_levels = ["ERROR", "ERR", "WARN", "WARNING", "CRITICAL"]
+    error_rows = (
+        db.session.query(AuditEvent, AuditRun)
+        .join(AuditRun, AuditRun.id == AuditEvent.audit_run_id)
+        .filter(AuditRun.org_id == current_user.org_id)
+        .filter(func.upper(AuditEvent.level).in_(err_levels))
+        .order_by(AuditEvent.id.desc())
+        .limit(err_limit)
+        .all()
+    )
+    error_events = [
+        {
+            "ts_ms": e.ts_ms,
+            "level": e.level,
+            "layer": e.layer,
+            "audit_run_id": e.audit_run_id,
+            "target_domain": (a.target_domain or a.id),
+            "message": e.message,
+        }
+        for (e, a) in error_rows
+    ]
+
+    # Failed audits list (most important at the top)
+    failed_audits = (
+        AuditRun.query.filter_by(org_id=current_user.org_id, status="error")
+        .order_by(AuditRun.created_utc.desc())
+        .limit(200)
+        .all()
+    )
     # UI lab runs from redis
     conn = _redis_conn()
     runs = []
     try:
-        ids = conn.lrange(_ui_index_key(current_user.org_id), 0, 10)
+        ids = conn.lrange(_ui_index_key(current_user.org_id), 0, runs_limit)
         for rid in ids:
             rid = rid.decode("utf-8") if isinstance(rid, (bytes, bytearray)) else str(rid)
             h = conn.hgetall(_ui_key(current_user.org_id, rid)) or {}
@@ -237,13 +276,23 @@ def admin_logs():
                     "status": (h.get(b"status") or b"").decode("utf-8", "ignore"),
                     "mode": (h.get(b"mode") or b"").decode("utf-8", "ignore"),
                     "created_utc": (h.get(b"created_utc") or b"").decode("utf-8", "ignore"),
+                    "error": (h.get(b"error") or b"").decode("utf-8", "ignore"),
                 }
             )
     except Exception:
         runs = []
     # id->domain map
     audit_map = {a.id: a for a in audits}
-    return render_template("admin/logs.html", diag=diag, events=events, audits=audits, audit_map=audit_map, ui_runs=runs)
+    return render_template(
+        "admin/logs.html",
+        diag=diag,
+        events=events,
+        error_events=error_events,
+        failed_audits=failed_audits,
+        audits=audits,
+        audit_map=audit_map,
+        ui_runs=runs,
+    )
 
 
 def _redis_conn():

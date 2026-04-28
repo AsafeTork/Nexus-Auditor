@@ -12,7 +12,7 @@
     <div class="flex items-center justify-between gap-6">
       <div>
         <div class="section-title">Console</div>
-        <div class="body-text">Diagnóstico + execuções recentes + eventos (org).</div>
+        <div class="body-text">Tudo que é erro primeiro, depois o restante (org scope).</div>
       </div>
       <button class="btn-secondary icon-btn" aria-label="Copiar console" onclick="copyText('consoleBox')">
         <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -27,8 +27,17 @@ DB={{ "OK" if diag.db.ok else "ERRO" }}{% if not diag.db.ok %} :: {{ diag.db.err
 REDIS={{ "OK" if diag.redis.ok else "ERRO" }}{% if not diag.redis.ok %} :: {{ diag.redis.error }}{% endif %}
 LLM={{ "OK" if diag.llm.ok else "ERRO" }} model={{ diag.llm.model }}{% if not diag.llm.ok %} :: {{ diag.llm.error }}{% endif %}
 
+=== FAILED AUDITS (recent) ===
+{% for a in failed_audits %}{{ a.created_utc }} :: error :: {{ a.target_domain or a.id }} :: audit_id={{ a.id }} :: model={{ a.model }}{% if not loop.last %}\n{% endif %}{% else %}(none){% endfor %}
+
+=== ERRORS (audit events) ===
+{% for e in error_events %}{{ e.ts_ms }} {{ e.level }} {{ e.layer }} :: {{ e.target_domain }} :: {{ e.message }}{% if not loop.last %}\n{% endif %}{% endfor %}
+
+=== ERRORS (ui/backend lab runs) ===
+{% for r in ui_runs %}{% if r.status == "error" %}{{ r.created_utc }} :: {{ r.mode }} :: error :: {{ r.id }} :: {{ r.error }}{% if not loop.last %}\n{% endif %}{% endif %}{% endfor %}
+
 === UI/Backend LAB RUNS (recent) ===
-{% for r in ui_runs %}{{ r.created_utc }} :: {{ r.mode }} :: {{ r.status }} :: {{ r.id }}{% if not loop.last %}\n{% endif %}{% else %}(no runs){% endfor %}
+{% for r in ui_runs %}{{ r.created_utc }} :: {{ r.mode }} :: {{ r.status }} :: {{ r.id }}{% if r.error %} :: {{ r.error }}{% endif %}{% if not loop.last %}\n{% endif %}{% else %}(no runs){% endfor %}
 
 === AUDIT EVENTS (recent) ===
 {% for e in events %}{% set a = audit_map.get(e.audit_run_id) %}{{ e.ts_ms }} {{ e.level }} {{ e.layer }} :: {{ (a.target_domain if a else e.audit_run_id) }} :: {{ e.message }}{% if not loop.last %}\n{% endif %}{% endfor %}
