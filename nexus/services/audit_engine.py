@@ -8,6 +8,7 @@ from typing import Dict, Generator, List, Tuple
 from urllib.parse import urlparse
 
 import requests
+from requests.adapters import HTTPAdapter
 from bs4 import BeautifulSoup
 
 
@@ -18,6 +19,12 @@ CLEAN_HTML_TO_LLM_CHARS = 80_000
 FETCH_TIMEOUT_S = 35
 LLM_TIMEOUT_S = 600
 LLM_HEARTBEAT_S = 10
+
+# Shared HTTP session for connection pooling (avoid creating a new TCP connection per call)
+_HTTP = requests.Session()
+_ADAPTER = HTTPAdapter(pool_connections=4, pool_maxsize=8, max_retries=0)
+_HTTP.mount("http://", _ADAPTER)
+_HTTP.mount("https://", _ADAPTER)
 
 
 def normalize_base_url_v1(base_url_v1: str) -> str:
@@ -86,7 +93,7 @@ def stream_llm_text(
         "stream": True,
         "messages": [{"role": "system", "content": system_prompt}, {"role": "user", "content": user_prompt}],
     }
-    r = requests.post(url, headers=headers, json=payload, stream=True, timeout=timeout_s)
+    r = _HTTP.post(url, headers=headers, json=payload, stream=True, timeout=timeout_s)
     r.encoding = "utf-8"
     r.raise_for_status()
     for raw in r.iter_lines(decode_unicode=True, chunk_size=2048):
@@ -237,9 +244,39 @@ def stream_llm_events(
         "stream": True,
         "messages": [{"role": "system", "content": system_prompt}, {"role": "user", "content": user_prompt}],
     }
-    r = requests.post(url, headers=headers, json=payload, stream=True, timeout=LLM_TIMEOUT_S)
-    r.encoding = "utf-8"
-    r.raise_for_status()
+    retry_statuses = {429, 502, 503, 504}
+    backoffs = [2, 4, 8]
+    last_exc: Exception | None = None
+    r = None
+    for attempt in range(3):
+        try:
+            rr = _HTTP.post(url, headers=headers, json=payload, stream=True, timeout=LLM_TIMEOUT_S)
+            rr.encoding = "utf-8"
+            if rr.status_code in retry_statuses:
+                # drain/close early to release the connection back to the pool
+                try:
+                    rr.close()
+                except Exception:
+                    pass
+                last_exc = requests.HTTPError(f"{rr.status_code} Server Error for url: {url}")
+                if attempt < 2:
+                    time.sleep(backoffs[attempt])
+                    continue
+            rr.raise_for_status()
+            r = rr
+            last_exc = None
+            break
+        except requests.exceptions.ConnectionError as e:
+            last_exc = e
+            if attempt < 2:
+                time.sleep(backoffs[attempt])
+                continue
+        except Exception as e:
+            # non-retryable
+            last_exc = e
+            break
+    if r is None:
+        raise last_exc or RuntimeError("Falha ao conectar ao provedor LLM.")
 
     buf = ""
     mode = "pre"

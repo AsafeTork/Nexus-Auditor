@@ -170,6 +170,7 @@ def audit_stream(audit_id: str):
         log_pos = max(0, from_log)
         md_pos = max(0, from_md)
         csv_pos = max(0, from_csv)
+        idle_cycles = 0
 
         import time as _t
 
@@ -205,9 +206,21 @@ def audit_stream(audit_id: str):
                         yield emit("CSV_ROW", ln)
                     sent = True
 
+                if sent:
+                    idle_cycles = 0
+                else:
+                    idle_cycles += 1
+
                 if not running and not sent:
                     break
-                _t.sleep(0.25)
+
+                # Reduce DB query rate while keeping UX acceptable:
+                # - 0.8s while running/queued
+                # - 2.0s if no new data for 3 consecutive cycles
+                if idle_cycles >= 3:
+                    _t.sleep(2.0)
+                else:
+                    _t.sleep(0.8 if running else 0.8)
         finally:
             try:
                 db.session.remove()

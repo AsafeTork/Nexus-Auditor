@@ -11,7 +11,7 @@
   <div class="min-h-screen md:min-h-0 flex-1 md:w-[53%] flex items-center justify-center p-6 md:p-10 relative">
     <div class="w-full max-w-md card p-6">
       <div class="flex flex-col sm:flex-row sm:items-center gap-4">
-        <img class="w-full sm:w-56 max-w-[320px] object-contain" alt="Nexus Auditor" src="{{ url_for('static', filename='logo_login.png') }}"/>
+        <img class="w-full sm:w-56 max-w-[320px] object-contain" alt="Nexus Auditor" src="{{ url_for('static', filename='logo_login_small.png') }}"/>
         <div class="sm:text-right">
           <div class="text-lg font-extrabold tracking-tight">Entrar</div>
           <div class="text-xs text-muted">Acesse seu painel</div>
@@ -21,11 +21,11 @@
       <form class="mt-6 space-y-3" method="post" action="{{ url_for('auth.login_post') }}">
         <div>
           <label class="text-xs text-muted">E-mail</label>
-          <input name="email" class="input mt-1 w-full rounded-xl px-3 py-2 text-sm" />
+          <input name="email" autocomplete="email" class="input mt-1 w-full rounded-xl px-3 py-2 text-sm" />
         </div>
         <div>
           <label class="text-xs text-muted">Senha</label>
-          <input type="password" name="password" class="input mt-1 w-full rounded-xl px-3 py-2 text-sm" />
+          <input type="password" name="password" autocomplete="current-password" class="input mt-1 w-full rounded-xl px-3 py-2 text-sm" />
         </div>
         <button class="btn-primary w-full rounded-xl px-4 py-2 font-extrabold">Entrar</button>
       </form>
@@ -44,7 +44,7 @@
 
 <!-- Mobile: seção extra para revelar MAIS imagem ao rolar (sem empurrar o login para cima) -->
 <div class="md:hidden h-[55vh] relative overflow-hidden">
-  <img src="{{ url_for('static', filename='login_bg.jpg') }}" alt="" class="absolute inset-0 w-full h-full object-cover opacity-55" style="object-position: 15% 50%;"/>
+  <img loading="lazy" src="{{ url_for('static', filename='login_bg.jpg') }}" alt="" class="absolute inset-0 w-full h-full object-cover opacity-55" style="object-position: 15% 50%;"/>
   <div class="absolute inset-0" style="background: linear-gradient(180deg, rgba(2,6,23,0.98) 0%, rgba(2,6,23,0.35) 45%, rgba(2,6,23,0.92) 100%);"></div>
 </div>
 {% endblock %}

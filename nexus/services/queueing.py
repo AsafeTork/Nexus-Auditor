@@ -5,12 +5,14 @@ import os
 import redis
 from rq import Queue
 
-from .. import create_app
-
 
 def _redis_conn():
-    app = create_app()
-    return redis.from_url(app.config["REDIS_URL"])
+    """
+    Fast Redis connection resolver.
+    Do NOT instantiate a Flask app just to read REDIS_URL.
+    """
+    redis_url = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+    return redis.from_url(redis_url)
 
 
 def enqueue_audit(audit_id: str) -> str:

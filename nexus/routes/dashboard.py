@@ -2,9 +2,12 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
 
+from sqlalchemy import func
+
 from flask import Blueprint, render_template, session
 from flask_login import login_required, current_user
 
+from .. import db
 from ..models import Organization, Site, AuditRun, Subscription
 
 bp = Blueprint("dashboard", __name__)
@@ -15,7 +18,20 @@ bp = Blueprint("dashboard", __name__)
 def home():
     org = Organization.query.filter_by(id=current_user.org_id).first()
     sites = Site.query.filter_by(org_id=current_user.org_id).order_by(Site.created_utc.desc()).limit(20).all()
-    audits = AuditRun.query.filter_by(org_id=current_user.org_id).order_by(AuditRun.created_utc.desc()).limit(50).all()
+    # Only load fields needed by the template (avoid loading large markdown/csv blobs)
+    audits = (
+        db.session.query(
+            AuditRun.id.label("id"),
+            AuditRun.status.label("status"),
+            AuditRun.target_domain.label("target_domain"),
+            AuditRun.model.label("model"),
+            AuditRun.created_utc.label("created_utc"),
+        )
+        .filter_by(org_id=current_user.org_id)
+        .order_by(AuditRun.created_utc.desc())
+        .limit(50)
+        .all()
+    )
     sub = Subscription.query.filter_by(org_id=current_user.org_id).first()
     # Admin simulator (session-only)
     if current_user.is_admin:
@@ -26,10 +42,17 @@ def home():
 
     # KPIs
     sites_count = len(sites)
-    total_audits = len(audits)
     status_counts = {"queued": 0, "running": 0, "done": 0, "error": 0}
-    for a in audits:
-        status_counts[str(a.status or "queued")] = status_counts.get(str(a.status or "queued"), 0) + 1
+    rows = (
+        db.session.query(AuditRun.status, func.count())
+        .filter_by(org_id=current_user.org_id)
+        .group_by(AuditRun.status)
+        .all()
+    )
+    for st, cnt in rows:
+        key = str(st or "queued")
+        status_counts[key] = int(cnt or 0)
+    total_audits = sum(status_counts.values())
 
     # Simple 7-day trend (based on created_utc ISO strings)
     today = datetime.now(timezone.utc).date()
