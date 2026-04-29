@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="pt-BR">
+<html lang="{{ (lang or 'en') }}">
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
@@ -10,241 +10,11 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=JetBrains+Mono:wght@400;600;800&display=swap" rel="stylesheet">
-  <style>
-    body{ font-family: Inter, ui-sans-serif, system-ui; }
-    .mono{ font-family: "JetBrains Mono", ui-monospace, monospace; }
-    /* Minimalist dark-first design system (Stripe/Linear/Notion-inspired) */
-    :root{
-      --app-bg: #0B0B0C;
-      --app-surface: #111113;
-      --app-surface2: #141416;
-      --app-border: rgba(148,163,184,.14);
-      --app-text: #E2E8F0;
-      --app-muted: #94A3B8;
-      --accent: #6366F1;
-      --accent-weak: rgba(99,102,241,.12);
-      --danger: #ef4444;
-      --danger-weak: rgba(239,68,68,.14);
-    }
-
-    /* Utility classes (avoid heavy Tailwind rewrites) */
-    .bg-app{
-      background:
-        radial-gradient(900px 520px at 15% -10%, rgba(79,70,229,.11), rgba(11,11,12,0) 62%),
-        radial-gradient(900px 520px at 100% 0%, rgba(99,102,241,.08), rgba(11,11,12,0) 55%),
-        var(--app-bg);
-      color: var(--app-text);
-    }
-    .bg-surface{ background: var(--app-surface); }
-    .bg-surface2{ background: var(--app-surface2); }
-    .border-app{ border-color: var(--app-border); }
-    .text-muted{ color: var(--app-muted); }
-    .text-brand-2{ color: var(--accent); }
-    .border-brand{ border-color: rgba(99,102,241,.35); }
-    .bg-brand-weak{ background: var(--accent-weak); }
-    .bg-brand-weak2{ background: rgba(99,102,241,.20); }
-
-    .btn, .btn-primary, .btn-secondary, .btn-danger{
-      display:inline-flex; align-items:center; justify-content:center; gap:8px;
-      border-radius: 12px;
-      padding: 10px 12px;
-      font-size: 13px;
-      font-weight: 600;
-      line-height: 1;
-      transition: transform .2s ease, background .2s ease, border-color .2s ease, opacity .2s ease, box-shadow .2s ease;
-      user-select: none;
-    }
-    .btn:active{ transform: scale(.98); }
-    .btn:focus-visible,
-    .btn-primary:focus-visible,
-    .btn-secondary:focus-visible,
-    .btn-danger:focus-visible{
-      outline: none;
-      box-shadow: 0 0 0 3px rgba(99,102,241,.26);
-    }
-    .btn-primary{
-      background: linear-gradient(135deg, rgba(99,102,241,1), rgba(79,70,229,1));
-      color: #fff;
-      border: 1px solid rgba(255,255,255,.10);
-    }
-    .btn-primary:hover{ opacity: .98; transform: translateY(-1px); box-shadow: 0 12px 28px rgba(99,102,241,.25); }
-    .btn-primary:focus{ box-shadow: 0 0 0 3px rgba(99,102,241,.26); }
-
-    .btn-secondary{
-      background: rgba(255,255,255,.02);
-      border: 1px solid var(--app-border);
-      color: var(--app-text);
-    }
-    .btn-secondary:hover{ background: rgba(255,255,255,.05); border-color: rgba(148,163,184,.22); }
-    .btn-danger{ background: var(--danger-weak); border: 1px solid rgba(239,68,68,.30); color: #fecaca; }
-    .btn-danger:hover{ background: rgba(239,68,68,.18); }
-
-    /* Badges */
-    .badge{ display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:999px; font-size:11px; font-weight:700; letter-spacing:.01em; border:1px solid var(--app-border); background: rgba(255,255,255,.02); }
-    .dot{ width:6px; height:6px; border-radius:999px; display:inline-block; }
-    .badge-muted{ color: var(--app-muted); }
-    .badge-ok{ border-color: rgba(16,185,129,.25); color: #6ee7b7; }
-    .badge-warn{ border-color: rgba(245,158,11,.30); color: #fbbf24; }
-    .badge-err{ border-color: rgba(239,68,68,.30); color: #fecaca; }
-    .badge-run{ border-color: rgba(79,70,229,.35); color: #c7d2fe; }
-
-    /* Table */
-    .table{ width:100%; border-collapse: separate; border-spacing:0; }
-    .table th{ text-align:left; font-size:11px; color: var(--app-muted); font-weight:600; padding:10px 12px; border-bottom: 1px solid var(--app-border); background: rgba(255,255,255,.01); }
-    .table td{ padding:12px; vertical-align: top; border-bottom: 1px solid var(--app-border); }
-    .table tr:hover td{ background: rgba(255,255,255,.02); }
-    .table-wrap{ overflow:auto; border-radius: 12px; border: 1px solid var(--app-border); background: rgba(255,255,255,.01); }
-
-    .input{
-      background: var(--app-surface);
-      border: 1px solid var(--app-border);
-      color: var(--app-text);
-      outline: none;
-      border-radius: 12px;
-      padding: 10px 12px;
-      width: 100%;
-    }
-    .input:focus{
-      box-shadow: 0 0 0 3px rgba(79,70,229,.20);
-      border-color: rgba(79,70,229,.45);
-    }
-
-    /* Cards (single, consistent) */
-    .card{
-      background: var(--app-surface);
-      border: 1px solid var(--app-border);
-      border-radius: 12px; /* rounded-xl */
-      padding: 24px; /* p-6 */
-      box-shadow: 0 1px 0 rgba(255,255,255,.02);
-    }
-
-    /* Letterhead is kept as an alias of card (no visual variation allowed) */
-    .letterhead{
-      background: var(--app-surface);
-      border: 1px solid var(--app-border);
-      border-radius: 12px;
-      padding: 24px;
-    }
-
-    /* Menus (not cards) */
-    .menu{
-      background: var(--app-surface);
-      border: 1px solid var(--app-border);
-      border-radius: 12px;
-      padding: 16px;
-    }
-
-    /* Sidebar section rhythm */
-    .nav-section{ margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--app-border); }
-    .nav-label{ padding: 0 8px 8px; font-size: 11px; color: var(--app-muted); font-weight: 600; letter-spacing: .02em; text-transform: uppercase; }
-
-    /* Tabs */
-    .tabBtn{
-      padding: 10px 12px;
-      border-radius: 12px;
-      transition: background .2s ease, border-color .2s ease, color .2s ease;
-      user-select: none;
-    }
-    .tabBtn:focus-visible{
-      outline: none;
-      box-shadow: 0 0 0 3px rgba(99,102,241,.22);
-    }
-
-    /* Lists */
-    .ui-list{ padding-left: 20px; display: flex; flex-direction: column; gap: 16px; }
-
-    /* Minimal markdown styling */
-    .md-render{ color: var(--app-text); font-size: 14px; line-height: 1.65; }
-    .md-render h1,.md-render h2,.md-render h3{ font-weight: 600; letter-spacing: -0.01em; margin: 16px 0 8px; }
-    .md-render h1{ font-size: 18px; }
-    .md-render h2{ font-size: 15px; color: #c7d2fe; }
-    .md-render h3{ font-size: 14px; color: #e5e7eb; }
-    .md-render p{ margin: 10px 0; color: #e5e7eb; }
-    .md-render ul{ margin: 10px 0 10px 18px; list-style: disc; }
-    .md-render ol{ margin: 10px 0 10px 18px; list-style: decimal; }
-    .md-render code{ font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 12px; padding: 2px 6px; border-radius: 10px; background: rgba(255,255,255,.03); border: 1px solid var(--app-border); }
-    .md-render pre{ overflow:auto; padding: 12px; border-radius: 12px; background: rgba(255,255,255,.02); border: 1px solid var(--app-border); }
-    .md-render a{ color: #c7d2fe; text-decoration: underline; text-underline-offset: 3px; }
-
-    /* Sidebar */
-    .nav-link{
-      position: relative;
-      display:flex; align-items:center; gap:10px;
-      padding:10px 10px;
-      border-radius: 10px;
-      color: rgba(148,163,184,.92);
-      font-size: 13px;
-      font-weight: 600;
-      border: 1px solid transparent;
-      transition: background .2s ease, border-color .2s ease, color .2s ease, box-shadow .2s ease;
-    }
-    .nav-link:hover{ background: rgba(255,255,255,.04); color: var(--app-text); border-color: rgba(148,163,184,.12); }
-    .nav-link:focus-visible{
-      outline: none;
-      border-color: rgba(99,102,241,.32);
-      box-shadow: 0 0 0 3px rgba(99,102,241,.18);
-    }
-    .nav-link-active{
-      background: rgba(79,70,229,.12);
-      color: var(--app-text);
-      border-color: rgba(79,70,229,.28);
-      box-shadow: inset 0 0 0 1px rgba(79,70,229,.06);
-    }
-    .nav-link-active::before{
-      content:"";
-      position:absolute;
-      left:-1px;
-      top:8px;
-      bottom:8px;
-      width:3px;
-      border-radius: 999px;
-      background: linear-gradient(180deg, rgba(99,102,241,1), rgba(79,70,229,1));
-    }
-
-    /* Typography hierarchy (3 levels) */
-    .page-title{ font-size: 24px; font-weight: 800; letter-spacing: -0.025em; }
-    .section-title{ font-size: 15px; font-weight: 600; letter-spacing: -0.01em; color: #c7d2fe; }
-    .body-text{ font-size: 13px; font-weight: 400; color: #a1a1aa; }
-    .page-subtitle{ font-size: 13px; font-weight: 400; color: rgba(148,163,184,.92); }
-
-    /* Layout helpers */
-    .topbar-pad{ padding: 16px 0; }
-    .page-pad{ padding: 24px 0; }
-
-    /* Focal emphasis (subtle, minimal) */
-    .card-focus{
-      border-color: rgba(99,102,241,.45);
-      box-shadow: 0 0 0 1px rgba(99,102,241,.15), 0 16px 40px rgba(0,0,0,.35);
-      background:
-        radial-gradient(900px 400px at 20% 0%, rgba(99,102,241,.12), rgba(11,11,12,0) 60%),
-        var(--app-surface);
-    }
-
-    /* Button size variant (for primary CTA like Sign in) */
-    .btn-lg{ padding: 12px 16px; font-size: 15px; border-radius: 14px; }
-
-    /* KPI emphasis */
-    .kpi-value{ font-size: 30px; line-height: 1.05; font-weight: 800; letter-spacing: -0.02em; }
-    @media (min-width: 768px){
-      .kpi-value{ font-size: 34px; }
-    }
-
-    /* Minimal icon button (for Copy etc.) */
-    .icon-btn{
-      width: 36px;
-      height: 36px;
-      padding: 0;
-      border-radius: 12px;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-    }
-    .icon-btn svg{ opacity: .92; }
-  </style>
+  <link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}"/>
 </head>
 <body class="bg-app">
   <a href="#mainContent" class="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-50 btn-secondary">
-    Pular para o conteúdo
+    Skip to content
   </a>
   {% set logo_mark = ('logo_admin_mark_96.png' if current_user.is_authenticated and current_user.is_admin else 'logo_user_mark_96.png') %}
 
@@ -274,7 +44,7 @@
         <div class="flex-1 min-w-0">
           <!-- Top navbar -->
           <header class="sticky top-0 z-40 border-b border-app" style="background: rgba(11,11,12,.72); backdrop-filter: blur(10px);">
-            <div class="mx-auto max-w-5xl px-6 topbar-pad flex items-center justify-between gap-6">
+            <div class="mx-auto {{ page_max_w or 'max-w-5xl' }} px-6 topbar-pad flex items-center justify-between gap-6">
               <div class="flex items-center gap-4 min-w-0">
                 <button id="menuBtn" class="lg:hidden btn btn-secondary" type="button">Menu</button>
                 <div class="min-w-0">
@@ -288,7 +58,7 @@
             </div>
           </header>
 
-          <main id="mainContent" class="mx-auto max-w-5xl px-6 page-pad flex flex-col gap-6">
+          <main id="mainContent" class="mx-auto {{ page_max_w or 'max-w-5xl' }} px-6 page-pad flex flex-col gap-6">
             {% if show_page_header is not defined or show_page_header %}
               <div class="flex items-end justify-between gap-6">
                 <div class="min-w-0">

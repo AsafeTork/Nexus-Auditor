@@ -52,14 +52,14 @@ def _diagnostics() -> Dict[str, Any]:
     except Exception as e:
         out["redis"] = {"ok": False, "error": f"{type(e).__name__}: {e}"}
 
-    # LLM sanity (non-stream short call)
+    # LLM sanity (non-stream short call with retries)
     base_url = current_app.config.get("LLM_BASE_URL_V1", "")
     api_key = current_app.config.get("LLM_API_KEY", "")
     model = current_app.config.get("LLM_DEFAULT_MODEL", "")
     out["llm"] = {"base_url_v1": base_url, "model": model, "api_key_mask": _mask(api_key, 6)}
     try:
         if not base_url or not model:
-            raise RuntimeError("LLM_BASE_URL_V1/LLM_DEFAULT_MODEL não configurados.")
+            raise RuntimeError("LLM_BASE_URL_V1/LLM_DEFAULT_MODEL not configured.")
         headers = {"Content-Type": "application/json", "Accept": "application/json"}
         if api_key:
             headers["Authorization"] = f"Bearer {api_key}"
@@ -69,12 +69,36 @@ def _diagnostics() -> Dict[str, Any]:
             "temperature": 0.1,
             "stream": False,
             "messages": [
-                {"role": "system", "content": "Você é um verificador. Responda somente com a palavra OK."},
+                {"role": "system", "content": "You are a health check. Reply with OK only."},
                 {"role": "user", "content": "OK?"},
             ],
         }
-        r = requests.post(url, headers=headers, json=payload, timeout=20)
-        r.raise_for_status()
+        retry_statuses = {429, 502, 503, 504, 520, 524}
+        timeout_s = int(os.getenv("LLM_TIMEOUT_S", "20"))
+        timeout_s = max(20, min(120, timeout_s))
+        backoffs = [1.0, 2.0, 4.0]
+        last_status = None
+        last_text = ""
+        r = None
+        for attempt in range(3):
+            rr = requests.post(url, headers=headers, json=payload, timeout=timeout_s)
+            last_status = rr.status_code
+            try:
+                last_text = (rr.text or "")[:240]
+            except Exception:
+                last_text = ""
+            if rr.status_code in retry_statuses and attempt < 2:
+                try:
+                    rr.close()
+                except Exception:
+                    pass
+                time.sleep(backoffs[attempt])
+                continue
+            rr.raise_for_status()
+            r = rr
+            break
+        if r is None:
+            raise RuntimeError(f"LLM request failed (status={last_status})")
         j = r.json()
         content = str(((j.get("choices") or [None])[0] or {}).get("message", {}).get("content") or "")
         out["llm"]["ok"] = True
@@ -82,6 +106,14 @@ def _diagnostics() -> Dict[str, Any]:
     except Exception as e:
         out["llm"]["ok"] = False
         out["llm"]["error"] = f"{type(e).__name__}: {e}"
+        # Useful snippet for debugging upstream gateways (best-effort)
+        try:
+            if "last_status" in locals() and last_status is not None:
+                out["llm"]["status"] = int(last_status)
+            if "last_text" in locals() and last_text:
+                out["llm"]["body_head"] = last_text
+        except Exception:
+            pass
 
     return out
 
@@ -283,13 +315,16 @@ def admin_logs():
         for rid in ids:
             rid = rid.decode("utf-8") if isinstance(rid, (bytes, bytearray)) else str(rid)
             h = conn.hgetall(_ui_key(current_user.org_id, rid)) or {}
+            err = (h.get(b"error") or b"").decode("utf-8", "ignore")
+            if err:
+                err = err.replace("\\n", "\n")
             runs.append(
                 {
                     "id": rid,
                     "status": (h.get(b"status") or b"").decode("utf-8", "ignore"),
                     "mode": (h.get(b"mode") or b"").decode("utf-8", "ignore"),
                     "created_utc": (h.get(b"created_utc") or b"").decode("utf-8", "ignore"),
-                    "error": (h.get(b"error") or b"").decode("utf-8", "ignore"),
+                    "error": err,
                 }
             )
     except Exception:
@@ -312,6 +347,8 @@ def admin_logs():
             key = _ui_key(current_user.org_id, rid)
             raw = conn.get(key + ":logs") or b""
             txt = raw.decode("utf-8", "ignore")
+            if txt:
+                txt = txt.replace("\\n", "\n")
             if tail_chars > 0 and len(txt) > tail_chars:
                 txt = txt[-tail_chars:]
             run_error_tails.append(

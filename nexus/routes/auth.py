@@ -23,7 +23,7 @@ def login_post():
     password = request.form.get("password") or ""
     user = User.query.filter_by(email=email).first()
     if not user or not user.check_password(password):
-        flash("Credenciais inválidas.", "error")
+        flash("Invalid credentials.", "error")
         return redirect(url_for("auth.login"))
     login_user(user)
     return redirect(url_for("dashboard.home"))
@@ -47,7 +47,7 @@ def register_post():
     email = (request.form.get("email") or "").strip().lower()
     password = request.form.get("password") or ""
     if not org_name or not email or len(password) < 8:
-        flash("Preencha organização, e-mail e senha (mínimo 8).", "error")
+        flash("Please provide organization, email, and password (min 8 chars).", "error")
         return redirect(url_for("auth.register"))
 
 
@@ -62,15 +62,15 @@ def oauth_start(provider: str):
 
     provider = (provider or "").strip().lower()
     if provider not in ("google", "github"):
-        flash("Provedor OAuth inválido.", "error")
+        flash("Invalid OAuth provider.", "error")
         return redirect(url_for("auth.login"))
 
     client = oauth.create_client(provider)
     if not client:
         cb = url_for("auth.oauth_callback", provider=provider, _external=True)
         flash(
-            f"OAuth {provider} não configurado. Configure as env vars OAUTH_{provider.upper()}_CLIENT_ID/SECRET "
-            f"e cadastre o callback: {cb}",
+            f"OAuth {provider} is not configured. Set env vars OAUTH_{provider.upper()}_CLIENT_ID/SECRET "
+            f"and register the callback URL: {cb}",
             "error",
         )
         return redirect(url_for("auth.login"))
@@ -87,13 +87,13 @@ def oauth_callback(provider: str):
     provider = (provider or "").strip().lower()
     client = oauth.create_client(provider)
     if not client:
-        flash("OAuth não configurado.", "error")
+        flash("OAuth is not configured.", "error")
         return redirect(url_for("auth.login"))
 
     try:
         token = client.authorize_access_token()
     except Exception as e:
-        flash(f"Falha no OAuth ({provider}): {type(e).__name__}", "error")
+        flash(f"OAuth failed ({provider}): {type(e).__name__}", "error")
         return redirect(url_for("auth.login"))
 
     email = ""
@@ -118,7 +118,7 @@ def oauth_callback(provider: str):
         email = ""
 
     if not email:
-        flash("Não foi possível obter seu e-mail do provedor OAuth.", "error")
+        flash("Could not retrieve your email from the OAuth provider.", "error")
         return redirect(url_for("auth.login"))
 
     user = User.query.filter_by(email=email).first()
@@ -128,7 +128,7 @@ def oauth_callback(provider: str):
 
     # Auto-provision new org + user (trial)
     try:
-        org = Organization(name=f"Org de {email}")
+        org = Organization(name=f"Org for {email}")
         db.session.add(org)
         db.session.flush()
         user = User(org_id=org.id, email=email, role="admin")
@@ -141,7 +141,7 @@ def oauth_callback(provider: str):
         return redirect(url_for("dashboard.home"))
     except Exception:
         db.session.rollback()
-        flash("Erro ao criar conta via OAuth. Tente novamente.", "error")
+        flash("Failed to create account via OAuth. Please try again.", "error")
         return redirect(url_for("auth.login"))
     if User.query.filter_by(email=email).first():
         flash("E-mail já cadastrado.", "error")

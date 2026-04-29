@@ -32,6 +32,7 @@ def create_app() -> Flask:
     app.config["SECRET_KEY"] = os.getenv("SECRET_KEY", "dev-secret-change-me")
     app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv("DATABASE_URL", "sqlite:///nexus_dev.db")
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+    app.config["APP_LANG"] = os.getenv("APP_LANG", "en")
 
     # LLM config (OpenAI-compatible gateway)
     app.config["LLM_BASE_URL_V1"] = os.getenv("LLM_BASE_URL_V1", "https://eclipse.mestredoblack.pro/v1")
@@ -102,6 +103,13 @@ def create_app() -> Flask:
     app.register_blueprint(settings_bp)
     app.register_blueprint(dossier_bp)
     app.register_blueprint(admin_bp)
+
+    # i18n helpers (safe, never crash templates)
+    from .i18n import get_lang, t  # noqa: E402
+
+    @app.context_processor
+    def inject_i18n() -> dict:
+        return {"lang": get_lang(), "t": t}
 
     # CLI
     from .cli import register_cli

@@ -2,31 +2,33 @@
 {% set title = "Error" %}
 {% block content %}
 <div class="letterhead">
-  <div class="text-sm font-semibold text-brand-2">Controlled failure</div>
-  <div class="mt-2 text-sm text-muted">
-    The system hit an error, but the operation was stopped safely.
-  </div>
-
-  <div class="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-    <div class="card">
-      <div class="text-xs text-muted">Code</div>
-      <div class="mono text-sm">{{ code }}</div>
-      <div class="mt-4 text-xs text-muted">Request ID</div>
-      <div class="mono text-sm">{{ request_id }}</div>
+  <div class="card">
+    <div class="text-sm font-semibold text-brand-2">Controlled failure</div>
+    <div class="mt-2 text-sm text-muted">
+      The system hit an error, but the operation was stopped safely.
     </div>
-    <div class="card">
-      <div class="text-xs text-muted">What to do</div>
-      <ul class="mt-4 text-sm text-muted list-disc ui-list">
-        <li>Reload the page (temporary provider instability can happen).</li>
-        <li>Verify env vars (DATABASE_URL, REDIS_URL, SECRET_KEY).</li>
-        <li>If it persists, send the Request ID to support.</li>
-      </ul>
-    </div>
-  </div>
 
-  {% if message %}
-    <div class="mt-5 text-xs text-muted">Details</div>
-    <pre class="mono mt-2 text-xs whitespace-pre-wrap border border-app rounded-xl bg-surface2 p-4">{{ message }}</pre>
-  {% endif %}
+    <div class="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div class="card">
+        <div class="text-xs text-muted">Code</div>
+        <div class="mono text-sm">{{ code }}</div>
+        <div class="mt-4 text-xs text-muted">Request ID</div>
+        <div class="mono text-sm">{{ request_id }}</div>
+      </div>
+      <div class="card">
+        <div class="text-xs text-muted">What to do</div>
+        <ul class="mt-4 text-sm text-muted list-disc ui-list">
+          <li>Reload the page (temporary provider instability can happen).</li>
+          <li>Verify env vars (DATABASE_URL, REDIS_URL, SECRET_KEY).</li>
+          <li>If it persists, send the Request ID to support.</li>
+        </ul>
+      </div>
+    </div>
+
+    {% if message %}
+      <div class="mt-5 text-xs text-muted">Details</div>
+      <pre class="mono mt-2 text-xs whitespace-pre-wrap border border-app rounded-xl bg-surface2 p-4">{{ message }}</pre>
+    {% endif %}
+  </div>
 </div>
 {% endblock %}

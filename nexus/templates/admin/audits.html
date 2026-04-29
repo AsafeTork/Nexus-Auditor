@@ -1,6 +1,7 @@
 {% extends "layout.html" %}
 {% set title = "Audits" %}
 {% set subtitle = "Admin view" %}
+{% set page_max_w = "max-w-7xl" %}
 {% block content %}
 <div class="letterhead">
   <div class="flex items-start justify-between gap-6">
@@ -35,7 +36,7 @@
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <button class="w-full text-left btn-secondary" role="menuitem">Publish to Git</button>
               </form>
-              <form method="post" action="{{ url_for('admin.admin_audit_delete', audit_id=a.id) }}" onsubmit="return confirm('Excluir esta auditoria?');">
+              <form method="post" action="{{ url_for('admin.admin_audit_delete', audit_id=a.id) }}" onsubmit="return confirm('Delete this audit?');">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <button class="w-full text-left btn-danger" role="menuitem">Delete</button>
               </form>

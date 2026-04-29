@@ -1,6 +1,7 @@
 {% extends "layout.html" %}
 {% set title = "Backend Lab" %}
-{% set subtitle = "Gera um PROMPT pronto para melhorar o backend" %}
+{% set subtitle = "Generates a prompt to improve the backend" %}
+{% set page_max_w = "max-w-7xl" %}
 {% block content %}
 <div class="letterhead">
   <div class="flex items-center justify-end gap-4">
@@ -10,11 +11,11 @@
   <div class="mt-6 grid grid-cols-1 gap-6">
     <div class="card card-focus">
       <div class="section-title">Rodar Backend Lab</div>
-      <div class="body-text mt-4">Sem opções de arquivos: ele analisa tudo automaticamente.</div>
+      <div class="body-text mt-4">No file picker: it analyzes the whole backend automatically.</div>
       <form class="mt-6 flex flex-col gap-4" method="post" action="{{ url_for('admin.backend_lab_run') }}">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <textarea name="goal" class="input text-xs" rows="2" placeholder="Opcional: foco (ex.: segurança, performance, logs, filas, testes)."></textarea>
-        <button class="btn-primary w-full">Gerar PROMPT (Backend)</button>
+        <textarea name="goal" class="input text-xs" rows="2" placeholder="Optional focus (e.g. security, performance, logs, queues, tests)."></textarea>
+        <button class="btn-primary w-full">Generate PROMPT (Backend)</button>
       </form>
     </div>
   </div>
@@ -22,7 +23,7 @@
   <div class="mt-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
     <div class="card">
       <div class="section-title">Recent runs</div>
-      <div class="body-text mt-4">Abra uma execução para ver logs/resultado.</div>
+      <div class="body-text mt-4">Open a run to view logs/output.</div>
       <div class="mt-6 flex flex-col gap-4">
         {% for r in runs %}
           <a class="block bg-surface2 rounded-xl p-4 hover:bg-surface border border-app" href="{{ url_for('admin.backend_lab', run=r.id) }}">
@@ -42,9 +43,9 @@
       <div class="flex items-center justify-between gap-6">
         <div>
           <div class="section-title">Logs + Output</div>
-          <div class="body-text">Quando terminar, copie o PROMPT e cole no SOLO.</div>
+          <div class="body-text">When it finishes, copy the PROMPT and paste it into SOLO.</div>
         </div>
-        <button class="btn-secondary icon-btn" aria-label="Copiar output" onclick="copyText('outBox')">
+        <button class="btn-secondary icon-btn" aria-label="Copy output" onclick="copyText('outBox')">
           <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16h8M8 12h8m-7 8h6a2 2 0 0 0 2-2V8l-4-4H9a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2Z"/>
           </svg>
@@ -65,10 +66,10 @@
     el.select();
     try{
       await navigator.clipboard.writeText(el.value);
-      alert("Copiado.");
+      alert("Copied.");
     }catch(e){
       document.execCommand("copy");
-      alert("Copiado.");
+      alert("Copied.");
     }
   }
 
@@ -86,7 +87,7 @@
         if(statusEl) statusEl.textContent = j.status || "—";
         if(logBox) logBox.value = j.logs || "";
         if(outBox && (j.result_md || j.error)){
-          outBox.value = j.result_md || ("ERRO: " + (j.error || "unknown"));
+          outBox.value = j.result_md || ("ERROR: " + (j.error || "unknown"));
         }
         if((j.status || "") === "done" || (j.status || "") === "error") return;
       }catch(e){}

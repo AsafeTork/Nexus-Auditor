@@ -1,6 +1,7 @@
 {% extends "layout.html" %}
 {% set title = "Admin" %}
 {% set subtitle = "Diagnostics and defaults" %}
+{% set page_max_w = "max-w-7xl" %}
 {% block content %}
 <div class="letterhead">
   <div class="flex items-center justify-end gap-4">
@@ -65,7 +66,7 @@
     <div class="card flex flex-col items-center justify-center text-center">
       <div class="text-[11px] text-muted">DB</div>
       <div class="text-lg font-extrabold {% if diag.db.ok %}text-emerald-300{% else %}text-rose-300{% endif %}">
-        {{ "OK" if diag.db.ok else "ERRO" }}
+        {{ "OK" if diag.db.ok else "ERROR" }}
       </div>
       {% if not diag.db.ok %}
         <div class="mono text-[11px] mt-2">{{ diag.db.error }}</div>
@@ -74,7 +75,7 @@
     <div class="card flex flex-col items-center justify-center text-center">
       <div class="text-[11px] text-muted">Redis</div>
       <div class="text-lg font-extrabold {% if diag.redis.ok %}text-emerald-300{% else %}text-rose-300{% endif %}">
-        {{ "OK" if diag.redis.ok else "ERRO" }}
+        {{ "OK" if diag.redis.ok else "ERROR" }}
       </div>
       <div class="mono text-[11px] text-muted mt-2">{{ diag.redis.url }}</div>
       {% if not diag.redis.ok %}
@@ -84,7 +85,7 @@
     <div class="card flex flex-col items-center justify-center text-center">
       <div class="text-[11px] text-muted">LLM</div>
       <div class="text-lg font-extrabold {% if diag.llm.ok %}text-emerald-300{% else %}text-rose-300{% endif %}">
-        {{ "OK" if diag.llm.ok else "ERRO" }}
+        {{ "OK" if diag.llm.ok else "ERROR" }}
       </div>
       <div class="mono text-[11px] text-muted mt-2">{{ diag.llm.base_url_v1 }} · {{ diag.llm.model }}</div>
       <div class="mono text-[11px] text-muted mt-1">key={{ diag.llm.api_key_mask }}</div>
@@ -108,7 +109,7 @@
           <div class="text-[11px] text-muted">{{ a.created_utc }} · model={{ a.model }}</div>
         </a>
       {% else %}
-        <div class="text-xs text-muted">Nenhuma auditoria ainda.</div>
+        <div class="text-xs text-muted">No audits yet.</div>
       {% endfor %}
     </div>
   </div>

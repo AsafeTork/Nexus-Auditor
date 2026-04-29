@@ -1,6 +1,7 @@
 {% extends "layout.html" %}
 {% set title = "UI Lab" %}
 {% set subtitle = "Quick UI review" %}
+{% set page_max_w = "max-w-7xl" %}
 {% block content %}
 <div class="letterhead">
   <div class="flex items-center justify-end gap-4">
@@ -9,16 +10,16 @@
 
   <div class="mt-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
     <div class="card card-focus lg:col-span-3">
-      <div class="section-title">Rodar UI Lab (automático)</div>
+      <div class="section-title">Run UI Lab (automatic)</div>
       <div class="body-text mt-4">
-        Ele analisa todos os templates do projeto e também coleta os sites do org (domínios) automaticamente.
-        Para cada domínio, tenta baixar HTML + tirar print (os bytes do print são descartados após extrair metadados).
-        Não há opção de URL/domínio nem upload de screenshot.
+        It analyzes all templates and also collects org sites (domains) automatically.
+        For each domain, it attempts HTML fetch + screenshot metadata (bytes are discarded after summarization).
+        No URL input and no screenshot upload.
       </div>
       <form class="mt-6 flex flex-col gap-4" method="post" action="{{ url_for('admin.ui_lab_run') }}">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <textarea name="goal" class="input text-xs" rows="2" placeholder="Opcional: foco da melhoria (ex.: sidebar, hierarquia, mobile, acessibilidade)."></textarea>
-        <button class="btn-primary w-full">Gerar PROMPT</button>
+        <textarea name="goal" class="input text-xs" rows="2" placeholder="Optional focus (e.g. sidebar, hierarchy, mobile, accessibility)."></textarea>
+        <button class="btn-primary w-full">Generate PROMPT</button>
       </form>
     </div>
   </div>
@@ -48,7 +49,7 @@
         <div class="section-title">Logs + Output</div>
         <div class="body-text">Runs in the background and updates automatically.</div>
       </div>
-        <button class="btn-secondary icon-btn" aria-label="Copiar output" onclick="copyText('outBox')">
+        <button class="btn-secondary icon-btn" aria-label="Copy output" onclick="copyText('outBox')">
           <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16h8M8 12h8m-7 8h6a2 2 0 0 0 2-2V8l-4-4H9a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2Z"/>
           </svg>
@@ -69,10 +70,10 @@
     el.select();
     try{
       await navigator.clipboard.writeText(el.value);
-      alert("Copiado.");
+      alert("Copied.");
     }catch(e){
       document.execCommand("copy");
-      alert("Copiado.");
+      alert("Copied.");
     }
   }
 </script>
@@ -92,7 +93,7 @@
         if(statusEl) statusEl.textContent = j.status || "—";
         if(logBox) logBox.value = j.logs || "";
         if(outBox && (j.result_md || j.error)){
-          outBox.value = j.result_md || ("ERRO: " + (j.error || "unknown"));
+          outBox.value = j.result_md || ("ERROR: " + (j.error || "unknown"));
         }
         if((j.status || "") === "done" || (j.status || "") === "error") return;
       }catch(e){}

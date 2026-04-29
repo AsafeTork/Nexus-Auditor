@@ -25,6 +25,14 @@ services:
         sync: false
       - key: STRIPE_PRICE_ID
         sync: false
+      - key: OAUTH_GOOGLE_CLIENT_ID
+        sync: false
+      - key: OAUTH_GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: OAUTH_GITHUB_CLIENT_ID
+        sync: false
+      - key: OAUTH_GITHUB_CLIENT_SECRET
+        sync: false
     startCommand: bash bin/start_web.sh
 
   - type: worker
@@ -46,5 +54,13 @@ services:
       - key: LLM_API_KEY
         sync: false
       - key: LLM_DEFAULT_MODEL
+        sync: false
+      - key: OAUTH_GOOGLE_CLIENT_ID
+        sync: false
+      - key: OAUTH_GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: OAUTH_GITHUB_CLIENT_ID
+        sync: false
+      - key: OAUTH_GITHUB_CLIENT_SECRET
         sync: false
     startCommand: python -m nexus.worker

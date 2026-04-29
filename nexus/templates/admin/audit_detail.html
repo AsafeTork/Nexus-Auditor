@@ -1,6 +1,7 @@
 {% extends "layout.html" %}
 {% set title = "Audit detail" %}
 {% set subtitle = audit.id %}
+{% set page_max_w = "max-w-7xl" %}
 {% block content %}
 <div class="letterhead">
   <div class="flex items-start justify-between gap-6">
@@ -11,11 +12,11 @@
       {% if site %}<div class="body-text mono">{{ site.base_url }}</div>{% endif %}
     </div>
     <div class="flex items-center gap-4">
-      <form method="post" action="{{ url_for('admin.admin_audit_delete', audit_id=audit.id) }}" onsubmit="return confirm('Excluir esta auditoria?');">
+      <form method="post" action="{{ url_for('admin.admin_audit_delete', audit_id=audit.id) }}" onsubmit="return confirm('Delete this audit?');">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <button class="btn-danger" aria-label="Excluir auditoria">Delete</button>
+        <button class="btn-danger" aria-label="Delete audit">Delete</button>
       </form>
-      <a class="btn-secondary" aria-label="Voltar" href="{{ url_for('admin.admin_audits') }}">Back</a>
+      <a class="btn-secondary" aria-label="Back" href="{{ url_for('admin.admin_audits') }}">Back</a>
     </div>
   </div>
 
@@ -29,7 +30,7 @@
     <section id="tab-logs" class="card" role="tabpanel" aria-labelledby="tabBtn-logs">
       <div class="flex items-center justify-between">
         <div class="text-sm font-semibold">Logs</div>
-        <button class="btn-secondary icon-btn text-brand-2 border-brand" aria-label="Copiar logs" onclick="copyText('logsBox')">
+        <button class="btn-secondary icon-btn text-brand-2 border-brand" aria-label="Copy logs" onclick="copyText('logsBox')">
           <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16h8M8 12h8m-7 8h6a2 2 0 0 0 2-2V8l-4-4H9a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2Z"/>
           </svg>
@@ -42,7 +43,7 @@
     <section id="tab-events" class="card hidden" role="tabpanel" aria-labelledby="tabBtn-events">
       <div class="flex items-center justify-between">
         <div class="text-sm font-semibold">Events (audit_events)</div>
-        <button class="btn-secondary icon-btn text-brand-2 border-brand" aria-label="Copiar events" onclick="copyText('eventsBox')">
+        <button class="btn-secondary icon-btn text-brand-2 border-brand" aria-label="Copy events" onclick="copyText('eventsBox')">
           <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16h8M8 12h8m-7 8h6a2 2 0 0 0 2-2V8l-4-4H9a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2Z"/>
           </svg>

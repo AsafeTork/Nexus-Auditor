@@ -39,9 +39,23 @@ docker compose exec web flask db upgrade
    - `SECRET_KEY`
    - `LLM_BASE_URL_V1`, `LLM_API_KEY`, `LLM_DEFAULT_MODEL`
    - Stripe: `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_ID`
+   - OAuth (opcional):
+     - Google: `OAUTH_GOOGLE_CLIENT_ID`, `OAUTH_GOOGLE_CLIENT_SECRET`
+     - GitHub: `OAUTH_GITHUB_CLIENT_ID`, `OAUTH_GITHUB_CLIENT_SECRET`
 4) Rode as migrações uma vez (Render Shell):
    - `FLASK_APP=app.py flask db upgrade`
 5) Abra o Web URL e crie sua conta (Register).
+
+## OAuth Google (login com Google)
+1) Google Cloud Console → APIs & Services → Credentials → Create Credentials → OAuth client ID → **Web application**
+2) Authorized redirect URI:
+   - `https://SEU_DOMINIO/oauth/google/callback`
+   - (local) `http://localhost:8000/oauth/google/callback`
+3) Copie o **Client ID** e o **Client secret** para as env vars:
+   - `OAUTH_GOOGLE_CLIENT_ID`
+   - `OAUTH_GOOGLE_CLIENT_SECRET`
+
+> Segurança: nunca commite secrets no Git. Configure `OAUTH_*_CLIENT_SECRET` somente no Render/host (Environment) ou no seu `.env` local (que deve estar no `.gitignore`).
 
 ### Opção B: VPS Ubuntu (controle total)
 - Use `docker compose`
