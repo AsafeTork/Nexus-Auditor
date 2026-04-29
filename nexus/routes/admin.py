@@ -10,21 +10,10 @@ import redis
 import requests
 from flask import Blueprint, current_app, jsonify, render_template, request, redirect, url_for, flash, session
 from flask_login import login_required, current_user
-from sqlalchemy import text, func, case
+from sqlalchemy import text, func
 
 from .. import db
-from ..models import (
-    AuditEvent,
-    AuditRun,
-    MonitoringFinding,
-    MonitoringJob,
-    MonitoringRun,
-    Organization,
-    Site,
-    Subscription,
-    User,
-    is_org_admin,
-)
+from ..models import AuditEvent, AuditRun, Organization, Site, Subscription, User, is_org_admin
 from ..security import require_admin
 from ..services.queueing import enqueue_ui_lab
 from ..services.github import create_issue
@@ -198,31 +187,36 @@ def _build_overview_rows(org_id: str):
     sites = Site.query.filter_by(org_id=org_id).order_by(Site.created_utc.desc()).limit(500).all()
 
     # Aggregate finding lifecycle counts per site (single query).
-    open_states = ["NEW", "PERSISTING", "REOPENED"]
-    agg = (
-        db.session.query(
-            MonitoringFinding.site_id.label("site_id"),
-            func.sum(case((MonitoringFinding.state == "RESOLVED", 1), else_=0)).label("resolved_count"),
-            func.sum(case((MonitoringFinding.state.in_(open_states), 1), else_=0)).label("open_count"),
-            func.sum(func.coalesce(MonitoringFinding.regression_count, 0)).label("regression_count"),
-            func.avg(
-                case((MonitoringFinding.resolution_time_s > 0, MonitoringFinding.resolution_time_s), else_=None)
-            ).label("avg_time_to_fix_s"),
+    # NOTE: use SQL text to avoid ImportError if monitoring models are not present in a given deployment.
+    agg_map: dict[str, dict] = {}
+    try:
+        agg_sql = text(
+            """
+            SELECT
+              site_id,
+              SUM(CASE WHEN state = 'RESOLVED' THEN 1 ELSE 0 END) AS resolved_count,
+              SUM(CASE WHEN state IN ('NEW','PERSISTING','REOPENED') THEN 1 ELSE 0 END) AS open_count,
+              COALESCE(SUM(COALESCE(regression_count,0)), 0) AS regression_count,
+              AVG(CASE WHEN resolution_time_s > 0 THEN resolution_time_s ELSE NULL END) AS avg_time_to_fix_s
+            FROM monitoring_findings
+            WHERE org_id = :org_id
+            GROUP BY site_id
+            """
         )
-        .filter(MonitoringFinding.org_id == org_id)
-        .group_by(MonitoringFinding.site_id)
-        .all()
-    )
-    agg_map = {
-        str(r.site_id): {
-            "open": int(r.open_count or 0),
-            "resolved": int(r.resolved_count or 0),
-            "regressions": int(r.regression_count or 0),
-            "avg_time_s": int(r.avg_time_to_fix_s or 0),
-        }
-        for r in agg
-        if r and getattr(r, "site_id", None)
-    }
+        rows = db.session.execute(agg_sql, {"org_id": org_id}).mappings().all()
+        for r in rows:
+            sid = str(r.get("site_id") or "")
+            if not sid:
+                continue
+            agg_map[sid] = {
+                "open": int(r.get("open_count") or 0),
+                "resolved": int(r.get("resolved_count") or 0),
+                "regressions": int(r.get("regression_count") or 0),
+                "avg_time_s": int(r.get("avg_time_to_fix_s") or 0),
+            }
+    except Exception:
+        # Table may not exist yet in some deployments; keep zeros.
+        agg_map = {}
 
     rows = []
     for s in sites:
@@ -230,21 +224,39 @@ def _build_overview_rows(org_id: str):
         denom = max(1, int(a["open"]) + int(a["resolved"]))
         fix_success_rate = round((int(a["resolved"]) / denom) * 100.0, 2)
 
-        last_run = (
-            MonitoringRun.query.filter_by(org_id=org_id, site_id=s.id)
-            .order_by(MonitoringRun.created_utc.desc())
-            .first()
-        )
-        has_decision = bool(last_run and (last_run.decision_json or "").strip())
-        has_verification = bool(last_run and (last_run.verification_json or "").strip())
+        last_run = {"id": "", "created_utc": "", "status": "", "decision_json": "", "verification_json": ""}
+        try:
+            last_sql = text(
+                """
+                SELECT id, created_utc, status, decision_json, verification_json
+                FROM monitoring_runs
+                WHERE org_id = :org_id AND site_id = :site_id
+                ORDER BY created_utc DESC
+                LIMIT 1
+                """
+            )
+            rr = db.session.execute(last_sql, {"org_id": org_id, "site_id": s.id}).mappings().first()
+            if rr:
+                last_run = {
+                    "id": str(rr.get("id") or ""),
+                    "created_utc": str(rr.get("created_utc") or ""),
+                    "status": str(rr.get("status") or ""),
+                    "decision_json": str(rr.get("decision_json") or ""),
+                    "verification_json": str(rr.get("verification_json") or ""),
+                }
+        except Exception:
+            pass
+
+        has_decision = bool((last_run.get("decision_json") or "").strip())
+        has_verification = bool((last_run.get("verification_json") or "").strip())
 
         rows.append(
             {
                 "site": {"id": s.id, "name": s.name, "base_url": s.base_url},
                 "last_run": {
-                    "id": getattr(last_run, "id", "") if last_run else "",
-                    "created_utc": getattr(last_run, "created_utc", "") if last_run else "",
-                    "status": getattr(last_run, "status", "") if last_run else "",
+                    "id": last_run.get("id") or "",
+                    "created_utc": last_run.get("created_utc") or "",
+                    "status": last_run.get("status") or "",
                 },
                 "open_findings": int(a["open"]),
                 "resolved_findings": int(a["resolved"]),
