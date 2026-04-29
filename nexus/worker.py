@@ -18,6 +18,7 @@ from .services.audit_engine import (
     clean_html,
     estimate_ltv_loss_from_rows,
     fetch_url_html,
+    parse_usd_range,
     stream_llm_events,
     stream_llm_text,
 )
@@ -338,7 +339,22 @@ def run_audit_job(audit_id: str) -> None:
             flush()
 
         def csv(row: str) -> None:
-            csv_buf.append((row or "").rstrip("\n") + "\n")
+            """
+            Append CSV row if it is well-formed and not a duplicate (category+failure key).
+            """
+            rr = (row or "").strip().strip("\r").strip("\n")
+            if not rr:
+                return
+            if rr.lower().startswith("categoria;"):
+                return
+            parts = [p.strip() for p in rr.split(";")]
+            if len(parts) < 7:
+                return
+            key = (parts[0].lower() + "|" + parts[1].lower()).strip()
+            if not key or key in seen_rows:
+                return
+            seen_rows.add(key)
+            csv_buf.append(rr + "\n")
             flush()
 
         site = Site.query.filter_by(id=audit.site_id).first()
@@ -351,6 +367,9 @@ def run_audit_job(audit_id: str) -> None:
         api_key = app.config.get("LLM_API_KEY", "")
         model = audit.model or app.config["LLM_DEFAULT_MODEL"]
         system_prompt = SYSTEM_PROMPT_DEFAULT
+        audit_brief = (os.getenv("AUDIT_BRIEF", "") or "").strip()
+        reflect = str(os.getenv("AUDIT_REFLECT", "0") or "0").strip().lower() in ("1", "true", "yes", "on")
+        attack_total_mode = str(os.getenv("AUDIT_ATTACK_TOTAL_MODE", "security") or "security").strip().lower()
 
         try:
             log("fetch", "INFO", f"Fetching HTML: {site.base_url}")
@@ -373,6 +392,7 @@ def run_audit_job(audit_id: str) -> None:
         md("")
 
         rows: list[str] = []
+        seen_rows: set[str] = set()
         consecutive_llm_failures = 0
 
         # Mode
@@ -401,8 +421,95 @@ def run_audit_job(audit_id: str) -> None:
                 flush(force=True)
                 continue
 
-            prompt = build_user_prompt(layer, fetch, cleaned)
-            # Prefer streaming so the audit page updates in real time.
+            prompt = build_user_prompt(layer, fetch, cleaned, brief=audit_brief)
+
+            # Reflection mode: non-stream draft + refinement pass (do not expose chain-of-thought; only final output)
+            if reflect:
+                try:
+                    log(layer, "INFO", "Chamando modelo (non-stream + reflexão)…")
+                    draft = call_llm_non_stream(
+                        base_url_v1=base_url_v1,
+                        api_key=api_key,
+                        model=model,
+                        temperature=0.15,
+                        system_prompt=system_prompt,
+                        user_prompt=prompt,
+                        timeout_s=140,
+                    )
+                    reviewer_prompt = (
+                        "Você é um revisor senior. Objetivo: melhorar qualidade SEM inventar fatos.\n"
+                        "Regras:\n"
+                        "- Remova duplicatas e itens genéricos.\n"
+                        "- Se um item não tiver prova literal, APAGUE do CSV.\n"
+                        "- Use faixas conservadoras ou 'N/A' em prejuízo se não houver base.\n"
+                        "- Mantenha o mesmo formato estrito: ---REPORT--- ... ---CSV--- ...\n"
+                        "\nPROMPT ORIGINAL (contexto):\n"
+                        + prompt
+                        + "\n\nDRAFT A REVISAR:\n"
+                        + (draft or "")
+                    )
+                    final = call_llm_non_stream(
+                        base_url_v1=base_url_v1,
+                        api_key=api_key,
+                        model=model,
+                        temperature=0.05,
+                        system_prompt=system_prompt,
+                        user_prompt=reviewer_prompt,
+                        timeout_s=160,
+                    )
+                    content = final or draft or ""
+                except Exception as e:
+                    log(layer, "WARN", f"Reflexão falhou, fallback non-stream simples: {type(e).__name__}: {e}")
+                    content = call_llm_non_stream(
+                        base_url_v1=base_url_v1,
+                        api_key=api_key,
+                        model=model,
+                        temperature=0.2,
+                        system_prompt=system_prompt,
+                        user_prompt=prompt,
+                        timeout_s=140,
+                    )
+
+                if not content.strip():
+                    log(layer, "ERROR", "Resposta vazia do provedor LLM.")
+                    consecutive_llm_failures += 1
+                    if consecutive_llm_failures >= 2:
+                        log("system", "ERROR", "Abortando auditoria: provedor LLM falhou repetidamente (>=2).")
+                        audit.status = "error"
+                        break
+                    continue
+
+                report = ""
+                csv_block = ""
+                if "---REPORT---" in content:
+                    content2 = content.split("---REPORT---", 1)[1]
+                else:
+                    content2 = content
+                if "---CSV---" in content2:
+                    report, csv_block = content2.split("---CSV---", 1)
+                else:
+                    report = content2
+
+                for ln in report.splitlines():
+                    if ln.strip():
+                        md(ln)
+
+                for ln in csv_block.splitlines():
+                    row = ln.strip("\r").strip()
+                    if not row or row.lower().startswith("categoria;"):
+                        continue
+                    if row.count(";") >= 6:
+                        csv(row)
+                        parts = [p.strip() for p in row.split(";")]
+                        if len(parts) >= 2:
+                            key = (parts[0].lower() + "|" + parts[1].lower()).strip()
+                            if key and key in seen_rows:
+                                rows.append(row)
+                consecutive_llm_failures = 0
+                flush(force=True)
+                continue
+
+            # Default: prefer streaming so the audit page updates in real time.
             try:
                 log(layer, "INFO", "Chamando modelo (stream)…")
                 for kind, text in stream_llm_events(
@@ -423,7 +530,12 @@ def run_audit_job(audit_id: str) -> None:
                             continue
                         if row.count(";") >= 6:
                             csv(row)
-                            rows.append(row)
+                            # Store de-duped canonical rows for summary calc
+                            parts = [p.strip() for p in row.split(";")]
+                            if len(parts) >= 2:
+                                key = (parts[0].lower() + "|" + parts[1].lower()).strip()
+                                if key and key in seen_rows:
+                                    rows.append(row)
                 consecutive_llm_failures = 0
                 continue
             except Exception as e:
@@ -469,7 +581,11 @@ def run_audit_job(audit_id: str) -> None:
                         continue
                     if row.count(";") >= 6:
                         csv(row)
-                        rows.append(row)
+                        parts = [p.strip() for p in row.split(";")]
+                        if len(parts) >= 2:
+                            key = (parts[0].lower() + "|" + parts[1].lower()).strip()
+                            if key and key in seen_rows:
+                                rows.append(row)
                 consecutive_llm_failures = 0
             except Exception as e:
                 log(layer, "ERROR", f"Falha no provedor LLM: {type(e).__name__}: {e}")
@@ -483,6 +599,57 @@ def run_audit_job(audit_id: str) -> None:
             flush(force=True)
 
         audit.status = "done" if audit.status != "error" else "error"
+
+        # Add a total "attack cost" estimate from CSV security-related rows (best-effort).
+        try:
+            if rows:
+                lo_sum = 0
+                hi_sum = 0
+                any_hit = False
+                for rr in rows:
+                    parts = [p.strip() for p in (rr or "").split(";")]
+                    if len(parts) < 8:
+                        continue
+                    category = parts[0].lower()
+                    est = parts[4]
+                    is_security = any(
+                        k in category
+                        for k in (
+                            "segurança",
+                            "security",
+                            "headers",
+                            "ssl",
+                            "ux defensiva",
+                            "dark patterns",
+                            "infra",
+                        )
+                    )
+                    if attack_total_mode == "all":
+                        is_security = True
+                    if not is_security:
+                        continue
+                    lo, hi = parse_usd_range(est)
+                    if lo is None or hi is None:
+                        continue
+                    any_hit = True
+                    lo_sum += int(lo)
+                    hi_sum += int(hi)
+                if any_hit and hi_sum > 0:
+                    md("")
+                    md("## Total estimate (attack scenarios)")
+                    md("- Soma heurística das faixas USD dos achados relacionados a segurança/infra.")
+                    md(f"- **Total estimado: USD {lo_sum:,} – {hi_sum:,}**".replace(",", "."))
+                    md("")
+                    total_row = (
+                        "Financeiro;Total attack risk (sum of security ranges);Derivado do CSV desta auditoria;"
+                        "Soma heurística das faixas USD (segurança/infra);"
+                        f"USD {lo_sum}–{hi_sum};Ajustar com dados reais e escopo;Alta;Baixa"
+                    )
+                    csv(total_row)
+                    flush(force=True)
+        except Exception:
+            pass
+
         flush(force=True)
 
 

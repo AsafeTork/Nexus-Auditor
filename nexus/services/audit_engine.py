@@ -117,6 +117,53 @@ def normalize_base_url_v1(base_url_v1: str) -> str:
     return u
 
 
+def parse_usd_range(s: str) -> tuple[int | None, int | None]:
+    """
+    Parse a loose USD estimate string to (low, high).
+    Accepts formats like:
+      - "USD 50.000 - 200.000"
+      - "200000"
+      - "$1,200"
+      - "USD 5.000–20.000/ano" (we ignore "/ano" and parse the numbers)
+    Returns (None, None) if not parseable.
+    """
+    txt = (s or "").strip()
+    if not txt:
+        return None, None
+    # Normalize separators
+    txt = txt.replace("–", "-").replace("—", "-")
+    # Keep only digits, separators and hyphen
+    # Extract up to two numeric blobs
+    nums = re.findall(r"[\d][\d\.,]*", txt)
+    if not nums:
+        return None, None
+
+    def to_int(x: str) -> int | None:
+        x = (x or "").strip()
+        if not x:
+            return None
+        # Remove commas and dots as thousand separators
+        # Heuristic: treat both '.' and ',' as thousand separators.
+        x2 = re.sub(r"[^\d]", "", x)
+        if not x2:
+            return None
+        try:
+            return int(x2)
+        except Exception:
+            return None
+
+    a = to_int(nums[0])
+    b = to_int(nums[1]) if len(nums) > 1 else None
+
+    if a is None and b is None:
+        return None, None
+    if b is None:
+        return a, a
+    lo = min(a or 0, b or 0)
+    hi = max(a or 0, b or 0)
+    return lo, hi
+
+
 def list_models(*, base_url_v1: str, api_key: str, timeout_s: int = 12) -> List[str]:
     """
     Busca lista de modelos em provider OpenAI-compatible.
@@ -220,17 +267,28 @@ MICRO_LAYERS = [
 
 SYSTEM_PROMPT_DEFAULT = (
     "Você é um Perito Forense Web. Escreva com tom acadêmico, documental e profissional.\\n"
-    "REGRA CRÍTICA: não invente vulnerabilidades. Só reporte uma falha se puder provar com um snippet literal do HTML/headers fornecidos.\\n"
-    "Se NÃO houver prova, NÃO gere linha no CSV.\\n"
-    "REGRAS DE OURO POR CAMADA:\\n"
-    "- Para CADA camada, busque evidências específicas no HTML fornecido (até 80k chars) e nos headers.\\n"
-    "- Para a camada 8 (Estratégia), se não houver evidência técnica, gere insight estratégico responsável baseado no texto/proposta do site (sem inventar fatos).\\n"
+    "\\n"
+    "REGRA CRÍTICA (anti-hallucination):\\n"
+    "- NÃO invente vulnerabilidades, recursos ausentes ou comportamento.\\n"
+    "- Só reporte uma falha se conseguir PROVAR com um snippet literal do HTML/headers fornecidos.\\n"
+    "- Se NÃO houver prova literal, NÃO gere linha no CSV.\\n"
+    "- Evite conclusões negativas do tipo \"não existe X\" sem prova direta (ex.: procure o elemento e mostre o snippet que confirma a ausência/condição).\\n"
+    "\\n"
+    "QUALIDADE (para parecer premium):\\n"
+    "- Não duplique achados: se um item se repete (ex.: Tailwind CDN / imagens / fontes), consolide em 1 achado com solução completa.\\n"
+    "- Priorize 8–15 achados totais (qualidade > quantidade).\\n"
+    "- Seja específico e executável: diga exatamente o que alterar (header/código), com exemplo mínimo.\\n"
+    "- Em \"Prejuízo\": se não houver base forte, use faixas conservadoras ou \"N/A\" (não chute números absurdos).\\n"
+    "\\n"
+    "CONTEXTO DE UI (importante):\\n"
+    "- Botões \"icon-only\" são aceitáveis se houver aria-label e foco visível; NÃO recomende adicionar texto visível só por gosto.\\n"
+    "\\n"
     "Retorne estritamente neste formato:\\n"
     "---REPORT---\\n"
     "## [Nome da Falha]\\n"
     "- **Prova:** [Snippet exato do HTML ou header literal]\\n"
     "- **Por quê:** [Motivo técnico]\\n"
-    "- **Prejuízo:** [Impacto em USD]\\n"
+    "- **Prejuízo:** [Impacto em USD ou N/A]\\n"
     "- **Solução:** [Como corrigir]\\n"
     "---CSV---\\n"
     "Categoria;Falha;Prova Técnica;Explicação;Prejuízo Estimado;Solução;Prioridade;Complexity\\n"
@@ -365,14 +423,21 @@ def clean_html(html: str) -> str:
     return out
 
 
-def build_user_prompt(layer: str, fetch: FetchResult, cleaned: str) -> str:
+def build_user_prompt(layer: str, fetch: FetchResult, cleaned: str, brief: str = "") -> str:
     headers_sample = {k.lower(): v for k, v in (fetch.headers or {}).items()}
     cleaned_preview = (cleaned or "")[:CLEAN_HTML_TO_LLM_CHARS]
-    return (
+    brief2 = (brief or "").strip()
+    if len(brief2) > 8000:
+        brief2 = brief2[:8000]
+    parts: list[str] = [
         f"MICRO-CAMADA: {layer}\n"
         f"URL final: {fetch.url}\n"
         f"HTTP status: {fetch.status_code}\n"
         f"Tempo (ms): {fetch.elapsed_ms}\n\n"
+    ]
+    if brief2:
+        parts.append(f"BRIEF DO PRODUTO (contexto, não inventar fatos):\n{brief2}\n\n")
+    parts.append(
         "HEADERS (literais / evidência):\n"
         f"content-security-policy: {headers_sample.get('content-security-policy')}\n"
         f"x-frame-options: {headers_sample.get('x-frame-options')}\n"
@@ -382,7 +447,11 @@ def build_user_prompt(layer: str, fetch: FetchResult, cleaned: str) -> str:
         f"HTML LIMPO (literal, ATÉ {CLEAN_HTML_TO_LLM_CHARS} chars):\n{cleaned_preview}\n\n"
         "INSTRUÇÕES:\n"
         "- No CSV, sempre preencha a coluna 'Complexity' com: Baixa, Média ou Alta.\n"
+        "- Não gere itens duplicados (consolide). Priorize poucos itens bons.\n"
+        "- Em 'Prejuízo Estimado', prefira faixas conservadoras ou 'N/A' se não houver base.\n"
+        "- Se o BRIEF DO PRODUTO existir, conecte os achados (principalmente nas camadas 7–9) ao posicionamento premium.\n"
     )
+    return "".join(parts)
 
 
 def stream_llm_events(

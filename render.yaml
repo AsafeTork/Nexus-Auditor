@@ -33,6 +33,12 @@ services:
         sync: false
       - key: OAUTH_GITHUB_CLIENT_SECRET
         sync: false
+      - key: AUDIT_BRIEF
+        sync: false
+      - key: AUDIT_REFLECT
+        sync: false
+      - key: AUDIT_ATTACK_TOTAL_MODE
+        sync: false
     startCommand: bash bin/start_web.sh
 
   - type: worker
@@ -62,5 +68,11 @@ services:
       - key: OAUTH_GITHUB_CLIENT_ID
         sync: false
       - key: OAUTH_GITHUB_CLIENT_SECRET
+        sync: false
+      - key: AUDIT_BRIEF
+        sync: false
+      - key: AUDIT_REFLECT
+        sync: false
+      - key: AUDIT_ATTACK_TOTAL_MODE
         sync: false
     startCommand: python -m nexus.worker
