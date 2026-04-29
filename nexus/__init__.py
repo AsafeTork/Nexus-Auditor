@@ -53,12 +53,10 @@ def create_app() -> Flask:
     # Do NOT ship a default master email.
     app.config["MASTER_ADMIN_EMAIL"] = os.getenv("MASTER_ADMIN_EMAIL", "")
 
-    # Canonical domain redirect (optional)
-    # Example:
-    #   CANONICAL_HOST=xentinelai.com
-    #   CANONICAL_SCHEME=https
-    app.config["CANONICAL_HOST"] = (os.getenv("CANONICAL_HOST", "") or "").strip().lower()
-    app.config["CANONICAL_SCHEME"] = (os.getenv("CANONICAL_SCHEME", "https") or "https").strip().lower()
+    # Domain behavior: always use the current host (e.g., *.onrender.com) without env vars.
+    # We intentionally disable canonical redirects to avoid accidental redirects to third-party domains.
+    app.config["CANONICAL_HOST"] = ""
+    app.config["CANONICAL_SCHEME"] = "https"
 
     # Stripe
     app.config["STRIPE_SECRET_KEY"] = os.getenv("STRIPE_SECRET_KEY", "")
@@ -156,8 +154,9 @@ def create_app() -> Flask:
     @app.context_processor
     def inject_branding() -> dict:
         return {
-            "app_name": app.config.get("APP_NAME", "App"),
-            "base_url": app.config.get("BASE_URL", ""),
+            "app_name": app.config.get("APP_NAME", ""),
+            # Prefer runtime host (no env) so links reflect the actual deployed domain.
+            "base_url": (request.host_url or "").rstrip("/"),
         }
 
     # CLI
