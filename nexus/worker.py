@@ -118,7 +118,9 @@ def run_ui_lab_job(run_id: str, org_id: str, mode: str, payload: dict) -> None:
                             with sync_playwright() as p:
                                 browser = p.chromium.launch(args=["--no-sandbox"])
                                 page = browser.new_page(viewport={"width": 1440, "height": 900})
-                                page.goto(url, wait_until="networkidle", timeout=60000)
+                                # Validate URL with SSRF guard before navigating the browser.
+                                safe = fetch_url_html(url).url
+                                page.goto(safe, wait_until="networkidle", timeout=60000)
                                 img_bytes = page.screenshot(full_page=True, type="png")
                                 browser.close()
                             meta = summarize_screenshot(img_bytes).__dict__
@@ -136,9 +138,9 @@ def run_ui_lab_job(run_id: str, org_id: str, mode: str, payload: dict) -> None:
                         # HTML
                         html_snip = ""
                         try:
-                            r = requests.get(url, timeout=25, headers={"User-Agent": "AuditAgent/1.0"})
-                            r.raise_for_status()
-                            html_snip = (r.text or "")[:max_site_html]
+                            # Reuse audit SSRF guard: fetch_url_html validates target is public http(s)
+                            ff = fetch_url_html(url)
+                            html_snip = (ff.html or "")[:max_site_html]
                         except Exception as e:
                             html_snip = f"<!-- HTML fetch failed: {type(e).__name__}: {e} -->"
                         # Screenshot meta
@@ -159,9 +161,9 @@ def run_ui_lab_job(run_id: str, org_id: str, mode: str, payload: dict) -> None:
 
                 url = str(payload.get("url") or "").strip()
                 append_log(f"[ui-lab] baixando HTML: {url}")
-                r = requests.get(url, timeout=18, headers={"User-Agent": "AuditAgent/1.0"})
-                r.raise_for_status()
-                html = r.text or ""
+                # Reuse audit SSRF guard: validates target is public http(s)
+                ff = fetch_url_html(url)
+                html = ff.html or ""
                 if len(html) > 20000:
                     html = html[:20000] + "\n<!-- ... truncado ... -->"
                 context = f"URL: {url}\n\nHTML:\n{html}"
@@ -402,6 +404,7 @@ def run_audit_job(audit_id: str) -> None:
         rows: list[str] = []
         seen_rows: set[str] = set()
         consecutive_llm_failures = 0
+        llm_failed_any = False
 
         # Mode
         mode = "full"
@@ -602,6 +605,7 @@ def run_audit_job(audit_id: str) -> None:
                 consecutive_llm_failures = 0
             except Exception as e:
                 log(layer, "ERROR", f"Falha no provedor LLM: {type(e).__name__}: {e}")
+                llm_failed_any = True
                 consecutive_llm_failures += 1
                 if consecutive_llm_failures >= max_consecutive_llm_failures:
                     log("system", "ERROR", f"Abortando auditoria: provedor LLM falhou repetidamente (>={max_consecutive_llm_failures}).")
@@ -610,6 +614,12 @@ def run_audit_job(audit_id: str) -> None:
                 continue
 
             flush(force=True)
+
+        # Product correctness: if the LLM failed, the report is incomplete.
+        # Do NOT mark as done (avoids false confidence).
+        if audit.status != "error" and llm_failed_any:
+            audit.status = "error"
+            log("system", "ERROR", "Auditoria incompleta: falha do provedor LLM. Status definido como error.")
 
         audit.status = "done" if audit.status != "error" else "error"
 
