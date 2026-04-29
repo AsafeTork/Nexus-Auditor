@@ -58,6 +58,15 @@ def create_app() -> Flask:
     app.config["CANONICAL_HOST"] = ""
     app.config["CANONICAL_SCHEME"] = "https"
 
+    # Cookies / sessão (hardening)
+    # - HttpOnly: impede acesso via JS (mitiga XSS roubando cookie)
+    # - SameSite=Lax: mitiga CSRF sem quebrar navegação normal
+    # - Secure: definido dinamicamente por request.is_secure (via ProxyFix)
+    app.config.setdefault("SESSION_COOKIE_HTTPONLY", True)
+    app.config.setdefault("SESSION_COOKIE_SAMESITE", "Lax")
+    app.config.setdefault("REMEMBER_COOKIE_HTTPONLY", True)
+    app.config.setdefault("REMEMBER_COOKIE_SAMESITE", "Lax")
+
     # Stripe
     app.config["STRIPE_SECRET_KEY"] = os.getenv("STRIPE_SECRET_KEY", "")
     app.config["STRIPE_WEBHOOK_SECRET"] = os.getenv("STRIPE_WEBHOOK_SECRET", "")
@@ -133,6 +142,13 @@ def create_app() -> Flask:
         canonical = (app.config.get("CANONICAL_HOST") or "").strip().lower()
         if not canonical:
             return None
+        # Ajuste dinâmico de cookies "Secure" conforme o esquema real da requisição.
+        # Evita quebrar dev/local em HTTP e mantém produção em HTTPS segura.
+        try:
+            app.config["SESSION_COOKIE_SECURE"] = bool(request.is_secure)
+            app.config["REMEMBER_COOKIE_SECURE"] = bool(request.is_secure)
+        except Exception:
+            pass
         host = (request.host or "").split(":", 1)[0].strip().lower()
         if host and host != canonical:
             scheme = (request.headers.get("X-Forwarded-Proto") or request.scheme or app.config.get("CANONICAL_SCHEME") or "https").split(",", 1)[0].strip()
@@ -174,9 +190,21 @@ def create_app() -> Flask:
     # Security-ish headers (not "hiding", just good practice)
     @app.after_request
     def add_headers(resp):
-        resp.headers["Cache-Control"] = "no-store"
+        # Static assets devem ser cacheados para performance.
+        if (request.path or "").startswith("/static/"):
+            resp.headers.setdefault("Cache-Control", "public, max-age=86400, immutable")
+        else:
+            resp.headers["Cache-Control"] = "no-store"
         resp.headers["X-Content-Type-Options"] = "nosniff"
         resp.headers["Referrer-Policy"] = "same-origin"
+        resp.headers.setdefault("X-Frame-Options", "DENY")
+        resp.headers.setdefault("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
+        # HSTS somente quando HTTPS está ativo (evita quebrar HTTP local)
+        try:
+            if request.is_secure:
+                resp.headers.setdefault("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
+        except Exception:
+            pass
         return resp
 
     # Defensive error pages (avoid raw stack traces to end-users)

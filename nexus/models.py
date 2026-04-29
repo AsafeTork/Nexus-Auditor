@@ -121,11 +121,12 @@ def is_org_admin(user: User) -> bool:
     if role == "admin":
         return True
 
-    # Some older databases may still have is_admin boolean.
-    try:
-        return bool(getattr(user, "is_admin", False))
-    except Exception:
-        return False
+    # IMPORTANTE:
+    # Não tente ler getattr(user, "is_admin") aqui, porque `User.is_admin` é uma @property
+    # que chama `is_org_admin(self)` e isso causaria recursão infinita.
+    #
+    # Se você tiver um banco legado, migre para o campo `role` (admin|member).
+    return False
 
 
 def is_subscription_active(sub: Subscription | None) -> bool:

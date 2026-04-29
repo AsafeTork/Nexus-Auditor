@@ -3,7 +3,11 @@ from __future__ import annotations
 import json
 from typing import Any, Dict
 
-from ..models import MonitoringRun
+try:
+    # Monitoring é opcional e pode não existir em todos os deploys.
+    from ..models import MonitoringRun  # type: ignore
+except Exception:
+    MonitoringRun = None  # type: ignore
 
 
 def get_site_agent_state(org_id: str, site_id: str) -> Dict[str, Any]:
@@ -16,6 +20,9 @@ def get_site_agent_state(org_id: str, site_id: str) -> Dict[str, Any]:
     - No policy/learning changes
     """
     if not org_id or not site_id:
+        return {}
+
+    if MonitoringRun is None:
         return {}
 
     mr = (
@@ -35,4 +42,3 @@ def get_site_agent_state(org_id: str, site_id: str) -> Dict[str, Any]:
         return data if isinstance(data, dict) else {}
     except Exception:
         return {}
-
