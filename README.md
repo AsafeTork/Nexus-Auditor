@@ -1,6 +1,6 @@
-# Nexus Auditor: Professional Edition (SaaS)
+# Xentinel AI (SaaS)
 
-Este pacote é um **SaaS profissional** (multi-tenant) do Nexus Auditor:
+Este pacote é um **SaaS profissional** (multi-tenant) do Xentinel AI:
 - Login + Organização (tenant)
 - Sites + Auditorias (histórico)
 - Worker assíncrono via **Redis + RQ**
@@ -71,7 +71,7 @@ docker compose exec web flask db upgrade
   5) Abrir o **Dossiê** (print-ready) para enviar ao cliente
 
 ## Notas sobre “outros provedores”
-O Nexus Pro usa **OpenAI-compatible**:
+O Xentinel AI usa **OpenAI-compatible**:
 - `POST /v1/chat/completions`
 - opcional: `GET /v1/models`
 

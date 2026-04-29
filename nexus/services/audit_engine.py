@@ -340,7 +340,7 @@ def fetch_url_html(url: str) -> FetchResult:
 
     t0 = time.time()
     headers = {
-        "User-Agent": "NexusAuditor-Pro/1.0",
+        "User-Agent": "XentinelAI/1.0",
         "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
     }
     # Follow redirects manually and re-validate each hop

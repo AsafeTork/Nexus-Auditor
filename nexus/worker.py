@@ -131,7 +131,7 @@ def run_ui_lab_job(run_id: str, org_id: str, mode: str, payload: dict) -> None:
                         # HTML
                         html_snip = ""
                         try:
-                            r = requests.get(url, timeout=25, headers={"User-Agent": "NexusAuditor/1.0"})
+                            r = requests.get(url, timeout=25, headers={"User-Agent": "XentinelAI/1.0"})
                             r.raise_for_status()
                             html_snip = (r.text or "")[:max_site_html]
                         except Exception as e:
@@ -154,7 +154,7 @@ def run_ui_lab_job(run_id: str, org_id: str, mode: str, payload: dict) -> None:
 
                 url = str(payload.get("url") or "").strip()
                 append_log(f"[ui-lab] baixando HTML: {url}")
-                r = requests.get(url, timeout=18, headers={"User-Agent": "NexusAuditor/1.0"})
+                r = requests.get(url, timeout=18, headers={"User-Agent": "XentinelAI/1.0"})
                 r.raise_for_status()
                 html = r.text or ""
                 if len(html) > 20000:
