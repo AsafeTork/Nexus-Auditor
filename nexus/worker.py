@@ -682,6 +682,12 @@ def run_audit_job(audit_id: str) -> None:
                     md("</details>")
                     md("")
                     flush(force=True)
+                else:
+                    md("## Market benchmarks (web research)")
+                    md("- Pesquisa iniciada via CatchAll (Newscatcher). **Pode levar ~10–15 minutos** para ficar pronta.")
+                    md("- Rode outra auditoria depois ou clique no ícone de atualizar para puxar do cache assim que concluir.")
+                    md("")
+                    flush(force=True)
         except Exception:
             pass
 

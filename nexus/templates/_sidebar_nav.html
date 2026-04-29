@@ -44,6 +44,13 @@
         <svg class="opacity-90" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4h16v16H4V4Zm4 12h8M8 8h8M8 12h6"/></svg>
         <span>Logs</span>
       </a>
+
+      <a class="nav-link {% if ep.startswith('admin.admin_users') %}nav-link-active{% endif %}"
+         {% if ep.startswith('admin.admin_users') %}aria-current="page"{% endif %}
+         href="{{ url_for('admin.admin_users') }}">
+        <svg class="opacity-90" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 14a4 4 0 1 1-8 0 4 4 0 0 1 8 0Zm-14 8a6 6 0 0 1 20 0M20 8a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/></svg>
+        <span>Users</span>
+      </a>
     </div>
   {% endif %}
 

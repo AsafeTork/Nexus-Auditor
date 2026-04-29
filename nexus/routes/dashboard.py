@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from datetime import datetime, timedelta, timezone
 
 from sqlalchemy import func
@@ -75,7 +76,9 @@ def home():
             except Exception:
                 pass
         trend = {"labels": labels, "counts": counts}
-        cache_set_json(cache_key, {"status_counts": status_counts, "trend": trend, "total_audits": total_audits}, ttl_s=300)
+        dash_ttl = int(os.getenv("DASH_CACHE_TTL_S", "60") or "60")
+        dash_ttl = max(10, min(600, dash_ttl))
+        cache_set_json(cache_key, {"status_counts": status_counts, "trend": trend, "total_audits": total_audits}, ttl_s=dash_ttl)
 
     return render_template(
         "dashboard/home.html",

@@ -100,6 +100,8 @@ class Subscription(db.Model):
     id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     org_id = db.Column(db.String(36), db.ForeignKey("orgs.id"), nullable=False, index=True)
     status = db.Column(db.String(32), default="trialing")  # inactive|trialing|active|past_due|canceled
+    # Commercial tier (admin UI): free|pro|enterprise
+    plan_tier = db.Column(db.String(32), default="free")
     stripe_customer_id = db.Column(db.String(128), default="")
     stripe_subscription_id = db.Column(db.String(128), default="")
     created_utc = db.Column(db.String(40), default=utc_now)

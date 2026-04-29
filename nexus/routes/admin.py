@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import json
 import time
 import uuid
 from typing import Any, Dict
@@ -12,13 +13,18 @@ from flask_login import login_required, current_user
 from sqlalchemy import text, func
 
 from .. import db
-from ..models import AuditEvent, AuditRun, Organization, Site, Subscription, is_org_admin
+from ..models import AuditEvent, AuditRun, Organization, Site, Subscription, User, is_org_admin
 from ..security import require_admin
 from ..services.queueing import enqueue_ui_lab
 from ..services.github import create_issue
 from ..services.audit_engine import list_models
 
 bp = Blueprint("admin", __name__)
+
+
+def _is_master_admin() -> bool:
+    master = (os.getenv("MASTER_ADMIN_EMAIL", "") or "").strip().lower()
+    return bool(master) and (str(getattr(current_user, "email", "") or "").strip().lower() == master)
 
 
 def _mask(s: str, keep: int = 4) -> str:
@@ -378,6 +384,140 @@ def admin_logs():
     )
 
 
+@bp.get("/admin/users")
+@login_required
+@require_admin
+def admin_users():
+    """
+    Admin user/org management.
+    - Master admin (MASTER_ADMIN_EMAIL) can see all orgs/users.
+    - Regular org admins see only their org.
+    """
+    master = _is_master_admin()
+    if master:
+        orgs = Organization.query.order_by(Organization.created_utc.desc()).limit(500).all()
+        users = User.query.order_by(User.created_utc.desc()).limit(2000).all()
+        subs = Subscription.query.order_by(Subscription.created_utc.desc()).limit(1000).all()
+    else:
+        orgs = Organization.query.filter_by(id=current_user.org_id).all()
+        users = User.query.filter_by(org_id=current_user.org_id).order_by(User.created_utc.desc()).limit(500).all()
+        subs = Subscription.query.filter_by(org_id=current_user.org_id).limit(5).all()
+
+    org_map = {o.id: o for o in orgs}
+    sub_map = {s.org_id: s for s in subs}
+
+    plan_tiers = ["free", "pro", "enterprise"]
+    sub_statuses = ["inactive", "trialing", "active", "past_due", "canceled"]
+    roles = ["member", "admin"]
+
+    return render_template(
+        "admin/users.html",
+        master=master,
+        orgs=orgs,
+        users=users,
+        org_map=org_map,
+        sub_map=sub_map,
+        plan_tiers=plan_tiers,
+        sub_statuses=sub_statuses,
+        roles=roles,
+    )
+
+
+@bp.post("/admin/user/<user_id>/role")
+@login_required
+@require_admin
+def admin_user_set_role(user_id: str):
+    master = _is_master_admin()
+    u = User.query.filter_by(id=user_id).first_or_404()
+    if (not master) and u.org_id != current_user.org_id:
+        flash("Forbidden.", "error")
+        return redirect(url_for("admin.admin_users"))
+
+    role = (request.form.get("role") or "").strip().lower()
+    if role not in ("admin", "member"):
+        flash("Invalid role.", "error")
+        return redirect(url_for("admin.admin_users"))
+
+    # Prevent removing the last admin of an org
+    if u.role == "admin" and role != "admin":
+        admins = User.query.filter_by(org_id=u.org_id, role="admin").count()
+        if admins <= 1:
+            flash("You cannot remove the last admin of an organization.", "error")
+            return redirect(url_for("admin.admin_users"))
+
+    u.role = role
+    db.session.commit()
+    flash("User updated.", "ok")
+    return redirect(url_for("admin.admin_users"))
+
+
+@bp.post("/admin/user/<user_id>/delete")
+@login_required
+@require_admin
+def admin_user_delete(user_id: str):
+    master = _is_master_admin()
+    u = User.query.filter_by(id=user_id).first_or_404()
+    if (not master) and u.org_id != current_user.org_id:
+        flash("Forbidden.", "error")
+        return redirect(url_for("admin.admin_users"))
+
+    # Prevent deleting yourself
+    if str(getattr(current_user, "id", "")) == str(u.id):
+        flash("You cannot delete your own account.", "error")
+        return redirect(url_for("admin.admin_users"))
+
+    # Prevent deleting the last admin of an org
+    if str(u.role or "").lower() == "admin":
+        admins = User.query.filter_by(org_id=u.org_id, role="admin").count()
+        if admins <= 1:
+            flash("You cannot delete the last admin of an organization.", "error")
+            return redirect(url_for("admin.admin_users"))
+
+    try:
+        db.session.delete(u)
+        db.session.commit()
+        flash("User deleted.", "ok")
+    except Exception as e:
+        db.session.rollback()
+        flash(f"Delete failed: {type(e).__name__}: {e}", "error")
+    return redirect(url_for("admin.admin_users"))
+
+
+@bp.post("/admin/org/<org_id>/subscription")
+@login_required
+@require_admin
+def admin_org_set_subscription(org_id: str):
+    master = _is_master_admin()
+    if (not master) and org_id != current_user.org_id:
+        flash("Forbidden.", "error")
+        return redirect(url_for("admin.admin_users"))
+
+    org = Organization.query.filter_by(id=org_id).first_or_404()
+    sub = Subscription.query.filter_by(org_id=org.id).first()
+    if not sub:
+        sub = Subscription(org_id=org.id, status="trialing", plan_tier="free")
+        db.session.add(sub)
+
+    status = (request.form.get("status") or "").strip().lower()
+    plan_tier = (request.form.get("plan_tier") or "").strip().lower()
+
+    if status and status not in ("inactive", "trialing", "active", "past_due", "canceled"):
+        flash("Invalid subscription status.", "error")
+        return redirect(url_for("admin.admin_users"))
+    if plan_tier and plan_tier not in ("free", "pro", "enterprise"):
+        flash("Invalid plan tier.", "error")
+        return redirect(url_for("admin.admin_users"))
+
+    if status:
+        sub.status = status
+    if plan_tier:
+        sub.plan_tier = plan_tier
+    sub.updated_utc = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+    db.session.commit()
+    flash("Subscription updated.", "ok")
+    return redirect(url_for("admin.admin_users"))
+
+
 def _redis_conn():
     return redis.from_url(current_app.config.get("REDIS_URL", "redis://localhost:6379/0"))
 
@@ -480,10 +620,62 @@ def ui_lab_run_json(run_id: str):
 def admin_llm_models():
     base_url = (request.args.get("base_url_v1") or "").strip() or current_app.config.get("LLM_BASE_URL_V1", "")
     api_key = current_app.config.get("LLM_API_KEY", "")
+    force = (request.args.get("force") or "").strip() in ("1", "true", "yes", "on")
+    q = (request.args.get("q") or "").strip().lower()
+
+    # Optional allowlist / custom list
+    raw_allow = (os.getenv("LLM_MODELS_ALLOWLIST", "") or "").strip()
+    allowlist = []
+    if raw_allow:
+        # Accept CSV or newline-separated
+        parts = [p.strip() for p in raw_allow.replace("\n", ",").split(",")]
+        allowlist = [p for p in parts if p]
+
+    # Cache in Redis (best-effort)
+    cache_ttl = int(os.getenv("LLM_MODELS_CACHE_TTL_S", "60") or "60")
+    cache_ttl = max(10, min(600, cache_ttl))
+    cache_key = f"llm_models:v1:{base_url}"
+    conn = _redis_conn()
+    if conn and (not force):
+        try:
+            cached = conn.get(cache_key)
+            if cached:
+                models = json.loads(cached)
+                if isinstance(models, list):
+                    out = [str(m) for m in models]
+                    if q:
+                        out = [m for m in out if q in m.lower()]
+                    return jsonify({"ok": True, "models": out, "cached": True})
+        except Exception:
+            pass
+
     try:
-        models = list_models(base_url_v1=base_url, api_key=api_key, timeout_s=12)
-        return jsonify({"ok": True, "models": models})
+        models_api = list_models(base_url_v1=base_url, api_key=api_key, timeout_s=12)
+        # Merge allowlist first, then API models (unique, stable order)
+        seen = set()
+        merged = []
+        for m in (allowlist or []) + (models_api or []):
+            mm = str(m or "").strip()
+            if not mm or mm in seen:
+                continue
+            seen.add(mm)
+            merged.append(mm)
+        if conn:
+            try:
+                conn.set(cache_key, json.dumps(merged, ensure_ascii=False), ex=cache_ttl)
+            except Exception:
+                pass
+        out = merged
+        if q:
+            out = [m for m in out if q in m.lower()]
+        return jsonify({"ok": True, "models": out, "cached": False})
     except Exception as e:
+        # If API fails, fallback to allowlist if present
+        if allowlist:
+            out = allowlist
+            if q:
+                out = [m for m in out if q in m.lower()]
+            return jsonify({"ok": True, "models": out, "cached": True, "fallback": "allowlist"})
         return jsonify({"ok": False, "error": f"{type(e).__name__}: {e}", "models": []}), 400
 
 

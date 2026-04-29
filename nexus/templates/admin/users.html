@@ -1,0 +1,134 @@
+{% extends "layout.html" %}
+{% set title = "Users" %}
+{% set subtitle = "Accounts, roles, and plan tiers" %}
+{% set page_max_w = "max-w-7xl" %}
+{% block content %}
+<div class="letterhead">
+  <div class="card">
+    <div class="flex items-start justify-between gap-4">
+      <div>
+        <div class="section-title">Admin Users</div>
+        <div class="body-text mt-2">
+          {% if master %}
+            You are master admin (global view).
+          {% else %}
+            You are viewing only your organization.
+          {% endif %}
+        </div>
+      </div>
+      <a class="btn-secondary" href="{{ url_for('admin.admin_home') }}">Back</a>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
+    <div class="card">
+      <div class="section-title">Organizations</div>
+      <div class="body-text mt-2">Plan tier + subscription status (per org).</div>
+
+      <div class="mt-4 overflow-auto border border-app rounded-xl">
+        <table class="w-full text-sm">
+          <thead class="text-xs text-muted bg-surface2">
+            <tr>
+              <th class="text-left p-3">Org</th>
+              <th class="text-left p-3">Created</th>
+              <th class="text-left p-3">Status</th>
+              <th class="text-left p-3">Tier</th>
+              <th class="text-right p-3">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for o in orgs %}
+              {% set sub = sub_map.get(o.id) %}
+              <tr class="border-t border-app">
+                <td class="p-3">
+                  <div class="font-semibold">{{ o.name }}</div>
+                  <div class="mono text-[11px] text-muted">{{ o.id }}</div>
+                </td>
+                <td class="p-3 mono text-[12px]">{{ o.created_utc }}</td>
+                <td class="p-3">
+                  <form method="post" action="{{ url_for('admin.admin_org_set_subscription', org_id=o.id) }}" class="flex items-center gap-2">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <select class="input text-xs py-2" name="status">
+                      {% for st in sub_statuses %}
+                        {% set cur = (sub.status if sub else '') %}
+                        <option value="{{ st }}" {% if st == cur %}selected{% endif %}>{{ st }}</option>
+                      {% endfor %}
+                    </select>
+                </td>
+                <td class="p-3">
+                    <select class="input text-xs py-2" name="plan_tier">
+                      {% for t in plan_tiers %}
+                        {% set cur2 = (sub.plan_tier if sub else 'free') %}
+                        <option value="{{ t }}" {% if t == cur2 %}selected{% endif %}>{{ t }}</option>
+                      {% endfor %}
+                    </select>
+                </td>
+                <td class="p-3 text-right">
+                    <button class="btn-primary text-xs px-3 py-2" type="submit">Save</button>
+                  </form>
+                </td>
+              </tr>
+            {% else %}
+              <tr><td class="p-3 text-muted" colspan="5">(no orgs)</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="section-title">Users</div>
+      <div class="body-text mt-2">Roles are per user. Plan is per org.</div>
+
+      <div class="mt-4 overflow-auto border border-app rounded-xl">
+        <table class="w-full text-sm">
+          <thead class="text-xs text-muted bg-surface2">
+            <tr>
+              <th class="text-left p-3">Email</th>
+              <th class="text-left p-3">Org</th>
+              <th class="text-left p-3">Role</th>
+              <th class="text-left p-3">Created</th>
+              <th class="text-right p-3">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for u in users %}
+              {% set o = org_map.get(u.org_id) %}
+              <tr class="border-t border-app">
+                <td class="p-3">
+                  <div class="font-semibold">{{ u.email }}</div>
+                  <div class="mono text-[11px] text-muted">{{ u.id }}</div>
+                </td>
+                <td class="p-3">
+                  <div class="text-xs font-semibold">{{ o.name if o else u.org_id }}</div>
+                  <div class="mono text-[11px] text-muted">{{ u.org_id }}</div>
+                </td>
+                <td class="p-3">
+                  <form method="post" action="{{ url_for('admin.admin_user_set_role', user_id=u.id) }}" class="flex items-center gap-2">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <select class="input text-xs py-2" name="role">
+                      <option value="member" {% if (u.role or '') == 'member' %}selected{% endif %}>user</option>
+                      <option value="admin" {% if (u.role or '') == 'admin' %}selected{% endif %}>admin</option>
+                    </select>
+                    <button class="btn-secondary text-xs px-3 py-2" type="submit">Update</button>
+                  </form>
+                </td>
+                <td class="p-3 mono text-[12px]">{{ u.created_utc }}</td>
+                <td class="p-3 text-right">
+                  <form method="post" action="{{ url_for('admin.admin_user_delete', user_id=u.id) }}" onsubmit="return confirm('Delete this user?');" class="inline">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button class="btn-danger text-xs px-3 py-2" type="submit">Delete</button>
+                  </form>
+                </td>
+              </tr>
+            {% else %}
+              <tr><td class="p-3 text-muted" colspan="5">(no users)</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+

@@ -61,6 +61,12 @@ services:
         sync: false
       - key: AUDIT_MARKET_CONTEXT
         sync: false
+      - key: LLM_MODELS_CACHE_TTL_S
+        sync: false
+      - key: LLM_MODELS_ALLOWLIST
+        sync: false
+      - key: DASH_CACHE_TTL_S
+        sync: false
     startCommand: bash bin/start_web.sh
 
   - type: worker
@@ -118,5 +124,11 @@ services:
       - key: AUDIT_MARKET_QUERY
         sync: false
       - key: AUDIT_MARKET_CONTEXT
+        sync: false
+      - key: LLM_MODELS_CACHE_TTL_S
+        sync: false
+      - key: LLM_MODELS_ALLOWLIST
+        sync: false
+      - key: DASH_CACHE_TTL_S
         sync: false
     startCommand: python -m nexus.worker

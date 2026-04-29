@@ -182,4 +182,3 @@ def get_or_refresh_attack_benchmarks(redis_conn) -> Optional[Dict[str, Any]]:
         return out
     except Exception:
         return None
-
