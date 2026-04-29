@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>{{ title or "Xentinel AI" }}</title>
+  <title>{{ title or "Console" }}</title>
   <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}"/>
   <link rel="apple-touch-icon" href="{{ url_for('static', filename='apple-touch-icon.png') }}"/>
   <script src="https://cdn.tailwindcss.com"></script>
@@ -28,7 +28,7 @@
           "Audits" if ep.startswith("audit.") else
           "Settings" if ep.startswith("settings.") else
           "Admin" if ep.startswith("admin.") else
-          "Xentinel"
+          "Console"
         ) %}
         {% set container_w = (page_max_w or 'max-w-7xl') %}
         <!-- Sidebar (desktop) -->
@@ -36,10 +36,10 @@
           <div class="w-full p-6">
             <div class="flex items-center gap-4">
               <div class="h-9 w-9 rounded-xl bg-brand-weak flex items-center justify-center overflow-hidden">
-                <img alt="Xentinel AI" class="h-7 w-7 object-contain" src="{{ url_for('static', filename=logo_mark) }}"/>
+                <img alt="Logo" class="h-7 w-7 object-contain" src="{{ url_for('static', filename=logo_mark) }}"/>
               </div>
               <div class="min-w-0">
-                <div class="section-title truncate">Xentinel AI</div>
+                <div class="section-title truncate">&nbsp;</div>
                 <div class="body-text truncate">{{ current_user.email }}</div>
               </div>
             </div>
@@ -58,7 +58,7 @@
                 <button id="menuBtn" class="lg:hidden btn btn-secondary" type="button">Menu</button>
                 <div class="min-w-0">
                   <div class="section-label truncate">{{ page_ctx }}</div>
-                  <div class="text-sm font-extrabold tracking-tight truncate">{{ title or "Xentinel AI" }}</div>
+                  <div class="text-sm font-extrabold tracking-tight truncate">{{ title or "Console" }}</div>
                 </div>
               </div>
               <div class="flex items-center gap-4">
@@ -178,10 +178,10 @@
       <div class="flex items-center justify-between">
         <div class="flex items-center gap-4">
           <div class="h-9 w-9 rounded-xl bg-brand-weak flex items-center justify-center overflow-hidden">
-                  <img class="h-7 w-7 object-contain" alt="Xentinel AI" src="{{ url_for('static', filename=logo_mark) }}"/>
+                  <img class="h-7 w-7 object-contain" alt="Logo" src="{{ url_for('static', filename=logo_mark) }}"/>
           </div>
           <div class="min-w-0">
-                  <div class="text-sm font-semibold truncate">Xentinel AI</div>
+                  <div class="text-sm font-semibold truncate">&nbsp;</div>
             <div class="text-xs text-muted truncate">{{ current_user.email }}</div>
           </div>
         </div>

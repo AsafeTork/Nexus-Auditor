@@ -36,6 +36,10 @@ def create_app() -> Flask:
     app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv("DATABASE_URL", "sqlite:///nexus_dev.db")
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
     app.config["APP_LANG"] = os.getenv("APP_LANG", "en")
+    # Branding / domain (visible, safe to change)
+    # Leave brand empty by default; show only logos until branding is finalized.
+    app.config["APP_NAME"] = (os.getenv("APP_NAME", "") or "").strip()
+    app.config["BASE_URL"] = (os.getenv("BASE_URL", "") or "").strip().rstrip("/")
 
     # LLM config (OpenAI-compatible gateway)
     app.config["LLM_BASE_URL_V1"] = os.getenv("LLM_BASE_URL_V1", "https://eclipse.mestredoblack.pro/v1")
@@ -105,6 +109,7 @@ def create_app() -> Flask:
     from .routes.settings import bp as settings_bp
     from .routes.dossier import bp as dossier_bp
     from .routes.admin import bp as admin_bp
+    from .routes.monitor import bp as monitor_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(dashboard_bp)
@@ -113,6 +118,7 @@ def create_app() -> Flask:
     app.register_blueprint(settings_bp)
     app.register_blueprint(dossier_bp)
     app.register_blueprint(admin_bp)
+    app.register_blueprint(monitor_bp)
 
     @app.before_request
     def enforce_canonical_host():
@@ -140,6 +146,13 @@ def create_app() -> Flask:
     @app.context_processor
     def inject_i18n() -> dict:
         return {"lang": get_lang(), "t": t}
+
+    @app.context_processor
+    def inject_branding() -> dict:
+        return {
+            "app_name": app.config.get("APP_NAME", "App"),
+            "base_url": app.config.get("BASE_URL", ""),
+        }
 
     # CLI
     from .cli import register_cli

@@ -129,7 +129,7 @@
   function filePrefix(){
     const host = "{{ audit.target_domain or 'ALVO' }}".toUpperCase().replace(/^WWW\./,'');
     const iso = new Date().toISOString().replace(/[-:]/g,"").replace(/\..*/,"Z");
-    return "AUDIT_NEXUS_" + host + "_" + iso;
+    return "AUDIT_REPORT_" + host + "_" + iso;
   }
   function downloadMD(){
     const blob = new Blob([MD||""], {type:"text/markdown;charset=utf-8"});

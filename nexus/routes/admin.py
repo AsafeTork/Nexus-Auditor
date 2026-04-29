@@ -334,10 +334,7 @@ def admin_audit_delete(audit_id: str):
 @require_admin
 def admin_audit_publish_github(audit_id: str):
     audit = AuditRun.query.filter_by(id=audit_id, org_id=current_user.org_id).first_or_404()
-    from flask import current_app
-
-    app_name = (current_app.config.get("APP_NAME", "App") or "App").strip()
-    title = f"[{app_name}] {audit.target_domain or 'audit'} · {audit.id}"
+    title = f"[AUDIT] {audit.target_domain or 'audit'} · {audit.id}"
     body = (
         f"## Relatório de Auditoria\n\n"
         f"**Audit ID:** `{audit.id}`\n"

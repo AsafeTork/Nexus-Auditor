@@ -23,6 +23,7 @@ from .services.audit_engine import (
     stream_llm_text,
 )
 from .services.research import get_or_refresh_attack_benchmarks
+from .services.monitoring import persist_monitoring_history
 from .services.ui_review import read_text_files, summarize_screenshot
 
 
@@ -131,7 +132,7 @@ def run_ui_lab_job(run_id: str, org_id: str, mode: str, payload: dict) -> None:
                         # HTML
                         html_snip = ""
                         try:
-                            r = requests.get(url, timeout=25, headers={"User-Agent": "XentinelAI/1.0"})
+                            r = requests.get(url, timeout=25, headers={"User-Agent": "AuditAgent/1.0"})
                             r.raise_for_status()
                             html_snip = (r.text or "")[:max_site_html]
                         except Exception as e:
@@ -154,7 +155,7 @@ def run_ui_lab_job(run_id: str, org_id: str, mode: str, payload: dict) -> None:
 
                 url = str(payload.get("url") or "").strip()
                 append_log(f"[ui-lab] baixando HTML: {url}")
-                r = requests.get(url, timeout=18, headers={"User-Agent": "XentinelAI/1.0"})
+                r = requests.get(url, timeout=18, headers={"User-Agent": "AuditAgent/1.0"})
                 r.raise_for_status()
                 html = r.text or ""
                 if len(html) > 20000:
@@ -387,7 +388,7 @@ def run_audit_job(audit_id: str) -> None:
             flush(force=True)
             return
 
-        md("# AUDIT_NEXUS — Professional Edition")
+        md("# Audit Report")
         md(f"- Target: {site.base_url}")
         md(f"- Final URL: {fetch.url}")
         md(f"- Provider: {base_url_v1}")
@@ -607,6 +608,12 @@ def run_audit_job(audit_id: str) -> None:
             flush(force=True)
 
         audit.status = "done" if audit.status != "error" else "error"
+
+        # Continuous monitoring history + diff (best-effort, non-blocking for audits).
+        try:
+            persist_monitoring_history(audit)
+        except Exception:
+            pass
 
         # Add a total "attack cost" estimate from CSV security-related rows (best-effort).
         try:
