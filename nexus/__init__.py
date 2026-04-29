@@ -157,6 +157,8 @@ def create_app() -> Flask:
             "app_name": app.config.get("APP_NAME", ""),
             # Prefer runtime host (no env) so links reflect the actual deployed domain.
             "base_url": (request.host_url or "").rstrip("/"),
+            # Feature flags (read-only). Prevent templates from linking to missing blueprints.
+            "has_monitoring": bool(app.view_functions.get("monitor.monitoring_home")),
         }
 
     # CLI

@@ -60,12 +60,14 @@
         <span>Users</span>
       </a>
 
-      <a class="nav-link {% if ep.startswith('monitor.') %}nav-link-active{% endif %}"
-         {% if ep.startswith('monitor.') %}aria-current="page"{% endif %}
-         href="{{ url_for('monitor.monitoring_home') }}">
-        <svg class="opacity-90" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12h3l3 8 4-16 3 8h5"/></svg>
-        <span>Monitoring</span>
-      </a>
+      {% if has_monitoring %}
+        <a class="nav-link {% if ep.startswith('monitor.') %}nav-link-active{% endif %}"
+           {% if ep.startswith('monitor.') %}aria-current="page"{% endif %}
+           href="{{ url_for('monitor.monitoring_home') }}">
+          <svg class="opacity-90" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12h3l3 8 4-16 3 8h5"/></svg>
+          <span>Monitoring</span>
+        </a>
+      {% endif %}
     </div>
   {% endif %}
 
