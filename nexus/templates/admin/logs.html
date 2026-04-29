@@ -35,6 +35,7 @@
 DB={{ "OK" if diag.db.ok else "ERROR" }}{% if not diag.db.ok %} :: {{ diag.db.error }}{% endif %}
 REDIS={{ "OK" if diag.redis.ok else "ERROR" }}{% if not diag.redis.ok %} :: {{ diag.redis.error }}{% endif %}
 LLM={{ "OK" if diag.llm.ok else "ERROR" }} model={{ diag.llm.model }}{% if not diag.llm.ok %} :: {{ diag.llm.error }}{% endif %}
+LOG_WINDOW=last {{ logs_days }} day(s) (since {{ logs_cutoff_utc }})
 
 === FAILED AUDITS (recent) ===
 {% if failed_audits %}

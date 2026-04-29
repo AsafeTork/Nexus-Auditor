@@ -258,6 +258,11 @@ def admin_logs():
     events_limit = int(os.getenv("ADMIN_LOGS_EVENTS_LIMIT", "2500"))
     err_limit = int(os.getenv("ADMIN_LOGS_ERROR_EVENTS_LIMIT", "5000"))
     runs_limit = int(os.getenv("ADMIN_LOGS_RUNS_LIMIT", "50"))
+    # Window filter (days). Prevents "stale looking" console by default.
+    days = int(os.getenv("ADMIN_LOGS_DAYS", "2") or "2")
+    days = max(1, min(30, days))
+    cutoff_ms = int(time.time() * 1000) - days * 24 * 60 * 60 * 1000
+    cutoff_utc = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(cutoff_ms / 1000))
 
     # Recent audits (org scope)
     audits = (
@@ -273,6 +278,7 @@ def admin_logs():
     if audit_ids:
         events = (
             AuditEvent.query.filter(AuditEvent.audit_run_id.in_(audit_ids))
+            .filter(AuditEvent.ts_ms >= cutoff_ms)
             .order_by(AuditEvent.id.desc())
             .limit(events_limit)
             .all()
@@ -297,6 +303,7 @@ def admin_logs():
         db.session.query(AuditEvent, AuditRun)
         .join(AuditRun, AuditRun.id == AuditEvent.audit_run_id)
         .filter(AuditRun.org_id == current_user.org_id)
+        .filter(AuditEvent.ts_ms >= cutoff_ms)
         .filter(func.upper(AuditEvent.level).in_(err_levels) | msg_hit)
         .order_by(AuditEvent.id.desc())
         .limit(err_limit)
@@ -332,12 +339,16 @@ def admin_logs():
             err = (h.get(b"error") or b"").decode("utf-8", "ignore")
             if err:
                 err = err.replace("\\n", "\n")
+            created_utc = (h.get(b"created_utc") or b"").decode("utf-8", "ignore")
+            # Keep only recent runs for the console view
+            if created_utc and created_utc < cutoff_utc:
+                continue
             runs.append(
                 {
                     "id": rid,
                     "status": (h.get(b"status") or b"").decode("utf-8", "ignore"),
                     "mode": (h.get(b"mode") or b"").decode("utf-8", "ignore"),
-                    "created_utc": (h.get(b"created_utc") or b"").decode("utf-8", "ignore"),
+                    "created_utc": created_utc,
                     "error": err,
                 }
             )
@@ -389,6 +400,8 @@ def admin_logs():
         audit_map=audit_map,
         ui_runs=runs,
         run_error_tails=run_error_tails,
+        logs_days=days,
+        logs_cutoff_utc=cutoff_utc,
     )
 
 
