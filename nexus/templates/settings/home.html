@@ -6,17 +6,26 @@
     <a class="btn-primary" href="#billing">Manage plan</a>
   {% endif %}
 {% endblock %}
+{% block page_context %}
+  <div class="hero-meta">
+    <span class="meta-chip">Org <strong class="mono">{{ current_user.org_id }}</strong></span>
+    <span class="meta-chip">Role <strong>{{ current_user.role or "member" }}</strong></span>
+    <span class="meta-chip">Master <strong class="mono">{{ master_email or "—" }}</strong></span>
+  </div>
+{% endblock %}
 {% block content %}
 <div class="flex flex-col gap-6">
   <section class="card card-focus">
-    <div class="section-title">Organization</div>
+    <div class="section-label">Overview</div>
+    <div class="section-title mt-2">Organization</div>
     <div class="mt-4 body-text">Org ID: <span class="mono">{{ current_user.org_id }}</span></div>
     <div class="mt-4 body-text">Role: <span class="section-title">{{ current_user.role or "member" }}</span></div>
     <div class="mt-4 body-text">Master: <span class="mono">{{ master_email or "—" }}</span></div>
   </section>
 
   <section class="card">
-    <div class="section-title">Users</div>
+    <div class="section-label">Details</div>
+    <div class="section-title mt-2">Users</div>
     <div class="mt-6 table-wrap">
       <table class="table">
         <thead>

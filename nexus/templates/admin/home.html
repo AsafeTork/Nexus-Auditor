@@ -2,6 +2,13 @@
 {% set title = "Admin" %}
 {% set subtitle = "Diagnostics and defaults" %}
 {% set page_max_w = "max-w-7xl" %}
+{% block page_context %}
+  <div class="hero-meta">
+    <span class="meta-chip">DB <strong>{{ "OK" if diag.db.ok else "ERROR" }}</strong></span>
+    <span class="meta-chip">Redis <strong>{{ "OK" if diag.redis.ok else "ERROR" }}</strong></span>
+    <span class="meta-chip">LLM <strong>{{ "OK" if diag.llm.ok else "ERROR" }}</strong></span>
+  </div>
+{% endblock %}
 {% block content %}
 <div class="letterhead">
   <div class="flex items-center justify-end gap-4">

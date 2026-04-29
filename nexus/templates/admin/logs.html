@@ -2,6 +2,13 @@
 {% set title = "Logs" %}
 {% set subtitle = "Support and diagnostics" %}
 {% set page_max_w = "max-w-7xl" %}
+{% block page_context %}
+  <div class="hero-meta">
+    <span class="meta-chip">Window <strong>{{ logs_days }} day(s)</strong></span>
+    <span class="meta-chip">Since <strong class="mono">{{ logs_cutoff_utc }}</strong></span>
+    <span class="meta-chip">Auto-refresh <strong>60s</strong></span>
+  </div>
+{% endblock %}
 {% block content %}
 <div class="letterhead">
   <div class="flex items-center justify-end gap-4">

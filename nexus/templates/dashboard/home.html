@@ -15,14 +15,42 @@
     </svg>
   </button>
 {% endblock %}
+{% block page_context %}
+  <div class="hero-meta">
+    <span class="meta-chip">Org <strong class="mono">{{ current_user.org_id }}</strong></span>
+    <span class="meta-chip">Plan <strong>{{ sub.status if sub else "inactive" }}</strong></span>
+    <span class="meta-chip">Auto-refresh <strong>60s</strong></span>
+  </div>
+{% endblock %}
+{% block hero_kpis %}
+  <div class="mt-5 section-grid cols-4">
+    <div class="card card-hover bg-surface2">
+      <div class="text-[11px] text-muted">Sites</div>
+      <div class="kpi-value">{{ kpi.sites }}</div>
+    </div>
+    <div class="card card-hover bg-surface2">
+      <div class="text-[11px] text-muted">Audits</div>
+      <div class="kpi-value">{{ kpi.audits }}</div>
+    </div>
+    <div class="card card-hover bg-surface2">
+      <div class="text-[11px] text-muted">Done</div>
+      <div class="kpi-value text-emerald-300">{{ kpi.done }}</div>
+    </div>
+    <div class="card card-hover bg-surface2">
+      <div class="text-[11px] text-muted">Errors</div>
+      <div class="kpi-value text-rose-300">{{ kpi.errors }}</div>
+    </div>
+  </div>
+{% endblock %}
 {% block content %}
 <div class="flex flex-col gap-8">
   <!-- Primary card: create site + run audits -->
   <section class="card card-focus" id="sites">
     <div class="flex items-start justify-between gap-6">
       <div class="min-w-0">
-        <div class="section-title">Run an audit</div>
-        <div class="body-text">Create a site, then run a full or fast audit.</div>
+        <div class="section-label">Primary</div>
+        <div class="section-title mt-2">Run an audit</div>
+        <div class="body-text">Create a site, then run a full or fast audit. This is the main workflow.</div>
       </div>
       {% if current_user.is_admin %}
         <a class="btn-secondary" href="{{ url_for('admin.admin_home') }}">Admin</a>
@@ -91,8 +119,9 @@
   <section class="card" id="audits">
     <div class="flex flex-col md:flex-row md:items-end md:justify-between gap-6">
       <div>
-        <div class="section-title">Audits</div>
-        <div class="body-text">Recent runs and status.</div>
+        <div class="section-label">History</div>
+        <div class="section-title mt-2">Audits</div>
+        <div class="body-text">Recent runs and status. Open one to see live output.</div>
       </div>
       <div class="flex items-center gap-4">
         <select id="auditFilter" class="input text-xs">
@@ -183,7 +212,8 @@
   <section class="card" id="billing">
     <div class="flex items-start justify-between gap-6">
       <div>
-        <div class="section-title">Billing</div>
+        <div class="section-label">Details</div>
+        <div class="section-title mt-2">Billing</div>
         <div class="body-text">Status: <span class="section-title">{{ sub.status if sub else "inactive" }}</span></div>
       </div>
       <a class="btn-secondary" href="{{ url_for('settings.settings_home') }}">Settings</a>
