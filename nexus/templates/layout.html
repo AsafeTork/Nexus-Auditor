@@ -22,6 +22,15 @@
   <div class="min-h-screen">
     {% if current_user.is_authenticated %}
       <div class="flex min-h-screen">
+        {% set ep = (request.endpoint or '') %}
+        {% set page_ctx = (
+          "Dashboard" if ep.startswith("dashboard.") else
+          "Audits" if ep.startswith("audit.") else
+          "Settings" if ep.startswith("settings.") else
+          "Admin" if ep.startswith("admin.") else
+          "Nexus"
+        ) %}
+        {% set container_w = (page_max_w or 'max-w-7xl') %}
         <!-- Sidebar (desktop) -->
         <aside class="hidden lg:flex w-60 shrink-0 border-r border-app">
           <div class="w-full p-6">
@@ -44,21 +53,27 @@
         <div class="flex-1 min-w-0">
           <!-- Top navbar -->
           <header class="sticky top-0 z-40 border-b border-app" style="background: rgba(11,11,12,.72); backdrop-filter: blur(10px);">
-            <div class="mx-auto {{ page_max_w or 'max-w-5xl' }} px-6 topbar-pad flex items-center justify-between gap-6">
+            <div class="mx-auto {{ container_w }} px-6 topbar-pad flex items-center justify-between gap-6">
               <div class="flex items-center gap-4 min-w-0">
                 <button id="menuBtn" class="lg:hidden btn btn-secondary" type="button">Menu</button>
                 <div class="min-w-0">
-                  <div class="section-title truncate">Nexus Auditor</div>
-                  <div class="body-text truncate">Org {{ current_user.org_id }}</div>
+                  <div class="section-label truncate">{{ page_ctx }}</div>
+                  <div class="text-sm font-extrabold tracking-tight truncate">{{ title or "Nexus Auditor" }}</div>
                 </div>
               </div>
               <div class="flex items-center gap-4">
+                <div class="hidden md:flex items-center gap-3">
+                  <span class="meta-chip">Org <strong class="mono">{{ (current_user.org_id or '')[:8] }}</strong></span>
+                  {% if current_user.is_admin %}
+                    <span id="sysPill" class="meta-chip">System <strong id="sysText">…</strong></span>
+                  {% endif %}
+                </div>
                 <a class="btn btn-secondary" href="{{ url_for('auth.logout') }}">Logout</a>
               </div>
             </div>
           </header>
 
-          <main id="mainContent" class="mx-auto {{ page_max_w or 'max-w-5xl' }} px-6 page-pad flex flex-col gap-6">
+          <main id="mainContent" class="mx-auto {{ container_w }} px-6 page-pad flex flex-col gap-6">
             {% if show_page_header is not defined or show_page_header %}
               <section class="hero">
                 <div class="flex flex-col md:flex-row md:items-end md:justify-between gap-6">
@@ -135,6 +150,22 @@
         if(overlay) overlay.addEventListener("click", (e)=>{ if(e.target===overlay) close(); });
         const closeBtn = document.getElementById("sidebarClose");
         if(closeBtn) closeBtn.addEventListener("click", close);
+      })();
+
+      // Header system status (admin only): fetch diagnostics and display a single "System" pill.
+      (function(){
+        const sysText = document.getElementById("sysText");
+        const sysPill = document.getElementById("sysPill");
+        if(!sysText || !sysPill) return;
+        fetch("/admin/diagnostics.json", {headers: {"Accept":"application/json"}})
+          .then(r => r.ok ? r.json() : null)
+          .then(j => {
+            if(!j) { sysText.textContent = "N/A"; return; }
+            const ok = Boolean(j.db?.ok) && Boolean(j.redis?.ok) && Boolean(j.llm?.ok);
+            sysText.textContent = ok ? "OK" : "Degraded";
+            sysPill.style.borderColor = ok ? "rgba(16,185,129,.25)" : "rgba(245,158,11,.30)";
+          })
+          .catch(() => { sysText.textContent = "N/A"; });
       })();
     });
 

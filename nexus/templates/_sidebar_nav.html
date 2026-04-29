@@ -1,5 +1,6 @@
 {% set ep = (request.endpoint or '') %}
-<nav class="flex flex-col gap-4">
+<nav class="flex flex-col gap-2">
+  <div class="nav-label">Workspace</div>
   <a class="nav-link {% if ep.startswith('dashboard.') %}nav-link-active{% endif %}"
      {% if ep.startswith('dashboard.') %}aria-current="page"{% endif %}
      href="{{ url_for('dashboard.home') }}">
@@ -55,6 +56,7 @@
   {% endif %}
 
   <div class="nav-section">
+    <div class="nav-label">Account</div>
     <a class="nav-link" href="{{ url_for('auth.logout') }}">
       <svg class="opacity-90" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 17l5-5-5-5M15 12H3m12 9a9 9 0 1 0 0-18"/></svg>
       <span>Logout</span>
