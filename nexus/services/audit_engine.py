@@ -655,7 +655,13 @@ def call_llm_non_stream(
                 last_exc = requests.HTTPError(f"{r.status_code} Server Error for url: {url}")
                 continue
             r.raise_for_status()
-            data = r.json()
+            try:
+                data = r.json()
+            except Exception as je:
+                # Some gateways return HTML/text for 502 even with 200/invalid JSON.
+                last_exc = je
+                time.sleep(1.5 * (attempt + 1))
+                continue
             try:
                 out = str(((data.get("choices") or [None])[0] or {}).get("message", {}).get("content") or "")
                 if out.strip():

@@ -370,6 +370,8 @@ def run_audit_job(audit_id: str) -> None:
         audit_brief = (os.getenv("AUDIT_BRIEF", "") or "").strip()
         reflect = str(os.getenv("AUDIT_REFLECT", "0") or "0").strip().lower() in ("1", "true", "yes", "on")
         attack_total_mode = str(os.getenv("AUDIT_ATTACK_TOTAL_MODE", "security") or "security").strip().lower()
+        max_consecutive_llm_failures = int(os.getenv("AUDIT_MAX_CONSECUTIVE_LLM_FAILURES", "4") or "4")
+        max_consecutive_llm_failures = max(2, min(10, max_consecutive_llm_failures))
 
         try:
             log("fetch", "INFO", f"Fetching HTML: {site.base_url}")
@@ -442,6 +444,11 @@ def run_audit_job(audit_id: str) -> None:
                         "- Remova duplicatas e itens genéricos.\n"
                         "- Se um item não tiver prova literal, APAGUE do CSV.\n"
                         "- Use faixas conservadoras ou 'N/A' em prejuízo se não houver base.\n"
+                        "- NÃO escreva cadeia de raciocínio passo a passo. Gere apenas um resumo curto do porquê.\n"
+                        "- Inclua um bloco colapsável no relatório:\n"
+                        "  <details><summary>Raciocínio (resumo)</summary>\n"
+                        "  - 2 a 5 bullets explicando rapidamente por que os achados importam, citando a prova.\n"
+                        "  </details>\n"
                         "- Mantenha o mesmo formato estrito: ---REPORT--- ... ---CSV--- ...\n"
                         "\nPROMPT ORIGINAL (contexto):\n"
                         + prompt
@@ -473,8 +480,8 @@ def run_audit_job(audit_id: str) -> None:
                 if not content.strip():
                     log(layer, "ERROR", "Resposta vazia do provedor LLM.")
                     consecutive_llm_failures += 1
-                    if consecutive_llm_failures >= 2:
-                        log("system", "ERROR", "Abortando auditoria: provedor LLM falhou repetidamente (>=2).")
+                    if consecutive_llm_failures >= max_consecutive_llm_failures:
+                        log("system", "ERROR", f"Abortando auditoria: provedor LLM falhou repetidamente (>={max_consecutive_llm_failures}).")
                         audit.status = "error"
                         break
                     continue
@@ -554,8 +561,8 @@ def run_audit_job(audit_id: str) -> None:
                 if not content.strip():
                     log(layer, "ERROR", "Resposta vazia do provedor LLM.")
                     consecutive_llm_failures += 1
-                    if consecutive_llm_failures >= 2:
-                        log("system", "ERROR", "Abortando auditoria: provedor LLM falhou repetidamente (>=2).")
+                    if consecutive_llm_failures >= max_consecutive_llm_failures:
+                        log("system", "ERROR", f"Abortando auditoria: provedor LLM falhou repetidamente (>={max_consecutive_llm_failures}).")
                         audit.status = "error"
                         break
                     continue
@@ -590,8 +597,8 @@ def run_audit_job(audit_id: str) -> None:
             except Exception as e:
                 log(layer, "ERROR", f"Falha no provedor LLM: {type(e).__name__}: {e}")
                 consecutive_llm_failures += 1
-                if consecutive_llm_failures >= 2:
-                    log("system", "ERROR", "Abortando auditoria: provedor LLM falhou repetidamente (>=2).")
+                if consecutive_llm_failures >= max_consecutive_llm_failures:
+                    log("system", "ERROR", f"Abortando auditoria: provedor LLM falhou repetidamente (>={max_consecutive_llm_failures}).")
                     audit.status = "error"
                     break
                 continue
