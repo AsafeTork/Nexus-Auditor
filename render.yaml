@@ -41,6 +41,26 @@ services:
         sync: false
       - key: AUDIT_MAX_CONSECUTIVE_LLM_FAILURES
         sync: false
+      - key: AUDIT_MARKET_RESEARCH
+        sync: false
+      - key: CATCHALL_API_KEY
+        sync: false
+      - key: AUDIT_MARKET_DAYS
+        sync: false
+      - key: AUDIT_MARKET_MODE
+        sync: false
+      - key: AUDIT_MARKET_LIMIT
+        sync: false
+      - key: AUDIT_MARKET_POLL_MAX_S
+        sync: false
+      - key: AUDIT_MARKET_POLL_INTERVAL_S
+        sync: false
+      - key: AUDIT_MARKET_CACHE_TTL_S
+        sync: false
+      - key: AUDIT_MARKET_QUERY
+        sync: false
+      - key: AUDIT_MARKET_CONTEXT
+        sync: false
     startCommand: bash bin/start_web.sh
 
   - type: worker
@@ -78,5 +98,25 @@ services:
       - key: AUDIT_ATTACK_TOTAL_MODE
         sync: false
       - key: AUDIT_MAX_CONSECUTIVE_LLM_FAILURES
+        sync: false
+      - key: AUDIT_MARKET_RESEARCH
+        sync: false
+      - key: CATCHALL_API_KEY
+        sync: false
+      - key: AUDIT_MARKET_DAYS
+        sync: false
+      - key: AUDIT_MARKET_MODE
+        sync: false
+      - key: AUDIT_MARKET_LIMIT
+        sync: false
+      - key: AUDIT_MARKET_POLL_MAX_S
+        sync: false
+      - key: AUDIT_MARKET_POLL_INTERVAL_S
+        sync: false
+      - key: AUDIT_MARKET_CACHE_TTL_S
+        sync: false
+      - key: AUDIT_MARKET_QUERY
+        sync: false
+      - key: AUDIT_MARKET_CONTEXT
         sync: false
     startCommand: python -m nexus.worker

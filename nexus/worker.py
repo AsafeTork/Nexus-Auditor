@@ -22,6 +22,7 @@ from .services.audit_engine import (
     stream_llm_events,
     stream_llm_text,
 )
+from .services.research import get_or_refresh_attack_benchmarks
 from .services.ui_review import read_text_files, summarize_screenshot
 
 
@@ -653,6 +654,33 @@ def run_audit_job(audit_id: str) -> None:
                         f"USD {lo_sum}–{hi_sum};Ajustar com dados reais e escopo;Alta;Baixa"
                     )
                     csv(total_row)
+                    flush(force=True)
+        except Exception:
+            pass
+
+        # Optional: Market research benchmarks (CatchAll / Newscatcher)
+        try:
+            market_enabled = str(os.getenv("AUDIT_MARKET_RESEARCH", "0") or "0").strip().lower() in ("1", "true", "yes", "on")
+            if market_enabled:
+                bench = get_or_refresh_attack_benchmarks(conn)
+                if bench and (bench.get("citations") or []):
+                    md("## Market benchmarks (web research)")
+                    md("- Fontes encontradas via CatchAll (Newscatcher).")
+                    for c in bench.get("citations") or []:
+                        title = (c.get("title") or "").strip() or "Source"
+                        link = (c.get("link") or "").strip()
+                        dt = (c.get("published_date") or "").strip()
+                        if dt:
+                            md(f"- [{title}]({link}) — {dt}")
+                        else:
+                            md(f"- [{title}]({link})")
+                    md("")
+                    md("<details><summary>Raciocínio (resumo)</summary>")
+                    md("- O total estimado acima é a soma das faixas USD dos achados com evidência técnica nesta auditoria.")
+                    md("- As fontes acima servem como benchmark de mercado (custos reais reportados/publicados).")
+                    md("- Se o benchmark indicar ordens de grandeza maiores/menores, ajuste as faixas por escopo (dados, receita, downtime, compliance).")
+                    md("</details>")
+                    md("")
                     flush(force=True)
         except Exception:
             pass
