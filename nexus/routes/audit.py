@@ -79,11 +79,28 @@ def start_audit():
 
     # Feature gating: require active subscription (trialing counts as active).
     sub = Subscription.query.filter_by(org_id=current_user.org_id).first()
+    # If a subscription record doesn't exist (older orgs / manual DB), create a trial automatically
+    # so audits don't silently "do nothing".
+    if sub is None:
+        try:
+            sub = Subscription(org_id=current_user.org_id, status="trialing")
+            db.session.add(sub)
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+            sub = None
     if current_user.is_admin:
         sim_sub = (session.get("sim_sub_status") or "").strip().lower()
         if sim_sub:
             sub = sub or Subscription(org_id=current_user.org_id)
             sub.status = sim_sub
+        # Admin convenience: if subscription exists but is inactive/blank, force trialing
+        if sub and not is_subscription_active(sub) and not sim_sub:
+            try:
+                sub.status = "trialing"
+                db.session.commit()
+            except Exception:
+                db.session.rollback()
     if not is_subscription_active(sub):
         return redirect(url_for("dashboard.home", billing="required"))
 
@@ -118,7 +135,7 @@ def start_audit():
         enqueue_audit(audit.id)
     except Exception:
         audit.status = "error"
-        audit.logs = (audit.logs or "") + "ERRO: falha ao enfileirar job (REDIS_URL/worker).\\n"
+        audit.logs = (audit.logs or "") + "ERROR: failed to enqueue job (check REDIS_URL/worker).\\n"
         db.session.commit()
     return redirect(url_for("audit.view_audit", audit_id=audit.id))
 

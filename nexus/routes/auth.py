@@ -50,6 +50,27 @@ def register_post():
         flash("Please provide organization, email, and password (min 8 chars).", "error")
         return redirect(url_for("auth.register"))
 
+    if User.query.filter_by(email=email).first():
+        flash("Email already registered.", "error")
+        return redirect(url_for("auth.register"))
+
+    try:
+        org = Organization(name=org_name)
+        db.session.add(org)
+        db.session.flush()
+        user = User(org_id=org.id, email=email, role="admin")
+        user.set_password(password)
+        db.session.add(user)
+        # Default: trial enabled
+        db.session.add(Subscription(org_id=org.id, status="trialing"))
+        db.session.commit()
+        login_user(user)
+        return redirect(url_for("dashboard.home"))
+    except Exception:
+        db.session.rollback()
+        flash("Failed to create account. Please try again.", "error")
+        return redirect(url_for("auth.register"))
+
 
 @bp.get("/oauth/<provider>")
 def oauth_start(provider: str):
@@ -99,8 +120,19 @@ def oauth_callback(provider: str):
     email = ""
     try:
         if provider == "google":
-            userinfo = client.parse_id_token(token)
+            # Preferred: ID token claims (fast)
+            try:
+                userinfo = client.parse_id_token(token) or {}
+            except Exception:
+                userinfo = {}
             email = (userinfo.get("email") or "").strip().lower()
+            # Fallback: userinfo endpoint (more reliable across gateways/proxies)
+            if not email:
+                try:
+                    info = client.get("userinfo").json() or {}
+                    email = (info.get("email") or "").strip().lower()
+                except Exception:
+                    email = ""
         elif provider == "github":
             user = client.get("user").json()
             email = (user.get("email") or "").strip().lower()
@@ -142,24 +174,3 @@ def oauth_callback(provider: str):
     except Exception:
         db.session.rollback()
         flash("Failed to create account via OAuth. Please try again.", "error")
-        return redirect(url_for("auth.login"))
-    if User.query.filter_by(email=email).first():
-        flash("E-mail já cadastrado.", "error")
-        return redirect(url_for("auth.register"))
-
-    try:
-        org = Organization(name=org_name)
-        db.session.add(org)
-        db.session.flush()
-        user = User(org_id=org.id, email=email, role="admin")
-        user.set_password(password)
-        db.session.add(user)
-        # Default: trial enabled. You can switch to strict paid-only by setting this to inactive.
-        db.session.add(Subscription(org_id=org.id, status="trialing"))
-        db.session.commit()
-        login_user(user)
-        return redirect(url_for("dashboard.home"))
-    except Exception:
-        db.session.rollback()
-        flash("Erro ao criar conta. Verifique configuração do banco e tente novamente.", "error")
-        return redirect(url_for("auth.register"))
