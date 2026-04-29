@@ -35,6 +35,10 @@ def _allow_global_admin_view() -> bool:
     return str(os.getenv("ADMIN_GLOBAL_USERS", "0") or "0").strip().lower() in ("1", "true", "yes", "on")
 
 
+def _master_email() -> str:
+    return (os.getenv("MASTER_ADMIN_EMAIL", "") or "").strip().lower()
+
+
 def _mask(s: str, keep: int = 4) -> str:
     if not s:
         return ""
@@ -432,9 +436,19 @@ def admin_users():
     sub_statuses = ["inactive", "trialing", "active", "past_due", "canceled"]
     roles = ["member", "admin"]
 
+    # Counts / admin distribution
+    total_users = len(users)
+    admin_users_count = sum(1 for u in users if str(getattr(u, "role", "") or "").lower() == "admin")
+    member_users_count = total_users - admin_users_count
+    admin_count_by_org: dict[str, int] = {}
+    for u in users:
+        if str(getattr(u, "role", "") or "").lower() == "admin":
+            admin_count_by_org[u.org_id] = admin_count_by_org.get(u.org_id, 0) + 1
+
     return render_template(
         "admin/users.html",
         master=global_view,
+        master_email=_master_email(),
         orgs=orgs,
         users=users,
         org_map=org_map,
@@ -442,7 +456,71 @@ def admin_users():
         plan_tiers=plan_tiers,
         sub_statuses=sub_statuses,
         roles=roles,
+        total_users=total_users,
+        admin_users_count=admin_users_count,
+        member_users_count=member_users_count,
+        admin_count_by_org=admin_count_by_org,
     )
+
+
+@bp.post("/admin/user/create")
+@login_required
+@require_admin
+def admin_user_create():
+    """
+    Create a new user.
+    - If global view: can choose org_id or create a new org.
+    - Else: creates inside current org only.
+    """
+    global_view = _is_master_admin() or _allow_global_admin_view()
+    email = (request.form.get("email") or "").strip().lower()
+    password = request.form.get("password") or ""
+    role = (request.form.get("role") or "member").strip().lower()
+    org_id = (request.form.get("org_id") or "").strip()
+    org_name = (request.form.get("org_name") or "").strip()
+
+    if not email or "@" not in email:
+        flash("Invalid email.", "error")
+        return redirect(url_for("admin.admin_users"))
+    if len(password) < 8:
+        flash("Password must be at least 8 characters.", "error")
+        return redirect(url_for("admin.admin_users"))
+    if role not in ("admin", "member"):
+        role = "member"
+
+    if User.query.filter_by(email=email).first():
+        flash("Email already registered.", "error")
+        return redirect(url_for("admin.admin_users"))
+
+    try:
+        if not global_view:
+            org_id = current_user.org_id
+        else:
+            # If master wants a brand new org, create it.
+            if not org_id:
+                if not org_name:
+                    flash("Choose an organization or provide org_name.", "error")
+                    return redirect(url_for("admin.admin_users"))
+                org = Organization(name=org_name)
+                db.session.add(org)
+                db.session.flush()
+                org_id = org.id
+                # Ensure subscription exists
+                db.session.add(Subscription(org_id=org_id, status="trialing", plan_tier="free"))
+            else:
+                # Ensure org exists
+                Organization.query.filter_by(id=org_id).first_or_404()
+
+        u = User(org_id=org_id, email=email, role=role)
+        u.set_password(password)
+        db.session.add(u)
+        db.session.commit()
+        flash("User created.", "ok")
+    except Exception as e:
+        db.session.rollback()
+        flash(f"Create failed: {type(e).__name__}: {e}", "error")
+
+    return redirect(url_for("admin.admin_users"))
 
 
 @bp.post("/admin/user/<user_id>/role")

@@ -10,14 +10,58 @@
         <div class="section-title">Admin Users</div>
         <div class="body-text mt-2">
           {% if master %}
-            Global view enabled.
+            Global view enabled. Master={{ master_email or "—" }}.
           {% else %}
-            This view shows only your organization. To see all users, enable <span class="mono">ADMIN_GLOBAL_USERS=1</span> or set <span class="mono">MASTER_ADMIN_EMAIL</span>.
+            This view shows only your organization.
           {% endif %}
         </div>
       </div>
       <a class="btn-secondary" href="{{ url_for('admin.admin_home') }}">Back</a>
     </div>
+  </div>
+
+  <div class="mt-6 grid grid-cols-1 md:grid-cols-3 gap-6">
+    <div class="card">
+      <div class="text-[11px] text-muted">Total users</div>
+      <div class="text-2xl font-extrabold mt-1">{{ total_users }}</div>
+    </div>
+    <div class="card">
+      <div class="text-[11px] text-muted">Admins</div>
+      <div class="text-2xl font-extrabold mt-1">{{ admin_users_count }}</div>
+      <div class="text-[11px] text-muted mt-1">Master admin is special; role=admin is regular admin.</div>
+    </div>
+    <div class="card">
+      <div class="text-[11px] text-muted">Members</div>
+      <div class="text-2xl font-extrabold mt-1">{{ member_users_count }}</div>
+    </div>
+  </div>
+
+  <div class="mt-6 card">
+    <div class="section-title">Create user</div>
+    <div class="body-text mt-2">Create a new account and choose role. (Password min 8 chars.)</div>
+    <form class="mt-4 grid grid-cols-1 md:grid-cols-5 gap-4" method="post" action="{{ url_for('admin.admin_user_create') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <input name="email" class="input text-sm" placeholder="email@domain.com" />
+      <input name="password" class="input text-sm" placeholder="temporary password" />
+      <select name="role" class="input text-sm">
+        <option value="member">member</option>
+        <option value="admin">admin</option>
+      </select>
+      {% if master %}
+        <select name="org_id" class="input text-sm">
+          <option value="">(new org)</option>
+          {% for o in orgs %}
+            <option value="{{ o.id }}">{{ o.name }}</option>
+          {% endfor %}
+        </select>
+        <input name="org_name" class="input text-sm" placeholder="org name (if new org)" />
+      {% else %}
+        <div class="md:col-span-2 body-text text-xs text-muted flex items-center">
+          Creates inside your organization.
+        </div>
+      {% endif %}
+      <button class="btn-primary">Create</button>
+    </form>
   </div>
 
   <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
@@ -43,6 +87,9 @@
                 <td class="p-3">
                   <div class="font-semibold">{{ o.name }}</div>
                   <div class="mono text-[11px] text-muted">{{ o.id }}</div>
+                  <div class="text-[11px] text-muted mt-1">
+                    admins={{ admin_count_by_org.get(o.id, 0) }}
+                  </div>
                 </td>
                 <td class="p-3 mono text-[12px]">{{ o.created_utc }}</td>
                 <td class="p-3">
@@ -98,6 +145,9 @@
                 <td class="p-3">
                   <div class="font-semibold">{{ u.email }}</div>
                   <div class="mono text-[11px] text-muted">{{ u.id }}</div>
+                  {% if master_email and (u.email or '')|lower == master_email %}
+                    <div class="inline-flex mt-2 text-[10px] px-2 py-1 rounded-full bg-brand-weak text-brand-2 border border-brand">MASTER</div>
+                  {% endif %}
                 </td>
                 <td class="p-3">
                   <div class="text-xs font-semibold">{{ o.name if o else u.org_id }}</div>
