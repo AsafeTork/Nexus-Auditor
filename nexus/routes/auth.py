@@ -126,13 +126,21 @@ def oauth_callback(provider: str):
             except Exception:
                 userinfo = {}
             email = (userinfo.get("email") or "").strip().lower()
-            # Fallback: userinfo endpoint (more reliable across gateways/proxies)
+
+            # Fallbacks: userinfo endpoints (more reliable across providers/proxies)
             if not email:
-                try:
-                    info = client.get("userinfo").json() or {}
-                    email = (info.get("email") or "").strip().lower()
-                except Exception:
-                    email = ""
+                for endpoint in (
+                    "userinfo",
+                    "https://openidconnect.googleapis.com/v1/userinfo",
+                    "https://www.googleapis.com/oauth2/v3/userinfo",
+                ):
+                    try:
+                        info = client.get(endpoint).json() or {}
+                        email = (info.get("email") or "").strip().lower()
+                        if email:
+                            break
+                    except Exception:
+                        continue
         elif provider == "github":
             user = client.get("user").json()
             email = (user.get("email") or "").strip().lower()
@@ -150,6 +158,15 @@ def oauth_callback(provider: str):
         email = ""
 
     if not email:
+        # Avoid leaking tokens to end-users; log only high-level debug for server logs.
+        try:
+            import uuid
+
+            rid = str(uuid.uuid4())
+            safe_keys = sorted([str(k) for k in (token or {}).keys()]) if isinstance(token, dict) else []
+            bp.logger.warning("oauth_email_missing request_id=%s provider=%s token_keys=%s", rid, provider, safe_keys)
+        except Exception:
+            rid = ""
         flash("Could not retrieve your email from the OAuth provider.", "error")
         return redirect(url_for("auth.login"))
 
