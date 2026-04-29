@@ -492,7 +492,10 @@ def main() -> None:
         redis_url = app.config["REDIS_URL"]
     conn = redis.from_url(redis_url)
     with Connection(conn):
-        worker = Worker([Queue("audits"), Queue("ui")])
+        # Pass explicit connection to avoid falling back to localhost in some environments.
+        q_audits = Queue("audits", connection=conn)
+        q_ui = Queue("ui", connection=conn)
+        worker = Worker([q_audits, q_ui], connection=conn)
         worker.work()
 
 
