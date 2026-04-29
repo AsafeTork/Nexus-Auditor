@@ -27,6 +27,14 @@ def _is_master_admin() -> bool:
     return bool(master) and (str(getattr(current_user, "email", "") or "").strip().lower() == master)
 
 
+def _allow_global_admin_view() -> bool:
+    """
+    If enabled, any admin can manage all users/orgs (not only MASTER_ADMIN_EMAIL).
+    Default: off.
+    """
+    return str(os.getenv("ADMIN_GLOBAL_USERS", "0") or "0").strip().lower() in ("1", "true", "yes", "on")
+
+
 def _mask(s: str, keep: int = 4) -> str:
     if not s:
         return ""
@@ -394,7 +402,8 @@ def admin_users():
     - Regular org admins see only their org.
     """
     master = _is_master_admin()
-    if master:
+    global_view = master or _allow_global_admin_view()
+    if global_view:
         orgs = Organization.query.order_by(Organization.created_utc.desc()).limit(500).all()
         users = User.query.order_by(User.created_utc.desc()).limit(2000).all()
         subs = Subscription.query.order_by(Subscription.created_utc.desc()).limit(1000).all()
@@ -412,7 +421,7 @@ def admin_users():
 
     return render_template(
         "admin/users.html",
-        master=master,
+        master=global_view,
         orgs=orgs,
         users=users,
         org_map=org_map,
@@ -427,7 +436,7 @@ def admin_users():
 @login_required
 @require_admin
 def admin_user_set_role(user_id: str):
-    master = _is_master_admin()
+    master = _is_master_admin() or _allow_global_admin_view()
     u = User.query.filter_by(id=user_id).first_or_404()
     if (not master) and u.org_id != current_user.org_id:
         flash("Forbidden.", "error")
@@ -455,7 +464,7 @@ def admin_user_set_role(user_id: str):
 @login_required
 @require_admin
 def admin_user_delete(user_id: str):
-    master = _is_master_admin()
+    master = _is_master_admin() or _allow_global_admin_view()
     u = User.query.filter_by(id=user_id).first_or_404()
     if (not master) and u.org_id != current_user.org_id:
         flash("Forbidden.", "error")
@@ -487,7 +496,7 @@ def admin_user_delete(user_id: str):
 @login_required
 @require_admin
 def admin_org_set_subscription(org_id: str):
-    master = _is_master_admin()
+    master = _is_master_admin() or _allow_global_admin_view()
     if (not master) and org_id != current_user.org_id:
         flash("Forbidden.", "error")
         return redirect(url_for("admin.admin_users"))

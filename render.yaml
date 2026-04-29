@@ -67,6 +67,8 @@ services:
         sync: false
       - key: DASH_CACHE_TTL_S
         sync: false
+      - key: ADMIN_GLOBAL_USERS
+        sync: false
     startCommand: bash bin/start_web.sh
 
   - type: worker
@@ -130,5 +132,7 @@ services:
       - key: LLM_MODELS_ALLOWLIST
         sync: false
       - key: DASH_CACHE_TTL_S
+        sync: false
+      - key: ADMIN_GLOBAL_USERS
         sync: false
     startCommand: python -m nexus.worker

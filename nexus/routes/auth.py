@@ -58,7 +58,8 @@ def register_post():
         org = Organization(name=org_name)
         db.session.add(org)
         db.session.flush()
-        user = User(org_id=org.id, email=email, role="admin")
+        # Default new accounts to "member" (no admin console).
+        user = User(org_id=org.id, email=email, role="member")
         user.set_password(password)
         db.session.add(user)
         # Default: trial enabled
@@ -180,7 +181,8 @@ def oauth_callback(provider: str):
         org = Organization(name=f"Org for {email}")
         db.session.add(org)
         db.session.flush()
-        user = User(org_id=org.id, email=email, role="admin")
+        # Default OAuth-created users to "member" (no admin console).
+        user = User(org_id=org.id, email=email, role="member")
         # random password placeholder (OAuth users won't use it normally)
         user.set_password("oauth-user-placeholder-" + email)
         db.session.add(user)

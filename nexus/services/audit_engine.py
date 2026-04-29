@@ -644,8 +644,10 @@ def call_llm_non_stream(
     if cached:
         return cached
 
-    last_exc: Exception | None = None
-    for attempt in range(3):
+    last_exc = None
+    max_attempts = int(os.getenv("LLM_NONSTREAM_RETRIES", "4") or "4")
+    max_attempts = max(2, min(8, max_attempts))
+    for attempt in range(max_attempts):
         try:
             r = _HTTP.post(url, headers=headers, json=payload, timeout=timeout_s)
             r.encoding = "utf-8"
