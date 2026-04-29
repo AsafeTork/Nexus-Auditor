@@ -109,7 +109,12 @@ def create_app() -> Flask:
     from .routes.settings import bp as settings_bp
     from .routes.dossier import bp as dossier_bp
     from .routes.admin import bp as admin_bp
-    from .routes.monitor import bp as monitor_bp
+    # NOTE: some deployments may not include optional blueprints (e.g., partial patches).
+    # Keep the app bootable even if monitoring routes are missing.
+    try:
+        from .routes.monitor import bp as monitor_bp  # type: ignore
+    except Exception:
+        monitor_bp = None
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(dashboard_bp)
@@ -118,7 +123,8 @@ def create_app() -> Flask:
     app.register_blueprint(settings_bp)
     app.register_blueprint(dossier_bp)
     app.register_blueprint(admin_bp)
-    app.register_blueprint(monitor_bp)
+    if monitor_bp is not None:
+        app.register_blueprint(monitor_bp)
 
     @app.before_request
     def enforce_canonical_host():
