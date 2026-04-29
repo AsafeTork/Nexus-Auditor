@@ -23,7 +23,11 @@ from .services.audit_engine import (
     stream_llm_text,
 )
 from .services.research import get_or_refresh_attack_benchmarks
-from .services.monitoring import persist_monitoring_history
+try:
+    # Optional: continuous monitoring modules may be missing in some deployments.
+    from .services.monitoring import persist_monitoring_history  # type: ignore
+except Exception:
+    persist_monitoring_history = None  # type: ignore
 from .services.ui_review import read_text_files, summarize_screenshot
 
 
@@ -611,7 +615,8 @@ def run_audit_job(audit_id: str) -> None:
 
         # Continuous monitoring history + diff (best-effort, non-blocking for audits).
         try:
-            persist_monitoring_history(audit)
+            if persist_monitoring_history:
+                persist_monitoring_history(audit)
         except Exception:
             pass
 
