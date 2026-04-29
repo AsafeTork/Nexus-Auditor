@@ -1,0 +1,91 @@
+{% extends "layout.html" %}
+{% set title = "Overview" %}
+{% set subtitle = "Read-only visibility across sites" %}
+{% set page_max_w = "max-w-7xl" %}
+
+{% block page_actions %}
+  <a class="btn-secondary" href="{{ url_for('admin.admin_home') }}">Console</a>
+  <a class="btn-secondary" href="{{ url_for('admin.admin_overview_json') }}">JSON</a>
+{% endblock %}
+
+{% block content %}
+<div class="letterhead">
+  <section class="card card-focus">
+    <div class="section-label">Agent visibility</div>
+    <div class="section-title mt-2">Sites overview</div>
+    <div class="body-text mt-2">
+      Último monitoring run + contagem de findings + sinais de decision/verification (somente leitura).
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="section-label">Data</div>
+    <div class="section-title mt-2">Targets</div>
+    <div class="mt-4 overflow-auto border border-app rounded-xl">
+      <table class="w-full text-sm">
+        <thead class="text-xs text-muted bg-surface2">
+          <tr>
+            <th class="text-left p-3">Site</th>
+            <th class="text-left p-3">Last run</th>
+            <th class="text-right p-3">Open</th>
+            <th class="text-right p-3">Resolved</th>
+            <th class="text-right p-3">Fix %</th>
+            <th class="text-right p-3">Avg time</th>
+            <th class="text-right p-3">Regressions</th>
+            <th class="text-center p-3">decision_json</th>
+            <th class="text-center p-3">verification_json</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in rows %}
+            <tr class="border-t border-app">
+              <td class="p-3">
+                <div class="font-semibold">{{ r.site.name }}</div>
+                <div class="mono text-[11px] text-muted">{{ r.site.base_url }}</div>
+                <div class="mono text-[11px] text-muted">site_id={{ r.site.id }}</div>
+              </td>
+              <td class="p-3">
+                {% if r.last_run.id %}
+                  <div class="mono text-xs">{{ r.last_run.created_utc }}</div>
+                  <div class="text-xs mt-1">
+                    <span class="badge {% if r.last_run.status=='done' %}badge-ok{% else %}badge-muted{% endif %}">
+                      <span class="dot" style="background:{% if r.last_run.status=='done' %}#34d399{% else %}#94a3b8{% endif %}"></span>
+                      {{ r.last_run.status }}
+                    </span>
+                  </div>
+                {% else %}
+                  <div class="text-xs text-muted">(no monitoring runs)</div>
+                {% endif %}
+              </td>
+              <td class="p-3 text-right mono text-xs">{{ r.open_findings }}</td>
+              <td class="p-3 text-right mono text-xs">{{ r.resolved_findings }}</td>
+              <td class="p-3 text-right mono text-xs">{{ r.fix_success_rate }}%</td>
+              <td class="p-3 text-right mono text-xs">
+                {% if r.avg_time_to_fix_s and r.avg_time_to_fix_s > 0 %}
+                  {{ r.avg_time_to_fix_s }}s
+                {% else %}
+                  —
+                {% endif %}
+              </td>
+              <td class="p-3 text-right mono text-xs">{{ r.regression_count }}</td>
+              <td class="p-3 text-center">
+                <span class="badge {% if r.has_decision_json %}badge-ok{% else %}badge-muted{% endif %}">
+                  {{ "true" if r.has_decision_json else "false" }}
+                </span>
+              </td>
+              <td class="p-3 text-center">
+                <span class="badge {% if r.has_verification_json %}badge-ok{% else %}badge-muted{% endif %}">
+                  {{ "true" if r.has_verification_json else "false" }}
+                </span>
+              </td>
+            </tr>
+          {% else %}
+            <tr><td class="p-3 text-muted" colspan="9">(no sites)</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>
+{% endblock %}
+

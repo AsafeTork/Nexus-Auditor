@@ -25,6 +25,13 @@
         <span>Console</span>
       </a>
 
+      <a class="nav-link {% if ep.startswith('admin.admin_overview') %}nav-link-active{% endif %}"
+         {% if ep.startswith('admin.admin_overview') %}aria-current="page"{% endif %}
+         href="{{ url_for('admin.admin_overview') }}">
+        <svg class="opacity-90" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 19V5m0 14h16M8 17V9m4 8V7m4 10v-6"/></svg>
+        <span>Overview</span>
+      </a>
+
       <a class="nav-link {% if ep.startswith('admin.ui_lab') %}nav-link-active{% endif %}"
          {% if ep.startswith('admin.ui_lab') %}aria-current="page"{% endif %}
          href="{{ url_for('admin.ui_lab') }}">
@@ -51,6 +58,13 @@
          href="{{ url_for('admin.admin_users') }}">
         <svg class="opacity-90" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 14a4 4 0 1 1-8 0 4 4 0 0 1 8 0Zm-14 8a6 6 0 0 1 20 0M20 8a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/></svg>
         <span>Users</span>
+      </a>
+
+      <a class="nav-link {% if ep.startswith('monitor.') %}nav-link-active{% endif %}"
+         {% if ep.startswith('monitor.') %}aria-current="page"{% endif %}
+         href="{{ url_for('monitor.monitoring_home') }}">
+        <svg class="opacity-90" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12h3l3 8 4-16 3 8h5"/></svg>
+        <span>Monitoring</span>
       </a>
     </div>
   {% endif %}

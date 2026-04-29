@@ -10,10 +10,21 @@ import redis
 import requests
 from flask import Blueprint, current_app, jsonify, render_template, request, redirect, url_for, flash, session
 from flask_login import login_required, current_user
-from sqlalchemy import text, func
+from sqlalchemy import text, func, case
 
 from .. import db
-from ..models import AuditEvent, AuditRun, Organization, Site, Subscription, User, is_org_admin
+from ..models import (
+    AuditEvent,
+    AuditRun,
+    MonitoringFinding,
+    MonitoringJob,
+    MonitoringRun,
+    Organization,
+    Site,
+    Subscription,
+    User,
+    is_org_admin,
+)
 from ..security import require_admin
 from ..services.queueing import enqueue_ui_lab
 from ..services.github import create_issue
@@ -180,6 +191,89 @@ def diagnostics_json():
     return jsonify(_diagnostics())
 
 
+def _build_overview_rows(org_id: str):
+    """
+    Read-only overview data per site (no pipeline changes).
+    """
+    sites = Site.query.filter_by(org_id=org_id).order_by(Site.created_utc.desc()).limit(500).all()
+
+    # Aggregate finding lifecycle counts per site (single query).
+    open_states = ["NEW", "PERSISTING", "REOPENED"]
+    agg = (
+        db.session.query(
+            MonitoringFinding.site_id.label("site_id"),
+            func.sum(case((MonitoringFinding.state == "RESOLVED", 1), else_=0)).label("resolved_count"),
+            func.sum(case((MonitoringFinding.state.in_(open_states), 1), else_=0)).label("open_count"),
+            func.sum(func.coalesce(MonitoringFinding.regression_count, 0)).label("regression_count"),
+            func.avg(
+                case((MonitoringFinding.resolution_time_s > 0, MonitoringFinding.resolution_time_s), else_=None)
+            ).label("avg_time_to_fix_s"),
+        )
+        .filter(MonitoringFinding.org_id == org_id)
+        .group_by(MonitoringFinding.site_id)
+        .all()
+    )
+    agg_map = {
+        str(r.site_id): {
+            "open": int(r.open_count or 0),
+            "resolved": int(r.resolved_count or 0),
+            "regressions": int(r.regression_count or 0),
+            "avg_time_s": int(r.avg_time_to_fix_s or 0),
+        }
+        for r in agg
+        if r and getattr(r, "site_id", None)
+    }
+
+    rows = []
+    for s in sites:
+        a = agg_map.get(s.id, {"open": 0, "resolved": 0, "regressions": 0, "avg_time_s": 0})
+        denom = max(1, int(a["open"]) + int(a["resolved"]))
+        fix_success_rate = round((int(a["resolved"]) / denom) * 100.0, 2)
+
+        last_run = (
+            MonitoringRun.query.filter_by(org_id=org_id, site_id=s.id)
+            .order_by(MonitoringRun.created_utc.desc())
+            .first()
+        )
+        has_decision = bool(last_run and (last_run.decision_json or "").strip())
+        has_verification = bool(last_run and (last_run.verification_json or "").strip())
+
+        rows.append(
+            {
+                "site": {"id": s.id, "name": s.name, "base_url": s.base_url},
+                "last_run": {
+                    "id": getattr(last_run, "id", "") if last_run else "",
+                    "created_utc": getattr(last_run, "created_utc", "") if last_run else "",
+                    "status": getattr(last_run, "status", "") if last_run else "",
+                },
+                "open_findings": int(a["open"]),
+                "resolved_findings": int(a["resolved"]),
+                "fix_success_rate": fix_success_rate,
+                "avg_time_to_fix_s": int(a["avg_time_s"]),
+                "regression_count": int(a["regressions"]),
+                "has_decision_json": has_decision,
+                "has_verification_json": has_verification,
+            }
+        )
+    return rows
+
+
+@bp.get("/admin/overview")
+@login_required
+@require_admin
+def admin_overview():
+    rows = _build_overview_rows(current_user.org_id)
+    return render_template("admin/overview.html", rows=rows)
+
+
+@bp.get("/admin/overview.json")
+@login_required
+@require_admin
+def admin_overview_json():
+    rows = _build_overview_rows(current_user.org_id)
+    return jsonify({"ok": True, "rows": rows})
+
+
 @bp.get("/admin/audits")
 @login_required
 @require_admin
@@ -228,7 +322,10 @@ def admin_audit_delete(audit_id: str):
 @require_admin
 def admin_audit_publish_github(audit_id: str):
     audit = AuditRun.query.filter_by(id=audit_id, org_id=current_user.org_id).first_or_404()
-    title = f"[Xentinel AI] {audit.target_domain or 'audit'} · {audit.id}"
+    from flask import current_app
+
+    app_name = (current_app.config.get("APP_NAME", "App") or "App").strip()
+    title = f"[{app_name}] {audit.target_domain or 'audit'} · {audit.id}"
     body = (
         f"## Relatório de Auditoria\n\n"
         f"**Audit ID:** `{audit.id}`\n"
