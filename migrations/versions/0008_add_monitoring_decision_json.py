@@ -1,6 +1,6 @@
 """add monitoring decision json
 
-Revision ID: 0008_monitoring_decision
+Revision ID: 0008_add_monitoring_decision_json
 Revises: 0007_add_monitoring_jobs
 Create Date: 2026-04-29
 """
@@ -10,7 +10,7 @@ from __future__ import annotations
 from alembic import op
 import sqlalchemy as sa
 
-revision = "0008_monitoring_decision"
+revision = "0008_add_monitoring_decision_json"
 down_revision = "0007_add_monitoring_jobs"
 branch_labels = None
 depends_on = None
@@ -25,3 +25,4 @@ def downgrade() -> None:
         op.drop_column("monitoring_runs", "decision_json")
     except Exception:
         pass
+
