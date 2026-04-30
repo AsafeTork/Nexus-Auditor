@@ -476,18 +476,27 @@ def run_audit_job(audit_id: str) -> None:
                     content = final or draft or ""
                 except Exception as e:
                     log(layer, "WARN", f"Reflexão falhou, fallback non-stream simples: {type(e).__name__}: {e}")
-                    content = call_llm_non_stream(
-                        base_url_v1=base_url_v1,
-                        api_key=api_key,
-                        model=model,
-                        temperature=0.2,
-                        system_prompt=system_prompt,
-                        user_prompt=prompt,
-                        timeout_s=140,
-                    )
+                    try:
+                        content = call_llm_non_stream(
+                            base_url_v1=base_url_v1,
+                            api_key=api_key,
+                            model=model,
+                            temperature=0.2,
+                            system_prompt=system_prompt,
+                            user_prompt=prompt,
+                            timeout_s=120,
+                        )
+                    except Exception as e2:
+                        # Treat as an essential LLM failure (avoid "running forever" / false success).
+                        log(layer, "ERROR", f"Falha no provedor LLM (fallback): {type(e2).__name__}: {e2}")
+                        llm_failed_any = True
+                        consecutive_llm_failures += 1
+                        audit.status = "error"
+                        break
 
                 if not content.strip():
                     log(layer, "ERROR", "Resposta vazia do provedor LLM.")
+                    llm_failed_any = True
                     consecutive_llm_failures += 1
                     if consecutive_llm_failures >= max_consecutive_llm_failures:
                         log("system", "ERROR", f"Abortando auditoria: provedor LLM falhou repetidamente (>={max_consecutive_llm_failures}).")
