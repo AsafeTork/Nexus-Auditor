@@ -9,15 +9,39 @@
 
 {% block content %}
 <div class="letterhead">
-  <section class="card card-focus">
-    <div class="section-label">Agent control plane</div>
-    <div class="section-title mt-2">Sites</div>
-    <div class="body-text mt-2">Visibilidade por target: status, top prioridades, prova de valor e confiança (somente leitura).</div>
+  <section class="glass-card">
+    <div class="eyebrow">Agent control plane</div>
+    <div class="mt-4 page-title">Show risk, next action and proof without making the buyer read raw logs.</div>
+    <div class="mt-3 page-lead">
+      Esta tela foi reformatada para parecer produto vendável: status claro, prioridades acionáveis, métricas de valor e alertas de confiança por site.
+    </div>
+    <div class="mt-6 metric-row cols-4">
+      <div class="metric-tile">
+        <div class="metric-label">Tracked sites</div>
+        <div class="metric-value">{{ cards|length }}</div>
+        <div class="metric-foot">Targets visible in the control plane.</div>
+      </div>
+      <div class="metric-tile">
+        <div class="metric-label">Sites with priority</div>
+        <div class="metric-value">{{ cards|selectattr('top3')|list|length }}</div>
+        <div class="metric-foot">At least one visible next action.</div>
+      </div>
+      <div class="metric-tile">
+        <div class="metric-label">Sites with trust warning</div>
+        <div class="metric-value text-warning">{{ cards|selectattr('trust_warning')|list|length }}</div>
+        <div class="metric-foot">Coverage issues that reduce certainty.</div>
+      </div>
+      <div class="metric-tile">
+        <div class="metric-label">Status model</div>
+        <div class="metric-value">3</div>
+        <div class="metric-foot">Protected, At risk, Critical.</div>
+      </div>
+    </div>
   </section>
 
   <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
     {% for c in cards %}
-      <section class="card">
+      <section class="card card-hover">
         <div class="flex items-start justify-between gap-6">
           <div class="min-w-0">
             <div class="section-title truncate">{{ c.site.name }}</div>
@@ -41,17 +65,31 @@
         </div>
 
         {% if c.overall.status != "NO_DATA" %}
-          <div class="mt-4 grid grid-cols-2 gap-3 text-xs">
-            <div class="meta-chip">confidence <strong class="mono">{{ c.overall.confidence if c.overall.confidence is not none else "—" }}</strong></div>
-            <div class="meta-chip">coverage <strong class="mono">{{ c.overall.coverage_quality }}</strong></div>
-            <div class="meta-chip">strictness <strong class="mono">{{ c.overall.strictness }}</strong></div>
-            <div class="meta-chip">instability <strong class="mono">{{ c.overall.instability_score }}</strong></div>
+          <div class="mt-4 metric-row">
+            <div class="metric-tile">
+              <div class="metric-label">Confidence</div>
+              <div class="metric-value text-2xl">{{ c.overall.confidence if c.overall.confidence is not none else "—" }}</div>
+            </div>
+            <div class="metric-tile">
+              <div class="metric-label">Coverage</div>
+              <div class="metric-value text-2xl">{{ c.overall.coverage_quality }}</div>
+            </div>
+            <div class="metric-tile">
+              <div class="metric-label">Strictness</div>
+              <div class="metric-value text-2xl">{{ c.overall.strictness }}</div>
+            </div>
+            <div class="metric-tile">
+              <div class="metric-label">Instability</div>
+              <div class="metric-value text-2xl">{{ c.overall.instability_score }}</div>
+            </div>
           </div>
         {% endif %}
 
         {% if c.trust_warning %}
-          <div class="mt-4 text-xs text-amber-200">
-            ⚠ Baixa cobertura: resultados podem não ser confiáveis
+          <div class="mt-4 soft-panel">
+            <div class="text-xs text-amber-200">
+              ⚠ Baixa cobertura: resultados podem não ser confiáveis
+            </div>
           </div>
         {% endif %}
 
@@ -60,7 +98,7 @@
           {% if c.top3 and c.top3|length > 0 %}
             <div class="mt-3 flex flex-col gap-3">
               {% for it in c.top3 %}
-                <div class="border border-app rounded-xl p-3 bg-surface2">
+                <div class="soft-panel">
                   <div class="flex items-start justify-between gap-4">
                     <div class="min-w-0">
                       <div class="mono text-xs font-semibold truncate">{{ it.finding_key or "(no key)" }}</div>
@@ -86,28 +124,51 @@
               {% endfor %}
             </div>
           {% else %}
-            <div class="mt-2 text-xs text-muted">(no decision priorities yet)</div>
+            <div class="empty-state mt-3">
+              <div class="empty-state-title">No decision priorities yet</div>
+              <div class="empty-state-copy">Quando o sistema ainda não gerou prioridades, o valor percebido cai. Rode um scan válido para alimentar este card.</div>
+            </div>
           {% endif %}
         </div>
 
         <div class="mt-6">
           <div class="text-[11px] text-muted">Prova de valor</div>
-          <div class="mt-3 grid grid-cols-2 gap-3 text-xs">
-            <div class="meta-chip">open <strong class="mono">{{ c.value.open_findings }}</strong></div>
-            <div class="meta-chip">resolved <strong class="mono">{{ c.value.resolved_findings }}</strong></div>
-            <div class="meta-chip">fix % <strong class="mono">{{ c.value.fix_success_rate }}%</strong></div>
-            <div class="meta-chip">avg time <strong class="mono">{% if c.value.avg_time_to_fix_s and c.value.avg_time_to_fix_s>0 %}{{ c.value.avg_time_to_fix_s }}s{% else %}—{% endif %}</strong></div>
-            <div class="meta-chip">regressions <strong class="mono">{{ c.value.regression_count }}</strong></div>
-            <div class="meta-chip">decision/verif <strong class="mono">{{ "Y" if c.flags.has_decision_json else "N" }}/{{ "Y" if c.flags.has_verification_json else "N" }}</strong></div>
+          <div class="mt-3 metric-row">
+            <div class="metric-tile">
+              <div class="metric-label">Open</div>
+              <div class="metric-value text-2xl">{{ c.value.open_findings }}</div>
+            </div>
+            <div class="metric-tile">
+              <div class="metric-label">Resolved</div>
+              <div class="metric-value text-2xl">{{ c.value.resolved_findings }}</div>
+            </div>
+            <div class="metric-tile">
+              <div class="metric-label">Fix success</div>
+              <div class="metric-value text-2xl">{{ c.value.fix_success_rate }}%</div>
+            </div>
+            <div class="metric-tile">
+              <div class="metric-label">Avg time</div>
+              <div class="metric-value text-2xl">{% if c.value.avg_time_to_fix_s and c.value.avg_time_to_fix_s>0 %}{{ c.value.avg_time_to_fix_s }}s{% else %}—{% endif %}</div>
+            </div>
+            <div class="metric-tile">
+              <div class="metric-label">Regressions</div>
+              <div class="metric-value text-2xl">{{ c.value.regression_count }}</div>
+            </div>
+            <div class="metric-tile">
+              <div class="metric-label">Decision / verify</div>
+              <div class="metric-value text-2xl">{{ "Y" if c.flags.has_decision_json else "N" }}/{{ "Y" if c.flags.has_verification_json else "N" }}</div>
+            </div>
           </div>
         </div>
       </section>
     {% else %}
       <section class="card">
-        <div class="text-sm text-muted">(no sites)</div>
+        <div class="empty-state">
+          <div class="empty-state-title">No sites</div>
+          <div class="empty-state-copy">The control plane becomes persuasive only when at least one target has history, priorities and proof of value.</div>
+        </div>
       </section>
     {% endfor %}
   </div>
 </div>
 {% endblock %}
-

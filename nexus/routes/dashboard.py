@@ -11,6 +11,7 @@ from flask_login import login_required, current_user
 from .. import db
 from ..models import Organization, Site, AuditRun, Subscription
 from ..services.cache import cache_get_json, cache_set_json
+from ..services.control_plane import build_agent_cards
 
 bp = Blueprint("dashboard", __name__)
 
@@ -80,15 +81,33 @@ def home():
         dash_ttl = max(10, min(600, dash_ttl))
         cache_set_json(cache_key, {"status_counts": status_counts, "trend": trend, "total_audits": total_audits}, ttl_s=dash_ttl)
 
+    priority_cards = build_agent_cards(current_user.org_id, limit=6)
+    visible_priorities = [c for c in priority_cards if (c.get("top3") or [])]
+    featured_cards = visible_priorities[:3] if visible_priorities else priority_cards[:3]
+    provider = (getattr(org, "llm_provider", "") or os.getenv("LLM_PROVIDER", "openai_compatible")).strip()
+    provider_base = (getattr(org, "llm_base_url_v1", "") or os.getenv("LLM_BASE_URL_V1", "")).strip()
+    provider_model = (getattr(org, "llm_model", "") or os.getenv("LLM_DEFAULT_MODEL", "")).strip()
+    provider_has_key = bool((getattr(org, "llm_api_key", "") or os.getenv("LLM_API_KEY", "")).strip())
+    provider_ready = bool(provider and provider_base and provider_model and provider_has_key)
+
     return render_template(
         "dashboard/home.html",
         sites=sites,
         audits=audits,
         sub=sub,
         llm_defaults={
+            "provider": provider,
             "base_url_v1": (getattr(org, "llm_base_url_v1", "") or "").strip(),
             "model": (getattr(org, "llm_model", "") or "").strip(),
         },
+        provider_state={
+            "provider": provider,
+            "base_url_v1": provider_base,
+            "model": provider_model,
+            "ready": provider_ready,
+        },
+        featured_cards=featured_cards,
+        priority_total=len(visible_priorities),
         kpi={
             "sites": sites_count,
             "audits": total_audits,
@@ -98,3 +117,10 @@ def home():
         trend=trend,
         status_counts=status_counts,
     )
+
+
+@bp.get("/priorities")
+@login_required
+def priorities():
+    cards = build_agent_cards(current_user.org_id, limit=250)
+    return render_template("dashboard/priorities.html", cards=cards)

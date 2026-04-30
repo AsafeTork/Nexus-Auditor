@@ -17,19 +17,26 @@ depends_on = None
 
 
 def upgrade() -> None:
-    op.create_table(
-        "site_contexts",
-        sa.Column("id", sa.String(length=36), primary_key=True),
-        sa.Column("org_id", sa.String(length=36), sa.ForeignKey("orgs.id"), nullable=False),
-        sa.Column("site_id", sa.String(length=36), sa.ForeignKey("sites.id"), nullable=False),
-        sa.Column("complexity", sa.String(length=16), server_default="MEDIUM"),
-        sa.Column("coverage_quality", sa.String(length=16), server_default="MEDIUM"),
-        sa.Column("instability_score", sa.Integer(), server_default="0"),
-        sa.Column("last_updated_utc", sa.String(length=40)),
-        sa.Column("created_utc", sa.String(length=40)),
-    )
-    op.create_index("ix_site_contexts_org_id", "site_contexts", ["org_id"], unique=False)
-    op.create_index("ix_site_contexts_site_id", "site_contexts", ["site_id"], unique=False)
+    bind = op.get_bind()
+    insp = sa.inspect(bind)
+    if not insp.has_table("site_contexts"):
+        op.create_table(
+            "site_contexts",
+            sa.Column("id", sa.String(length=36), primary_key=True),
+            sa.Column("org_id", sa.String(length=36), sa.ForeignKey("orgs.id"), nullable=False),
+            sa.Column("site_id", sa.String(length=36), sa.ForeignKey("sites.id"), nullable=False),
+            sa.Column("complexity", sa.String(length=16), server_default="MEDIUM"),
+            sa.Column("coverage_quality", sa.String(length=16), server_default="MEDIUM"),
+            sa.Column("instability_score", sa.Integer(), server_default="0"),
+            sa.Column("last_updated_utc", sa.String(length=40)),
+            sa.Column("created_utc", sa.String(length=40)),
+        )
+        insp = sa.inspect(bind)
+    idx = {ix["name"] for ix in insp.get_indexes("site_contexts")} if insp.has_table("site_contexts") else set()
+    if "ix_site_contexts_org_id" not in idx:
+        op.create_index("ix_site_contexts_org_id", "site_contexts", ["org_id"], unique=False)
+    if "ix_site_contexts_site_id" not in idx:
+        op.create_index("ix_site_contexts_site_id", "site_contexts", ["site_id"], unique=False)
 
 
 def downgrade() -> None:
@@ -39,4 +46,3 @@ def downgrade() -> None:
         op.drop_table("site_contexts")
     except Exception:
         pass
-

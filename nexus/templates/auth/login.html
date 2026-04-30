@@ -5,16 +5,59 @@
   <div class="hidden md:block relative w-[47%] overflow-hidden">
     <img src="{{ url_for('static', filename='login_bg.jpg') }}" alt="" class="absolute inset-0 w-full h-full object-cover opacity-50" style="object-position: 15% 50%;"/>
     <div class="absolute inset-0" style="background: linear-gradient(90deg, rgba(11,11,12,0.10) 0%, rgba(11,11,12,0.20) 55%, rgba(11,11,12,1) 100%);"></div>
+    <div class="absolute inset-0 p-10 flex flex-col justify-between">
+      <div class="max-w-md">
+        <div class="eyebrow">Security Control Plane</div>
+        <div class="mt-5 text-4xl font-extrabold tracking-tight leading-tight text-white">
+          Mostre risco real, próxima ação e progresso de correção em uma única interface.
+        </div>
+        <div class="mt-5 page-lead">
+          A UI foi redesenhada para vender clareza: menos ruído, mais prova visual, decisões priorizadas e linguagem orientada a resultado.
+        </div>
+      </div>
+      <div class="space-y-5">
+        <div class="trust-strip">
+          <span class="trust-item">Prioridades visíveis por site</span>
+          <span class="trust-item">Prova de valor com métricas</span>
+          <span class="trust-item">Configuração multi-provider</span>
+        </div>
+        <div class="value-grid cols-3">
+          <div class="feature-card">
+            <div class="feature-card-title">Diagnóstico compreensível</div>
+            <div class="feature-card-copy">Status, risco e confiança apresentados para humanos, não só para técnicos.</div>
+          </div>
+          <div class="feature-card">
+            <div class="feature-card-title">Ação imediata</div>
+            <div class="feature-card-copy">Top prioridades e próximos passos acima da dobra, sem caça a logs.</div>
+          </div>
+          <div class="feature-card">
+            <div class="feature-card-title">Percepção premium</div>
+            <div class="feature-card-copy">Hierarquia visual mais forte, menos fricção e melhor sensação de produto vendável.</div>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 
   <!-- Right login panel -->
   <div class="min-h-screen md:min-h-0 flex-1 md:w-[53%] flex items-center justify-center p-6 relative">
-    <div class="w-full max-w-md card">
-      <div class="flex flex-col sm:flex-row sm:items-center gap-4">
-        <img class="h-10 w-10 object-contain" alt="Logo" src="{{ url_for('static', filename='logo_mark.png') }}"/>
-        <div class="sm:text-right">
-          <div class="page-title tracking-tight">Sign in</div>
-          <div class="body-text">Access your workspace</div>
+    <div class="w-full max-w-lg glass-card">
+      <div class="flex flex-col gap-5">
+        <div class="flex items-center gap-4">
+          <div class="h-12 w-12 rounded-2xl bg-brand-weak flex items-center justify-center border border-brand overflow-hidden">
+            <img class="h-9 w-9 object-contain" alt="Logo" src="{{ url_for('static', filename='logo_mark.png') }}"/>
+          </div>
+          <div>
+            <div class="page-title tracking-tight">Sign in</div>
+            <div class="body-text">Enter the workspace and move from raw findings to clear priorities.</div>
+          </div>
+      </div>
+        <div class="soft-panel">
+          <div class="check-list">
+            <div class="check-item">Veja status por site, top prioridades e prova de valor sem depender de leitura técnica pesada.</div>
+            <div class="check-item">Use a área de configurações para trocar provider, validar chave e carregar modelos antes de auditar.</div>
+            <div class="check-item">Acompanhe cada run com resumo executivo, dados técnicos e dossiê pronto para apresentar.</div>
+          </div>
         </div>
       </div>
 
@@ -30,6 +73,10 @@
         </div>
         <button class="btn-primary btn-lg w-full">Sign in</button>
       </form>
+
+      <div class="mt-4 text-xs text-muted">
+        Dica: depois do login, configure o provider em <span class="mono">Settings → Provider config</span> para validar chave e carregar modelos.
+      </div>
 
       <div class="mt-6 flex items-center justify-center gap-4">
         <a class="btn-secondary w-11 h-11 rounded-full p-0 flex items-center justify-center" aria-label="Continue with Google" href="{{ url_for('auth.oauth_start', provider='google') }}">
@@ -60,5 +107,11 @@
 <div class="md:hidden h-[55vh] relative overflow-hidden">
   <img loading="lazy" src="{{ url_for('static', filename='login_bg.jpg') }}" alt="" class="absolute inset-0 w-full h-full object-cover opacity-45" style="object-position: 15% 50%;"/>
   <div class="absolute inset-0" style="background: linear-gradient(180deg, rgba(11,11,12,0.98) 0%, rgba(11,11,12,0.35) 45%, rgba(11,11,12,0.96) 100%);"></div>
+  <div class="absolute inset-0 p-6 flex flex-col justify-end">
+    <div class="eyebrow">Clear security value</div>
+    <div class="mt-4 text-2xl font-extrabold tracking-tight text-white">
+      Transforme achados técnicos em risco, prioridade e ação.
+    </div>
+  </div>
 </div>
 {% endblock %}

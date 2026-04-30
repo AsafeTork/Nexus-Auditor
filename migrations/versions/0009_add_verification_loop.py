@@ -1,7 +1,7 @@
 """add verification loop
 
 Revision ID: 0009_add_verification_loop
-Revises: 0008_add_monitoring_decision_json
+Revises: 0008_monitoring_decision
 Create Date: 2026-04-29
 """
 
@@ -11,37 +11,50 @@ from alembic import op
 import sqlalchemy as sa
 
 revision = "0009_add_verification_loop"
-down_revision = "0008_add_monitoring_decision_json"
+down_revision = "0008_monitoring_decision"
 branch_labels = None
 depends_on = None
 
 
 def upgrade() -> None:
-    op.add_column("monitoring_runs", sa.Column("verification_json", sa.Text(), server_default=""))
+    bind = op.get_bind()
+    insp = sa.inspect(bind)
 
-    op.create_table(
-        "monitoring_findings",
-        sa.Column("id", sa.String(length=36), primary_key=True),
-        sa.Column("org_id", sa.String(length=36), sa.ForeignKey("orgs.id"), nullable=False),
-        sa.Column("site_id", sa.String(length=36), sa.ForeignKey("sites.id"), nullable=False),
-        sa.Column("job_id", sa.String(length=36), sa.ForeignKey("monitoring_jobs.id"), nullable=False),
-        sa.Column("finding_key", sa.String(length=500), nullable=False),
-        sa.Column("state", sa.String(length=32), server_default="NEW"),
-        sa.Column("first_seen_utc", sa.String(length=40)),
-        sa.Column("last_seen_utc", sa.String(length=40)),
-        sa.Column("resolved_utc", sa.String(length=40)),
-        sa.Column("reopen_count", sa.Integer(), server_default="0"),
-        sa.Column("regression_count", sa.Integer(), server_default="0"),
-        sa.Column("resolution_time_s", sa.Integer(), server_default="0"),
-        sa.Column("last_recommendation", sa.Text()),
-        sa.Column("last_decision_run_id", sa.String(length=36)),
-        sa.Column("created_utc", sa.String(length=40)),
-        sa.Column("updated_utc", sa.String(length=40)),
-    )
-    op.create_index("ix_monitoring_findings_org_id", "monitoring_findings", ["org_id"], unique=False)
-    op.create_index("ix_monitoring_findings_site_id", "monitoring_findings", ["site_id"], unique=False)
-    op.create_index("ix_monitoring_findings_job_id", "monitoring_findings", ["job_id"], unique=False)
-    op.create_index("ix_monitoring_findings_finding_key", "monitoring_findings", ["finding_key"], unique=False)
+    run_cols = {c["name"] for c in insp.get_columns("monitoring_runs")}
+    if "verification_json" not in run_cols:
+        op.add_column("monitoring_runs", sa.Column("verification_json", sa.Text(), server_default=""))
+        insp = sa.inspect(bind)
+
+    if not insp.has_table("monitoring_findings"):
+        op.create_table(
+            "monitoring_findings",
+            sa.Column("id", sa.String(length=36), primary_key=True),
+            sa.Column("org_id", sa.String(length=36), sa.ForeignKey("orgs.id"), nullable=False),
+            sa.Column("site_id", sa.String(length=36), sa.ForeignKey("sites.id"), nullable=False),
+            sa.Column("job_id", sa.String(length=36), sa.ForeignKey("monitoring_jobs.id"), nullable=False),
+            sa.Column("finding_key", sa.String(length=500), nullable=False),
+            sa.Column("state", sa.String(length=32), server_default="NEW"),
+            sa.Column("first_seen_utc", sa.String(length=40)),
+            sa.Column("last_seen_utc", sa.String(length=40)),
+            sa.Column("resolved_utc", sa.String(length=40)),
+            sa.Column("reopen_count", sa.Integer(), server_default="0"),
+            sa.Column("regression_count", sa.Integer(), server_default="0"),
+            sa.Column("resolution_time_s", sa.Integer(), server_default="0"),
+            sa.Column("last_recommendation", sa.Text()),
+            sa.Column("last_decision_run_id", sa.String(length=36)),
+            sa.Column("created_utc", sa.String(length=40)),
+            sa.Column("updated_utc", sa.String(length=40)),
+        )
+        insp = sa.inspect(bind)
+    idx = {ix["name"] for ix in insp.get_indexes("monitoring_findings")} if insp.has_table("monitoring_findings") else set()
+    if "ix_monitoring_findings_org_id" not in idx:
+        op.create_index("ix_monitoring_findings_org_id", "monitoring_findings", ["org_id"], unique=False)
+    if "ix_monitoring_findings_site_id" not in idx:
+        op.create_index("ix_monitoring_findings_site_id", "monitoring_findings", ["site_id"], unique=False)
+    if "ix_monitoring_findings_job_id" not in idx:
+        op.create_index("ix_monitoring_findings_job_id", "monitoring_findings", ["job_id"], unique=False)
+    if "ix_monitoring_findings_finding_key" not in idx:
+        op.create_index("ix_monitoring_findings_finding_key", "monitoring_findings", ["finding_key"], unique=False)
 
 
 def downgrade() -> None:
@@ -57,4 +70,3 @@ def downgrade() -> None:
         op.drop_column("monitoring_runs", "verification_json")
     except Exception:
         pass
-

@@ -17,56 +17,104 @@
 <div class="flex flex-col gap-6">
   <section class="card card-focus">
     <div class="section-label">Overview</div>
-    <div class="section-title mt-2">Organization</div>
-    <div class="mt-4 body-text">Org ID: <span class="mono">{{ current_user.org_id }}</span></div>
-    <div class="mt-4 body-text">Role: <span class="section-title">{{ current_user.role or "member" }}</span></div>
-    <div class="mt-4 body-text">Master: <span class="mono">{{ master_email or "—" }}</span></div>
+    <div class="section-title mt-2">Configuration that keeps the product usable</div>
+    <div class="mt-3 page-lead">
+      A buyer-friendly SaaS needs clear setup states. This screen was reorganized so provider configuration, access control and billing feel operational instead of hidden.
+    </div>
+    <div class="mt-5 trust-strip">
+      <span class="trust-item">Org <strong class="mono">{{ current_user.org_id }}</strong></span>
+      <span class="trust-item">Role <strong>{{ current_user.role or "member" }}</strong></span>
+      <span class="trust-item">Master <strong class="mono">{{ master_email or "—" }}</strong></span>
+    </div>
   </section>
 
-  <section class="card" id="provider">
-    <div class="section-label">Config</div>
-    <div class="section-title mt-2">LLM provider</div>
-    <div class="mt-2 body-text">Configure provider, API key and model defaults for this organization.</div>
-
-    {% if is_admin %}
-      <form class="mt-6 grid grid-cols-1 md:grid-cols-5 gap-4" method="post" action="{{ url_for('admin.admin_llm_save') }}">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <select id="cfgLlmProvider" name="provider" class="input text-sm" onchange="suggestCfgProviderBase()">
-          {% set _p = (llm_defaults.provider or "openai_compatible") %}
-          <option value="openai" {% if _p=="openai" %}selected{% endif %}>OpenAI</option>
-          <option value="openai_compatible" {% if _p=="openai_compatible" %}selected{% endif %}>OpenAI-compatible</option>
-          <option value="openrouter" {% if _p=="openrouter" %}selected{% endif %}>OpenRouter</option>
-          <option value="groq" {% if _p=="groq" %}selected{% endif %}>Groq</option>
-          <option value="anthropic" {% if _p=="anthropic" %}selected{% endif %}>Anthropic</option>
-        </select>
-        <input id="cfgLlmBase" name="base_url_v1" class="input text-sm" placeholder="https://provider/v1" value="{{ llm_defaults.base_url_v1 }}"/>
-        <input id="cfgLlmApiKey" name="api_key" type="password" class="input text-sm" placeholder="Cole nova API key (deixe vazio para manter)" value=""/>
-        <div class="md:col-span-2">
-          <input id="cfgModelSearch" class="input text-sm w-full" placeholder="Search model…" oninput="filterCfgModels()" />
-          <select id="cfgLlmModel" name="model" class="input text-sm w-full mt-2">
-            <option value="{{ llm_defaults.model }}">{{ llm_defaults.model }}</option>
-          </select>
-        </div>
-        <div class="md:col-span-5 flex items-center gap-3">
-          <button type="button" class="btn-secondary" onclick="loadCfgModels(true)">Load models</button>
-          <button type="button" class="btn-secondary" onclick="validateCfgProvider()">Validate</button>
-          <button class="btn-primary">Save</button>
-        </div>
-      </form>
-      <div class="mt-2 text-xs text-muted">Current key: <span class="mono">{{ llm_defaults.api_key_mask or "(empty)" }}</span></div>
-      <div class="mt-1 text-xs text-muted">Tip: for OpenAI-compatible gateways, use only <span class="mono">.../v1</span>, not <span class="mono">/chat/completions</span>.</div>
-      <div id="cfgLlmValidateOut" class="mt-2 text-xs text-muted"></div>
-    {% else %}
-      <div class="mt-4 body-text">Only admins can change provider configuration.</div>
-      <div class="mt-2 text-xs text-muted mono">
-        {{ llm_defaults.provider }} · {{ llm_defaults.base_url_v1 or "—" }} · {{ llm_defaults.model or "—" }}
+  <section class="split-showcase" id="provider">
+    <div class="glass-card">
+      <div class="eyebrow">Provider config</div>
+      <div class="mt-4 page-title">Choose, validate and save the model stack.</div>
+      <div class="mt-3 page-lead">
+        This is where the product feels reliable: the operator should immediately know which provider is active, whether the key works and which model is selected.
       </div>
-    {% endif %}
+
+      {% if is_admin %}
+        <form class="mt-6 grid grid-cols-1 md:grid-cols-5 gap-4" method="post" action="{{ url_for('admin.admin_llm_save') }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <select id="cfgLlmProvider" name="provider" class="input text-sm" onchange="suggestCfgProviderBase()">
+            {% set _p = (llm_defaults.provider or "openai_compatible") %}
+            <option value="openai" {% if _p=="openai" %}selected{% endif %}>OpenAI</option>
+            <option value="openai_compatible" {% if _p=="openai_compatible" %}selected{% endif %}>OpenAI-compatible</option>
+            <option value="openrouter" {% if _p=="openrouter" %}selected{% endif %}>OpenRouter</option>
+            <option value="groq" {% if _p=="groq" %}selected{% endif %}>Groq</option>
+            <option value="anthropic" {% if _p=="anthropic" %}selected{% endif %}>Anthropic</option>
+          </select>
+          <input id="cfgLlmBase" name="base_url_v1" class="input text-sm" placeholder="https://provider/v1" value="{{ llm_defaults.base_url_v1 }}"/>
+          <input id="cfgLlmApiKey" name="api_key" type="password" class="input text-sm" placeholder="Cole nova API key (deixe vazio para manter)" value=""/>
+          <div class="md:col-span-2">
+            <input id="cfgModelSearch" class="input text-sm w-full" placeholder="Search model…" oninput="filterCfgModels()" />
+            <select id="cfgLlmModel" name="model" class="input text-sm w-full mt-2">
+              <option value="{{ llm_defaults.model }}">{{ llm_defaults.model }}</option>
+            </select>
+          </div>
+          <div class="md:col-span-5 flex items-center gap-3">
+            <button type="button" class="btn-secondary" onclick="loadCfgModels(true)">Load models</button>
+            <button type="button" class="btn-secondary" onclick="validateCfgProvider()">Validate</button>
+            <button class="btn-primary">Save</button>
+          </div>
+        </form>
+        <div class="mt-3 trust-strip">
+          <span class="trust-item">Current key <strong class="mono">{{ llm_defaults.api_key_mask or "(empty)" }}</strong></span>
+          <span class="trust-item">Provider <strong>{{ llm_defaults.provider or "—" }}</strong></span>
+          <span class="trust-item">Model <strong class="mono">{{ llm_defaults.model or "—" }}</strong></span>
+        </div>
+        <div class="mt-2 text-xs text-muted">Tip: for OpenAI-compatible gateways, use only <span class="mono">.../v1</span>, not <span class="mono">/chat/completions</span>.</div>
+        <div id="cfgLlmValidateOut" class="mt-3 text-xs text-muted"></div>
+      {% else %}
+        <div class="mt-4 body-text">Only admins can change provider configuration.</div>
+        <div class="mt-2 text-xs text-muted mono">
+          {{ llm_defaults.provider }} · {{ llm_defaults.base_url_v1 or "—" }} · {{ llm_defaults.model or "—" }}
+        </div>
+      {% endif %}
+    </div>
+    <div class="soft-panel soft-panel-strong">
+      <div class="section-label">Why this matters</div>
+      <div class="section-title mt-2">A premium setup experience reduces doubt</div>
+      <div class="step-list mt-5">
+        <div class="step-item">
+          <span class="step-index">1</span>
+          <div class="step-copy"><strong>Pick a provider:</strong> choose the vendor you trust or want to test first.</div>
+        </div>
+        <div class="step-item">
+          <span class="step-index">2</span>
+          <div class="step-copy"><strong>Load models:</strong> use the real model list instead of guessing strings manually.</div>
+        </div>
+        <div class="step-item">
+          <span class="step-index">3</span>
+          <div class="step-copy"><strong>Validate before usage:</strong> catch bad keys or unsupported models before the user sees a broken audit.</div>
+        </div>
+      </div>
+      <div class="mt-6 signal-list">
+        <div class="signal-item">
+          <div class="signal-item-copy">
+            <div class="signal-item-title">Visible state</div>
+            <div class="signal-item-sub">The operator should always know which provider and model the org is relying on.</div>
+          </div>
+          <span class="badge badge-ok">Trust</span>
+        </div>
+        <div class="signal-item">
+          <div class="signal-item-copy">
+            <div class="signal-item-title">Low-friction recovery</div>
+            <div class="signal-item-sub">If a provider fails, switching vendors should feel operational, not like a backend incident.</div>
+          </div>
+          <span class="badge badge-warn">Resilience</span>
+        </div>
+      </div>
+    </div>
   </section>
 
   <section class="card">
     <div class="section-label">Details</div>
     <div class="section-title mt-2">Users</div>
+    <div class="body-text mt-2">Keep access management simple and visible. This builds trust for teams evaluating whether the product is ready for shared use.</div>
     <div class="mt-6 table-wrap">
       <table class="table">
         <thead>
@@ -124,8 +172,10 @@
   </section>
 
   <section class="card" id="billing">
-    <div class="section-title">Billing</div>
+    <div class="section-label">Commercial</div>
+    <div class="section-title mt-2">Billing</div>
     <div class="mt-4 body-text">Status: <span class="section-title">{{ sub.status if sub else "inactive" }}</span></div>
+    <div class="mt-2 body-text">When pricing and billing are easy to find, the product feels more complete and more purchasable.</div>
     {% if is_admin %}
       <form class="mt-6" method="post" action="{{ url_for('billing.create_checkout') }}">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">

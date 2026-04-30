@@ -4,6 +4,7 @@
 {% set page_max_w = "max-w-7xl" %}
 {% block page_actions %}
   <a class="btn-primary" href="/dossier/{{ audit.id }}" target="_blank">Open dossier</a>
+  <a class="btn-secondary" href="{{ url_for('dashboard.priorities') }}">Open priorities</a>
 {% endblock %}
 {% block page_context %}
   <div class="hero-meta">
@@ -13,6 +14,33 @@
   </div>
 {% endblock %}
 {% block content %}
+<div class="flex flex-col gap-6">
+<div class="glass-card">
+  <div class="eyebrow">Run visibility</div>
+  <div class="mt-4 page-title">A run should explain its state, not force the user to interpret logs.</div>
+  <div class="mt-3 page-lead">
+    Based on current UX guidance, this screen now emphasizes system status, plain-language next steps and visible outputs so the user stays confident while the audit progresses.
+  </div>
+  <div class="mt-6 metric-row cols-4">
+    <div class="metric-tile">
+      <div class="metric-label">Current status</div>
+      <div class="metric-value text-2xl" id="heroStatusBig">{{ audit.status }}</div>
+    </div>
+    <div class="metric-tile">
+      <div class="metric-label">Rows with evidence</div>
+      <div class="metric-value text-2xl" id="kpiRowsTop">—</div>
+    </div>
+    <div class="metric-tile">
+      <div class="metric-label">Model</div>
+      <div class="metric-value text-2xl mono">{{ audit.model or "—" }}</div>
+    </div>
+    <div class="metric-tile">
+      <div class="metric-label">Client output</div>
+      <div class="metric-value text-2xl">Dossier</div>
+    </div>
+  </div>
+</div>
+
 <div class="card card-focus">
   <div class="flex items-start justify-between gap-6">
     <div>
@@ -29,6 +57,19 @@
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v10m0 0 4-4m-4 4-4-4M5 21h14"/>
         </svg>
       </button>
+    </div>
+  </div>
+
+  <div class="mt-5 value-grid cols-2">
+    <div class="soft-panel soft-panel-strong">
+      <div class="section-label">System message</div>
+      <div class="section-title mt-2" id="runStateTitle">Audit status: {{ audit.status }}</div>
+      <div class="body-text mt-2" id="runStateCopy">The system will keep this page updated as new logs, markdown and CSV rows arrive.</div>
+    </div>
+    <div class="soft-panel">
+      <div class="section-label">Next best action</div>
+      <div class="section-title mt-2" id="nextActionTitle">Wait for findings</div>
+      <div class="body-text mt-2" id="nextActionCopy">Once the run completes, review the executive summary first and then open the dossier for a client-facing version.</div>
     </div>
   </div>
 
@@ -120,11 +161,53 @@
     </section>
   </div>
 </div>
+</div>
 
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 <script>
   const AUDIT_ID = "{{ audit.id }}";
   let LOGS="", MD="", CSV="";
+  function describeStatus(status){
+    const s = String(status || "").toLowerCase();
+    if(s === "queued"){
+      return {
+        title: "Audit queued",
+        copy: "The run is waiting for the worker. This is a valid system state, not a silent failure.",
+        nextTitle: "Keep this page open",
+        nextCopy: "You can stay here while logs and findings begin to appear."
+      };
+    }
+    if(s === "running"){
+      return {
+        title: "Audit running",
+        copy: "The system is actively collecting evidence and generating the report.",
+        nextTitle: "Watch the executive summary first",
+        nextCopy: "Use the executive view for fast understanding, then expand into technical details only if needed."
+      };
+    }
+    if(s === "done"){
+      return {
+        title: "Audit complete",
+        copy: "The run finished successfully and the output is ready to review or share.",
+        nextTitle: "Open the dossier",
+        nextCopy: "Use the dossier for a cleaner, client-facing presentation of the result."
+      };
+    }
+    if(s === "error"){
+      return {
+        title: "Audit failed",
+        copy: "The run finished with an error. The logs below should help you recognize the issue and recover quickly.",
+        nextTitle: "Check provider and logs",
+        nextCopy: "If the provider is the cause, go to Settings, validate the key and model, then launch a fresh run."
+      };
+    }
+    return {
+      title: "Audit status",
+      copy: "This page keeps the current state visible so the user never has to guess what is happening.",
+      nextTitle: "Follow the visible next step",
+      nextCopy: "Use the status and summary cards to decide whether to wait, review, or reconfigure."
+    };
+  }
 
   function filePrefix(){
     const host = "{{ audit.target_domain or 'ALVO' }}".toUpperCase().replace(/^WWW\./,'');
@@ -199,9 +282,16 @@
     try{
       const rows = (CSV||"").trim().split(/\n/).filter(x => x.trim()).length - 1; // minus header
       document.getElementById("kpiRows").textContent = String(Math.max(0, rows));
+      document.getElementById("kpiRowsTop").textContent = String(Math.max(0, rows));
       document.getElementById("kpiStatus").textContent = String(status || "—");
       document.getElementById("statusBadge").textContent = String(status || "—");
       try{ document.getElementById("heroStatus").textContent = String(status || "—"); }catch(e){}
+      try{ document.getElementById("heroStatusBig").textContent = String(status || "—"); }catch(e){}
+      const desc = describeStatus(status);
+      try{ document.getElementById("runStateTitle").textContent = desc.title; }catch(e){}
+      try{ document.getElementById("runStateCopy").textContent = desc.copy; }catch(e){}
+      try{ document.getElementById("nextActionTitle").textContent = desc.nextTitle; }catch(e){}
+      try{ document.getElementById("nextActionCopy").textContent = desc.nextCopy; }catch(e){}
     }catch(e){}
   }
 
