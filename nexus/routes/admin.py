@@ -18,6 +18,7 @@ from ..security import require_admin
 from ..services.queueing import enqueue_ui_lab
 from ..services.github import create_issue
 from ..services.audit_engine import list_models
+from ..services.control_plane import build_agent_cards
 
 bp = Blueprint("admin", __name__)
 
@@ -284,6 +285,14 @@ def admin_overview():
 def admin_overview_json():
     rows = _build_overview_rows(current_user.org_id)
     return jsonify({"ok": True, "rows": rows})
+
+
+@bp.get("/admin/agent")
+@login_required
+@require_admin
+def admin_agent():
+    cards = build_agent_cards(current_user.org_id, limit=250)
+    return render_template("admin/agent.html", cards=cards)
 
 
 @bp.get("/admin/audits")

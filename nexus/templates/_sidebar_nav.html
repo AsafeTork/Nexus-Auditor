@@ -32,6 +32,13 @@
         <span>Overview</span>
       </a>
 
+      <a class="nav-link {% if ep.startswith('admin.admin_agent') %}nav-link-active{% endif %}"
+         {% if ep.startswith('admin.admin_agent') %}aria-current="page"{% endif %}
+         href="{{ url_for('admin.admin_agent') }}">
+        <svg class="opacity-90" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6l4 2M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/></svg>
+        <span>Agent</span>
+      </a>
+
       <a class="nav-link {% if ep.startswith('admin.ui_lab') %}nav-link-active{% endif %}"
          {% if ep.startswith('admin.ui_lab') %}aria-current="page"{% endif %}
          href="{{ url_for('admin.ui_lab') }}">
