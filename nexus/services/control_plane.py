@@ -144,7 +144,7 @@ def build_agent_cards(org_id: str, *, limit: int = 200) -> List[Dict[str, Any]]:
             last_run = db.session.execute(
                 text(
                     """
-                    SELECT id, created_utc, status, decision_json, verification_json
+                    SELECT id, created_utc, status, findings_json, decision_json, verification_json
                     FROM monitoring_runs
                     WHERE org_id = :org_id AND site_id = :site_id
                     ORDER BY created_utc DESC
@@ -165,6 +165,20 @@ def build_agent_cards(org_id: str, *, limit: int = 200) -> List[Dict[str, Any]]:
                 decision = json.loads(str(last_run.get("decision_json") or "")) or {}
             except Exception:
                 decision = {}
+
+        # Fallback metrics from the latest run snapshot when lifecycle aggregates are unavailable.
+        if int(agg.get("open_findings") or 0) == 0 and int(agg.get("resolved_findings") or 0) == 0 and last_run:
+            try:
+                last_keys = json.loads(str(last_run.get("findings_json") or "[]")) or []
+            except Exception:
+                last_keys = []
+            if isinstance(last_keys, list) and last_keys:
+                agg = {
+                    "open_findings": len([k for k in last_keys if str(k or "").strip()]),
+                    "resolved_findings": 0,
+                    "regression_count": int(agg.get("regression_count") or 0),
+                    "avg_time_to_fix_s": int(agg.get("avg_time_to_fix_s") or 0),
+                }
 
         top = decision.get("top") or []
         if not isinstance(top, list):

@@ -19,6 +19,61 @@ from .policy_engine import load_site_policy, safety_gate
 from .queueing import enqueue_audit
 
 
+def _fallback_baseline_finding() -> Finding:
+    return Finding(
+        key="infra|missing security headers (baseline)",
+        category="Infra",
+        failure="Missing security headers (baseline)",
+        proof="N/A (baseline fallback: audit produced no parseable findings)",
+        explanation="Baseline hardening check to avoid an empty monitoring/decision flow during early rollout or provider instability.",
+        loss="N/A",
+        solution="Add at least: HSTS, X-Content-Type-Options, Referrer-Policy, and a staged CSP (Report-Only) at the edge (CDN/reverse proxy). Verify with curl -I.",
+        priority="High",
+        complexity="Low",
+    )
+
+
+def _canonical_findings_from_audit(audit: AuditRun) -> List[Finding]:
+    """
+    Single source of truth for monitoring findings.
+    Contract:
+      - always returns >= 1 finding
+      - fallback is deterministic and safe
+    """
+    findings = parse_csv_findings(audit.csv_text or "")
+    if findings:
+        return findings
+    return [_fallback_baseline_finding()]
+
+
+def _simple_verification_payload(cur_keys: List[str], diff: Dict) -> Dict:
+    total = len(cur_keys or [])
+    return {
+        "events": {
+            "fix_verified": [],
+            "still_vulnerable": list(cur_keys or [])[:20],
+            "regression": [],
+            "new": list((diff.get("new") or []))[:20],
+            "unverified_absent": [],
+        },
+        "summary": {
+            "run": {
+                "fix_verified": 0,
+                "still_vulnerable": total,
+                "regression": 0,
+                "new": int((diff.get("counts") or {}).get("new") or total),
+                "unverified_absent": 0,
+            },
+            "aggregate": {
+                "fix_success_rate_pct": 0.0,
+                "avg_time_to_fix_s": 0,
+                "total_resolved": 0,
+                "total_open": total,
+            },
+        },
+    }
+
+
 def utc_now() -> datetime:
     return datetime.now(timezone.utc)
 
@@ -174,11 +229,13 @@ def persist_monitoring_history(audit: AuditRun) -> None:
         except Exception:
             return
 
-    cur_keys = parse_findings_keys(audit.csv_text or "")
-    # Fallback: if the audit produced no CSV findings, generate a baseline hardening finding.
-    # This is explicit and deterministic to avoid an empty Agent UI during early MVP rollout.
+    findings = _canonical_findings_from_audit(audit)
+    cur_keys = sorted(set([str(f.key or "").strip() for f in findings if str(f.key or "").strip()]))
     if not cur_keys:
-        cur_keys = ["infra|missing security headers (baseline)"]
+        # Defensive fallback; should not happen because _canonical_findings_from_audit guarantees >=1 finding.
+        ff = _fallback_baseline_finding()
+        findings = [ff]
+        cur_keys = [ff.key]
     cur_hash = hash_keys(cur_keys)
 
     prev = (
@@ -249,6 +306,7 @@ def persist_monitoring_history(audit: AuditRun) -> None:
         findings_json=json.dumps(cur_keys, ensure_ascii=False),
         diff_json=json.dumps(diff, ensure_ascii=False),
         decision_json="",
+        verification_json=json.dumps(_simple_verification_payload(cur_keys, diff), ensure_ascii=False),
         created_utc=utc_iso(),
     )
     db.session.add(mr)
@@ -269,22 +327,6 @@ def persist_monitoring_history(audit: AuditRun) -> None:
     decision = {}
     try:
         top_n = int(os.getenv("DECISION_TOP_N", "3") or "3")
-        findings = parse_csv_findings(audit.csv_text or "")
-        if not findings:
-            # Keep consistent with cur_keys fallback.
-            findings = [
-                Finding(
-                    key="infra|missing security headers (baseline)",
-                    category="Infra",
-                    failure="Missing security headers (baseline)",
-                    proof="N/A (baseline fallback: CSV had no findings)",
-                    explanation="Baseline hardening check to avoid empty prioritization during early rollout.",
-                    loss="N/A",
-                    solution="Add at least: HSTS, X-Content-Type-Options, Referrer-Policy, and a staged CSP (Report-Only) at the edge (CDN/reverse proxy). Verify with curl -I.",
-                    priority="High",
-                    complexity="Low",
-                )
-            ]
         keys_for_learning = [f.key for f in findings if f.key]
         learning_enabled = str(os.getenv("LEARNING_ENABLED", "1") or "1").strip().lower() in ("1", "true", "yes", "on")
         learning_map = load_learning_map(job.id, keys_for_learning) if learning_enabled else {}
@@ -303,10 +345,33 @@ def persist_monitoring_history(audit: AuditRun) -> None:
             "context": ctx,
             "note": "Context can increase strictness (complexity/coverage/instability) and override 'safe' assumptions.",
         }
+        if not (decision.get("top") or []):
+            # Contract: Agent must always receive at least one visible priority.
+            decision = build_decision_report(
+                [_fallback_baseline_finding()],
+                recurrence_map={_fallback_baseline_finding().key: 1},
+                learning_map={},
+                policy=policy,
+                safety_gate_fn=safety_gate,
+                context=ctx,
+                top_n=1,
+            )
         mr.decision_json = json.dumps(decision, ensure_ascii=False) if decision else ""
         audit.markdown_text = (audit.markdown_text or "") + decision_markdown(decision)
     except Exception:
-        decision = {}
+        # Contract fallback: even if the rich decision pipeline fails, produce one visible top priority.
+        ff = _fallback_baseline_finding()
+        decision = build_decision_report(
+            [ff],
+            recurrence_map={ff.key: 1},
+            learning_map={},
+            policy=load_site_policy(job.org_id, job.site_id),
+            safety_gate_fn=safety_gate,
+            context=ctx,
+            top_n=1,
+        )
+        mr.decision_json = json.dumps(decision, ensure_ascii=False)
+        audit.markdown_text = (audit.markdown_text or "") + decision_markdown(decision)
 
     # Verification loop (NEW -> PERSISTING -> RESOLVED -> (optional) REOPENED/REGRESSION)
     try:
@@ -487,6 +552,7 @@ def persist_monitoring_history(audit: AuditRun) -> None:
         except Exception:
             pass
     except Exception:
+        # Keep the simple default verification_json already attached to the run.
         pass
 
     db.session.commit()
