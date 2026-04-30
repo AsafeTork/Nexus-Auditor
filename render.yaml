@@ -15,6 +15,8 @@ services:
         sync: false
       - key: LLM_BASE_URL_V1
         sync: false
+      - key: LLM_PROVIDER
+        sync: false
       - key: LLM_API_KEY
         sync: false
       - key: LLM_DEFAULT_MODEL
@@ -69,6 +71,24 @@ services:
         sync: false
       - key: ADMIN_GLOBAL_USERS
         sync: false
+      - key: MONITOR_TICK_TOKEN
+        sync: false
+      - key: DECISION_TOP_N
+        sync: false
+      - key: MONITOR_DECISION_LOOKBACK
+        sync: false
+      - key: LEARNING_ENABLED
+        sync: false
+      - key: POLICY_DEFAULT_MAX_RISK_LEVEL
+        sync: false
+      - key: POLICY_DEFAULT_MAX_RATE_RPS
+        sync: false
+      - key: CONTEXT_LOOKBACK
+        sync: false
+      - key: APP_NAME
+        sync: false
+      - key: BASE_URL
+        sync: false
     startCommand: bash bin/start_web.sh
 
   - type: worker
@@ -86,6 +106,8 @@ services:
       - key: SECRET_KEY
         sync: false
       - key: LLM_BASE_URL_V1
+        sync: false
+      - key: LLM_PROVIDER
         sync: false
       - key: LLM_API_KEY
         sync: false
@@ -134,5 +156,23 @@ services:
       - key: DASH_CACHE_TTL_S
         sync: false
       - key: ADMIN_GLOBAL_USERS
+        sync: false
+      - key: MONITOR_TICK_TOKEN
+        sync: false
+      - key: DECISION_TOP_N
+        sync: false
+      - key: MONITOR_DECISION_LOOKBACK
+        sync: false
+      - key: LEARNING_ENABLED
+        sync: false
+      - key: POLICY_DEFAULT_MAX_RISK_LEVEL
+        sync: false
+      - key: POLICY_DEFAULT_MAX_RATE_RPS
+        sync: false
+      - key: CONTEXT_LOOKBACK
+        sync: false
+      - key: APP_NAME
+        sync: false
+      - key: BASE_URL
         sync: false
     startCommand: python -m nexus.worker

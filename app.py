@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Xentinel AI (SaaS-ready)
+App (SaaS-ready)
 Entry point for WSGI servers (Gunicorn) and local dev.
 """
 

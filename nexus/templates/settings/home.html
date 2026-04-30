@@ -1,9 +1,9 @@
 {% extends "layout.html" %}
 {% set title = "Settings" %}
-{% set subtitle = "Organization, users and billing" %}
+{% set subtitle = "Organization, provider config, users and billing" %}
 {% block page_actions %}
   {% if is_admin %}
-    <a class="btn-primary" href="#billing">Manage plan</a>
+    <a class="btn-primary" href="#provider">Provider config</a>
   {% endif %}
 {% endblock %}
 {% block page_context %}
@@ -21,6 +21,47 @@
     <div class="mt-4 body-text">Org ID: <span class="mono">{{ current_user.org_id }}</span></div>
     <div class="mt-4 body-text">Role: <span class="section-title">{{ current_user.role or "member" }}</span></div>
     <div class="mt-4 body-text">Master: <span class="mono">{{ master_email or "—" }}</span></div>
+  </section>
+
+  <section class="card" id="provider">
+    <div class="section-label">Config</div>
+    <div class="section-title mt-2">LLM provider</div>
+    <div class="mt-2 body-text">Configure provider, API key and model defaults for this organization.</div>
+
+    {% if is_admin %}
+      <form class="mt-6 grid grid-cols-1 md:grid-cols-5 gap-4" method="post" action="{{ url_for('admin.admin_llm_save') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <select id="cfgLlmProvider" name="provider" class="input text-sm" onchange="suggestCfgProviderBase()">
+          {% set _p = (llm_defaults.provider or "openai_compatible") %}
+          <option value="openai" {% if _p=="openai" %}selected{% endif %}>OpenAI</option>
+          <option value="openai_compatible" {% if _p=="openai_compatible" %}selected{% endif %}>OpenAI-compatible</option>
+          <option value="openrouter" {% if _p=="openrouter" %}selected{% endif %}>OpenRouter</option>
+          <option value="groq" {% if _p=="groq" %}selected{% endif %}>Groq</option>
+          <option value="anthropic" {% if _p=="anthropic" %}selected{% endif %}>Anthropic</option>
+        </select>
+        <input id="cfgLlmBase" name="base_url_v1" class="input text-sm" placeholder="https://provider/v1" value="{{ llm_defaults.base_url_v1 }}"/>
+        <input id="cfgLlmApiKey" name="api_key" type="password" class="input text-sm" placeholder="Cole nova API key (deixe vazio para manter)" value=""/>
+        <div class="md:col-span-2">
+          <input id="cfgModelSearch" class="input text-sm w-full" placeholder="Search model…" oninput="filterCfgModels()" />
+          <select id="cfgLlmModel" name="model" class="input text-sm w-full mt-2">
+            <option value="{{ llm_defaults.model }}">{{ llm_defaults.model }}</option>
+          </select>
+        </div>
+        <div class="md:col-span-5 flex items-center gap-3">
+          <button type="button" class="btn-secondary" onclick="loadCfgModels(true)">Load models</button>
+          <button type="button" class="btn-secondary" onclick="validateCfgProvider()">Validate</button>
+          <button class="btn-primary">Save</button>
+        </div>
+      </form>
+      <div class="mt-2 text-xs text-muted">Current key: <span class="mono">{{ llm_defaults.api_key_mask or "(empty)" }}</span></div>
+      <div class="mt-1 text-xs text-muted">Tip: for OpenAI-compatible gateways, use only <span class="mono">.../v1</span>, not <span class="mono">/chat/completions</span>.</div>
+      <div id="cfgLlmValidateOut" class="mt-2 text-xs text-muted"></div>
+    {% else %}
+      <div class="mt-4 body-text">Only admins can change provider configuration.</div>
+      <div class="mt-2 text-xs text-muted mono">
+        {{ llm_defaults.provider }} · {{ llm_defaults.base_url_v1 or "—" }} · {{ llm_defaults.model or "—" }}
+      </div>
+    {% endif %}
   </section>
 
   <section class="card">
@@ -97,4 +138,89 @@
     {% endif %}
   </section>
 </div>
+{% if is_admin %}
+<script>
+  let __cfgModels = [];
+  function suggestCfgProviderBase(){
+    const p = (document.getElementById("cfgLlmProvider")?.value || "").trim();
+    const el = document.getElementById("cfgLlmBase");
+    if(!el) return;
+    const current = (el.value || "").trim();
+    if(current) return;
+    const defaults = {
+      openai: "https://api.openai.com/v1",
+      openai_compatible: "",
+      openrouter: "https://openrouter.ai/api/v1",
+      groq: "https://api.groq.com/openai/v1",
+      anthropic: "https://api.anthropic.com"
+    };
+    el.value = defaults[p] || "";
+  }
+  async function loadCfgModels(force=false){
+    const provider = (document.getElementById("cfgLlmProvider")?.value || "").trim();
+    const base = (document.getElementById("cfgLlmBase")?.value || "").trim();
+    const apiKey = (document.getElementById("cfgLlmApiKey")?.value || "").trim();
+    const out = document.getElementById("cfgLlmValidateOut");
+    try{
+      const res = await fetch(`/admin/llm/models.json`, {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({provider, base_url_v1: base, api_key: apiKey, force})
+      });
+      const j = await res.json();
+      if(!j.ok){
+        if(out) out.textContent = j.error || "Could not load models.";
+        return;
+      }
+      __cfgModels = j.models || [];
+      renderCfgModels(__cfgModels);
+      if(out) out.textContent = `Models loaded: ${__cfgModels.length}`;
+    }catch(e){
+      if(out) out.textContent = "Could not load models.";
+    }
+  }
+  function renderCfgModels(models){
+    const sel = document.getElementById("cfgLlmModel");
+    if(!sel) return;
+    const current = sel.value;
+    sel.innerHTML = "";
+    for(const m of models){
+      const opt = document.createElement("option");
+      opt.value = m;
+      opt.textContent = m;
+      sel.appendChild(opt);
+    }
+    if(current) sel.value = current;
+  }
+  function filterCfgModels(){
+    const q = (document.getElementById("cfgModelSearch")?.value || "").trim().toLowerCase();
+    if(!q){ renderCfgModels(__cfgModels); return; }
+    renderCfgModels(__cfgModels.filter(m => (m || "").toLowerCase().includes(q)));
+  }
+  async function validateCfgProvider(){
+    const provider = (document.getElementById("cfgLlmProvider")?.value || "").trim();
+    const base = (document.getElementById("cfgLlmBase")?.value || "").trim();
+    const apiKey = (document.getElementById("cfgLlmApiKey")?.value || "").trim();
+    const model = (document.getElementById("cfgLlmModel")?.value || "").trim();
+    const out = document.getElementById("cfgLlmValidateOut");
+    if(out) out.textContent = "Validating...";
+    try{
+      const res = await fetch(`/admin/llm/validate.json`, {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({provider, base_url_v1: base, api_key: apiKey, model})
+      });
+      const j = await res.json();
+      if(out){
+        out.textContent = j.ok
+          ? `OK · models=${j.models_count || 0} · sample=${j.sample || ""}`
+          : `ERROR · ${j.error || "validation failed"}`;
+      }
+    }catch(e){
+      if(out) out.textContent = "Validation failed.";
+    }
+  }
+  setTimeout(() => loadCfgModels(false), 300);
+</script>
+{% endif %}
 {% endblock %}

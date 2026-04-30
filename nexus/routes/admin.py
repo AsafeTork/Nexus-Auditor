@@ -19,6 +19,7 @@ from ..services.queueing import enqueue_ui_lab
 from ..services.github import create_issue
 from ..services.audit_engine import list_models
 from ..services.control_plane import build_agent_cards
+from ..services.llm_providers import canonical_base_url_v1, list_provider_models, normalize_provider, validate_provider
 
 bp = Blueprint("admin", __name__)
 
@@ -71,68 +72,46 @@ def _diagnostics() -> Dict[str, Any]:
     except Exception as e:
         out["redis"] = {"ok": False, "error": f"{type(e).__name__}: {e}"}
 
-    # LLM sanity (non-stream short call with retries)
-    base_url = current_app.config.get("LLM_BASE_URL_V1", "")
-    api_key = current_app.config.get("LLM_API_KEY", "")
-    model = current_app.config.get("LLM_DEFAULT_MODEL", "")
-    out["llm"] = {"base_url_v1": base_url, "model": model, "api_key_mask": _mask(api_key, 6)}
+    # LLM sanity (provider-aware)
+    org = Organization.query.filter_by(id=current_user.org_id).first() if getattr(current_user, "org_id", None) else None
+    provider = normalize_provider(getattr(org, "llm_provider", "") if org else "", getattr(org, "llm_base_url_v1", "") if org else "")
+    base_url = (
+        (getattr(org, "llm_base_url_v1", "") if org else "")
+        or current_app.config.get("LLM_BASE_URL_V1", "")
+    )
+    api_key = (
+        (getattr(org, "llm_api_key", "") if org else "")
+        or current_app.config.get("LLM_API_KEY", "")
+    )
+    model = (
+        (getattr(org, "llm_model", "") if org else "")
+        or current_app.config.get("LLM_DEFAULT_MODEL", "")
+    )
+    out["llm"] = {
+        "provider": provider,
+        "base_url_v1": canonical_base_url_v1(provider, base_url),
+        "model": model,
+        "api_key_mask": _mask(api_key, 6),
+    }
     try:
         if not base_url or not model:
-            raise RuntimeError("LLM_BASE_URL_V1/LLM_DEFAULT_MODEL not configured.")
-        headers = {"Content-Type": "application/json", "Accept": "application/json"}
-        if api_key:
-            headers["Authorization"] = f"Bearer {api_key}"
-        url = base_url.rstrip("/") + "/chat/completions"
-        payload = {
-            "model": model,
-            "temperature": 0.1,
-            "stream": False,
-            "messages": [
-                {"role": "system", "content": "You are a health check. Reply with OK only."},
-                {"role": "user", "content": "OK?"},
-            ],
-        }
-        retry_statuses = {429, 502, 503, 504, 520, 524}
-        timeout_s = int(os.getenv("LLM_TIMEOUT_S", "20"))
-        timeout_s = max(20, min(120, timeout_s))
-        backoffs = [1.0, 2.0, 4.0]
-        last_status = None
-        last_text = ""
-        r = None
-        for attempt in range(3):
-            rr = requests.post(url, headers=headers, json=payload, timeout=timeout_s)
-            last_status = rr.status_code
-            try:
-                last_text = (rr.text or "")[:240]
-            except Exception:
-                last_text = ""
-            if rr.status_code in retry_statuses and attempt < 2:
-                try:
-                    rr.close()
-                except Exception:
-                    pass
-                time.sleep(backoffs[attempt])
-                continue
-            rr.raise_for_status()
-            r = rr
-            break
-        if r is None:
-            raise RuntimeError(f"LLM request failed (status={last_status})")
-        j = r.json()
-        content = str(((j.get("choices") or [None])[0] or {}).get("message", {}).get("content") or "")
-        out["llm"]["ok"] = True
-        out["llm"]["sample"] = content[:120]
+            raise RuntimeError("LLM provider/base_url/model not configured.")
+        diag = validate_provider(
+            provider=provider,
+            base_url_v1=base_url,
+            api_key=api_key,
+            model=model,
+            timeout_s=max(12, min(30, int(os.getenv("LLM_TIMEOUT_S", "20")))),
+        )
+        out["llm"]["ok"] = bool(diag.get("ok"))
+        out["llm"]["sample"] = str(diag.get("sample") or "")[:120]
+        out["llm"]["models_count"] = int(diag.get("models_count") or 0)
+        out["llm"]["model_found"] = bool(diag.get("model_found")) if "model_found" in diag else None
+        if not out["llm"]["ok"] and diag.get("error"):
+            out["llm"]["error"] = str(diag.get("error"))
     except Exception as e:
         out["llm"]["ok"] = False
         out["llm"]["error"] = f"{type(e).__name__}: {e}"
-        # Useful snippet for debugging upstream gateways (best-effort)
-        try:
-            if "last_status" in locals() and last_status is not None:
-                out["llm"]["status"] = int(last_status)
-            if "last_text" in locals() and last_text:
-                out["llm"]["body_head"] = last_text
-        except Exception:
-            pass
 
     return out
 
@@ -154,7 +133,9 @@ def admin_home():
         audits=audits,
         sim=sim,
         llm_defaults={
+            "provider": (getattr(org, "llm_provider", "openai_compatible") or "openai_compatible").strip(),
             "base_url_v1": (getattr(org, "llm_base_url_v1", "") or "").strip(),
+            "api_key_mask": _mask((getattr(org, "llm_api_key", "") or "").strip(), 6),
             "model": (getattr(org, "llm_model", "") or "").strip(),
         },
     )
@@ -165,9 +146,14 @@ def admin_home():
 @require_admin
 def admin_llm_save():
     org = Organization.query.filter_by(id=current_user.org_id).first_or_404()
-    base = (request.form.get("base_url_v1") or "").strip()
+    provider = normalize_provider((request.form.get("provider") or "").strip(), (request.form.get("base_url_v1") or "").strip())
+    base = canonical_base_url_v1(provider, (request.form.get("base_url_v1") or "").strip())
+    api_key = (request.form.get("api_key") or "").strip()
     model = (request.form.get("model") or "").strip()
+    org.llm_provider = provider
     org.llm_base_url_v1 = base
+    if api_key:
+        org.llm_api_key = api_key
     org.llm_model = model
     db.session.commit()
     flash("Configuração de IA salva para este org.", "ok")
@@ -829,14 +815,28 @@ def ui_lab_run_json(run_id: str):
     )
 
 
-@bp.get("/admin/llm/models.json")
+@bp.route("/admin/llm/models.json", methods=["GET", "POST"])
 @login_required
 @require_admin
 def admin_llm_models():
-    base_url = (request.args.get("base_url_v1") or "").strip() or current_app.config.get("LLM_BASE_URL_V1", "")
-    api_key = current_app.config.get("LLM_API_KEY", "")
-    force = (request.args.get("force") or "").strip() in ("1", "true", "yes", "on")
-    q = (request.args.get("q") or "").strip().lower()
+    org = Organization.query.filter_by(id=current_user.org_id).first()
+    payload = request.get_json(silent=True) or {}
+    provider = normalize_provider(
+        payload.get("provider") or request.values.get("provider") or (getattr(org, "llm_provider", "") if org else ""),
+        payload.get("base_url_v1") or request.values.get("base_url_v1") or (getattr(org, "llm_base_url_v1", "") if org else ""),
+    )
+    base_url = canonical_base_url_v1(
+        provider,
+        payload.get("base_url_v1") or request.values.get("base_url_v1") or (getattr(org, "llm_base_url_v1", "") if org else "") or current_app.config.get("LLM_BASE_URL_V1", ""),
+    )
+    api_key = (
+        payload.get("api_key")
+        or request.values.get("api_key")
+        or (getattr(org, "llm_api_key", "") if org else "")
+        or current_app.config.get("LLM_API_KEY", "")
+    )
+    force = str(payload.get("force") or request.values.get("force") or "").strip().lower() in ("1", "true", "yes", "on")
+    q = str(payload.get("q") or request.values.get("q") or "").strip().lower()
 
     # Optional allowlist / custom list
     raw_allow = (os.getenv("LLM_MODELS_ALLOWLIST", "") or "").strip()
@@ -849,7 +849,7 @@ def admin_llm_models():
     # Cache in Redis (best-effort)
     cache_ttl = int(os.getenv("LLM_MODELS_CACHE_TTL_S", "60") or "60")
     cache_ttl = max(10, min(600, cache_ttl))
-    cache_key = f"llm_models:v1:{base_url}"
+    cache_key = f"llm_models:v2:{provider}:{base_url}"
     conn = _redis_conn()
     if conn and (not force):
         try:
@@ -860,12 +860,12 @@ def admin_llm_models():
                     out = [str(m) for m in models]
                     if q:
                         out = [m for m in out if q in m.lower()]
-                    return jsonify({"ok": True, "models": out, "cached": True})
+                    return jsonify({"ok": True, "provider": provider, "base_url_v1": base_url, "models": out, "cached": True})
         except Exception:
             pass
 
     try:
-        models_api = list_models(base_url_v1=base_url, api_key=api_key, timeout_s=12)
+        models_api = list_provider_models(provider=provider, base_url_v1=base_url, api_key=api_key, timeout_s=12)
         # Merge allowlist first, then API models (unique, stable order)
         seen = set()
         merged = []
@@ -883,15 +883,41 @@ def admin_llm_models():
         out = merged
         if q:
             out = [m for m in out if q in m.lower()]
-        return jsonify({"ok": True, "models": out, "cached": False})
+        return jsonify({"ok": True, "provider": provider, "base_url_v1": base_url, "models": out, "cached": False})
     except Exception as e:
         # If API fails, fallback to allowlist if present
         if allowlist:
             out = allowlist
             if q:
                 out = [m for m in out if q in m.lower()]
-            return jsonify({"ok": True, "models": out, "cached": True, "fallback": "allowlist"})
-        return jsonify({"ok": False, "error": f"{type(e).__name__}: {e}", "models": []}), 400
+            return jsonify({"ok": True, "provider": provider, "base_url_v1": base_url, "models": out, "cached": True, "fallback": "allowlist"})
+        return jsonify({"ok": False, "provider": provider, "base_url_v1": base_url, "error": f"{type(e).__name__}: {e}", "models": []}), 400
+
+
+@bp.post("/admin/llm/validate.json")
+@login_required
+@require_admin
+def admin_llm_validate():
+    org = Organization.query.filter_by(id=current_user.org_id).first()
+    payload = request.get_json(silent=True) or {}
+    provider = normalize_provider(
+        payload.get("provider") or (getattr(org, "llm_provider", "") if org else ""),
+        payload.get("base_url_v1") or (getattr(org, "llm_base_url_v1", "") if org else ""),
+    )
+    base_url = canonical_base_url_v1(
+        provider,
+        payload.get("base_url_v1") or (getattr(org, "llm_base_url_v1", "") if org else "") or current_app.config.get("LLM_BASE_URL_V1", ""),
+    )
+    api_key = (
+        payload.get("api_key")
+        or (getattr(org, "llm_api_key", "") if org else "")
+        or current_app.config.get("LLM_API_KEY", "")
+    )
+    model = (payload.get("model") or (getattr(org, "llm_model", "") if org else "") or current_app.config.get("LLM_DEFAULT_MODEL", "")).strip()
+    try:
+        return jsonify(validate_provider(provider=provider, base_url_v1=base_url, api_key=api_key, model=model, timeout_s=15))
+    except Exception as e:
+        return jsonify({"ok": False, "provider": provider, "base_url_v1": base_url, "model": model, "error": f"{type(e).__name__}: {e}"}), 502
 
 
 @bp.post("/admin/ui-lab/run")

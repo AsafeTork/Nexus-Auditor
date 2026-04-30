@@ -1,6 +1,6 @@
-# Xentinel AI (SaaS)
+# SaaS (rebrandable)
 
-Este pacote é um **SaaS profissional** (multi-tenant) do Xentinel AI:
+Este pacote é um **SaaS profissional** (multi-tenant) rebrandable via `APP_NAME`:
 - Login + Organização (tenant)
 - Sites + Auditorias (histórico)
 - Worker assíncrono via **Redis + RQ**
@@ -57,6 +57,36 @@ docker compose exec web flask db upgrade
 
 > Segurança: nunca commite secrets no Git. Configure `OAUTH_*_CLIENT_SECRET` somente no Render/host (Environment) ou no seu `.env` local (que deve estar no `.gitignore`).
 
+## Continuous monitoring (cron)
+
+O sistema suporta monitoramento contínuo via um scheduler simples acionado por cron:
+
+1) Defina `MONITOR_TICK_TOKEN` (string aleatória) no Render (Web Service).
+2) Crie um Render Cron Job (a cada 1 minuto) chamando:
+
+```
+POST https://SEU_DOMINIO/admin/monitor/tick?token=SEU_TOKEN
+```
+
+3) Configure os targets em Admin → Monitoring (frequência + modo).
+
+Notas:
+- O tick é “at-least-once”: ao enfileirar ele já avança o `next_run_utc`.
+- Para escalar, aumente réplicas do worker; a fila é centralizada no Redis.
+
+## Safety & policy engine (actions gate)
+
+Mesmo antes de executar ações automaticamente, toda ação sugerida passa por um **Safety Gate** determinístico, baseado na policy do target.
+
+Defaults (env vars):
+- `POLICY_DEFAULT_MAX_RISK_LEVEL=HIGH`
+- `POLICY_DEFAULT_MAX_RATE_RPS=20`
+
+Regras hard:
+- CSP deve começar em **Report-Only** (staged rollout).
+- Rate limits são **capados** por policy.
+- Ações sem rollback são **bloqueadas**.
+
 ### Opção B: VPS Ubuntu (controle total)
 - Use `docker compose`
 - Nginx como reverse proxy (TLS via LetsEncrypt)
@@ -71,7 +101,7 @@ docker compose exec web flask db upgrade
   5) Abrir o **Dossiê** (print-ready) para enviar ao cliente
 
 ## Notas sobre “outros provedores”
-O Xentinel AI usa **OpenAI-compatible**:
+O sistema usa **OpenAI-compatible**:
 - `POST /v1/chat/completions`
 - opcional: `GET /v1/models`
 

@@ -1,0 +1,132 @@
+{% extends "layout.html" %}
+{% set title = "Monitoring" %}
+{% set subtitle = "Continuous monitoring jobs and recent history" %}
+{% set page_max_w = "max-w-7xl" %}
+{% block page_actions %}
+  <a class="btn-secondary" href="{{ url_for('admin.admin_home') }}">Back</a>
+{% endblock %}
+{% block page_context %}
+  <div class="hero-meta">
+    <span class="meta-chip">Fix success <strong>{{ fix_success_rate }}%</strong></span>
+    <span class="meta-chip">Avg time to fix <strong class="mono">{{ avg_time_s }}s</strong></span>
+    <span class="meta-chip">Resolved <strong>{{ total_resolved }}</strong></span>
+    <span class="meta-chip">Open <strong>{{ total_open }}</strong></span>
+  </div>
+{% endblock %}
+{% block content %}
+<div class="letterhead">
+  <section class="card card-focus">
+    <div class="section-label">Overview</div>
+    <div class="section-title mt-2">Continuous monitoring</div>
+    <div class="body-text mt-2">
+      Jobs are triggered by a cron hitting <span class="mono">POST /admin/monitor/tick</span>.
+      Each target can run every 5min / 1h / daily (frequency is per site).
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="section-label">Details</div>
+    <div class="section-title mt-2">Targets</div>
+    <div class="mt-4 overflow-auto border border-app rounded-xl">
+      <table class="w-full text-sm">
+        <thead class="text-xs text-muted bg-surface2">
+          <tr>
+            <th class="text-left p-3">Site</th>
+            <th class="text-left p-3">Context</th>
+            <th class="text-left p-3">Enabled</th>
+            <th class="text-left p-3">Mode</th>
+            <th class="text-left p-3">Frequency (min)</th>
+            <th class="text-left p-3">Next run</th>
+            <th class="text-right p-3">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for s in sites %}
+            {% set j = job_map.get(s.id) %}
+            {% set cx = ctx_map.get(s.id) %}
+            <tr class="border-t border-app">
+              <td class="p-3">
+                <div class="font-semibold">{{ s.name }}</div>
+                <div class="mono text-[11px] text-muted">{{ s.base_url }}</div>
+              </td>
+              <td class="p-3">
+                <div class="text-xs">complexity: <span class="mono font-semibold">{{ (cx.complexity if cx else "MEDIUM") }}</span></div>
+                <div class="text-xs text-muted mt-1">coverage: <span class="mono">{{ (cx.coverage_quality if cx else "—") }}</span></div>
+                <div class="text-xs text-muted">instability: <span class="mono">{{ (cx.instability_score if cx else 0) }}</span></div>
+              </td>
+              <td class="p-3">
+                <span class="badge {% if j and j.enabled %}badge-ok{% else %}badge-muted{% endif %}">
+                  <span class="dot" style="background:{% if j and j.enabled %}#34d399{% else %}#94a3b8{% endif %}"></span>
+                  {{ "ON" if (j and j.enabled) else "OFF" }}
+                </span>
+              </td>
+              <td class="p-3 mono text-xs">{{ j.mode if j else "full" }}</td>
+              <td class="p-3 mono text-xs">{{ (j.frequency_s // 60) if j else 60 }}</td>
+              <td class="p-3 mono text-xs">{{ j.next_run_utc if j else "—" }}</td>
+              <td class="p-3 text-right">
+                <form method="post" action="{{ url_for('monitor.monitoring_save', site_id=s.id) }}" class="flex flex-wrap items-center justify-end gap-2">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <select name="enabled" class="input text-xs py-2 w-24">
+                    <option value="0" {% if not (j and j.enabled) %}selected{% endif %}>OFF</option>
+                    <option value="1" {% if (j and j.enabled) %}selected{% endif %}>ON</option>
+                  </select>
+                  <select name="complexity" class="input text-xs py-2 w-28">
+                    <option value="LOW" {% if cx and cx.complexity == 'LOW' %}selected{% endif %}>LOW</option>
+                    <option value="MEDIUM" {% if (not cx) or cx.complexity == 'MEDIUM' %}selected{% endif %}>MEDIUM</option>
+                    <option value="HIGH" {% if cx and cx.complexity == 'HIGH' %}selected{% endif %}>HIGH</option>
+                  </select>
+                  <select name="mode" class="input text-xs py-2 w-24">
+                    <option value="full" {% if (not j) or j.mode == 'full' %}selected{% endif %}>full</option>
+                    <option value="fast" {% if j and j.mode == 'fast' %}selected{% endif %}>fast</option>
+                  </select>
+                  <input name="frequency_min" class="input text-xs py-2 w-28" value="{{ (j.frequency_s // 60) if j else 60 }}" />
+                  <button class="btn-primary text-xs px-3 py-2">Save</button>
+                </form>
+              </td>
+            </tr>
+          {% else %}
+            <tr><td class="p-3 text-muted" colspan="7">(no sites)</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="section-label">History</div>
+    <div class="section-title mt-2">Recent monitoring runs</div>
+    <div class="body-text mt-2">Shows the last 30 runs (diff snapshot is stored per run).</div>
+    <div class="mt-4 overflow-auto border border-app rounded-xl">
+      <table class="w-full text-sm">
+        <thead class="text-xs text-muted bg-surface2">
+          <tr>
+            <th class="text-left p-3">Created</th>
+            <th class="text-left p-3">Site</th>
+            <th class="text-left p-3">Audit</th>
+            <th class="text-left p-3">Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in runs %}
+            <tr class="border-t border-app">
+              <td class="p-3 mono text-xs">{{ r.created_utc }}</td>
+              <td class="p-3 mono text-xs">{{ r.site_id }}</td>
+              <td class="p-3">
+                <a class="text-brand-2 underline mono text-xs" href="{{ url_for('audit.view_audit', audit_id=r.audit_run_id) }}">{{ r.audit_run_id }}</a>
+              </td>
+              <td class="p-3">
+                <span class="badge {% if r.status=='done' %}badge-ok{% else %}badge-err{% endif %}">
+                  <span class="dot" style="background:{% if r.status=='done' %}#34d399{% else %}#fb7185{% endif %}"></span>
+                  {{ r.status }}
+                </span>
+              </td>
+            </tr>
+          {% else %}
+            <tr><td class="p-3 text-muted" colspan="4">(no runs yet)</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>
+{% endblock %}

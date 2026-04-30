@@ -16,6 +16,8 @@ from requests.adapters import HTTPAdapter
 from bs4 import BeautifulSoup
 import redis
 
+from .llm_providers import call_provider_non_stream, list_provider_models, normalize_provider
+
 
 MAX_DOWNLOAD_BYTES = 5_000_000
 MAX_CLEAN_HTML_CHARS = 100_000
@@ -164,7 +166,7 @@ def parse_usd_range(s: str) -> tuple[int | None, int | None]:
     return lo, hi
 
 
-def list_models(*, base_url_v1: str, api_key: str, timeout_s: int = 12) -> List[str]:
+def list_models(*, base_url_v1: str, api_key: str, timeout_s: int = 12, provider: str = "") -> List[str]:
     """
     Busca lista de modelos em provider OpenAI-compatible.
     GET {base}/models
@@ -173,20 +175,12 @@ def list_models(*, base_url_v1: str, api_key: str, timeout_s: int = 12) -> List[
     base = normalize_base_url_v1(base_url_v1)
     if not base:
         return []
-    url = base.rstrip("/") + "/models"
-    headers = {"Accept": "application/json"}
-    if api_key:
-        headers["Authorization"] = f"Bearer {api_key}"
-    r = requests.get(url, headers=headers, timeout=timeout_s)
-    r.raise_for_status()
-    j = r.json() or {}
-    data = j.get("data") or []
-    out: List[str] = []
-    if isinstance(data, list):
-        for it in data:
-            if isinstance(it, dict) and it.get("id"):
-                out.append(str(it["id"]))
-    return out
+    return list_provider_models(
+        provider=normalize_provider(provider, base),
+        base_url_v1=base,
+        api_key=api_key,
+        timeout_s=timeout_s,
+    )
 
 
 def stream_llm_text(
@@ -202,6 +196,23 @@ def stream_llm_text(
     """
     Streaming genérico (delta text) para providers OpenAI-compatible.
     """
+    provider = normalize_provider("", base_url_v1)
+    if provider == "anthropic":
+        # Minimal compatibility: Anthropic direct is handled as non-stream and yielded once.
+        text = call_provider_non_stream(
+            provider=provider,
+            base_url_v1=base_url_v1,
+            api_key=api_key,
+            model=model,
+            temperature=temperature,
+            system_prompt=system_prompt,
+            user_prompt=user_prompt,
+            timeout_s=timeout_s,
+        )
+        if text:
+            yield text
+        return
+
     headers = {"Content-Type": "application/json"}
     if api_key:
         headers["Authorization"] = f"Bearer {api_key}"
@@ -620,17 +631,7 @@ def call_llm_non_stream(
     Safer fallback for providers that stall/hang on streaming.
     Returns the assistant message content (string).
     """
-    headers = {"Content-Type": "application/json", "Accept": "application/json"}
-    if api_key:
-        headers["Authorization"] = f"Bearer {api_key}"
-
-    url = normalize_base_url_v1(base_url_v1).rstrip("/") + "/chat/completions"
-    payload = {
-        "model": model,
-        "temperature": float(temperature),
-        "stream": False,
-        "messages": [{"role": "system", "content": system_prompt}, {"role": "user", "content": user_prompt}],
-    }
+    provider = normalize_provider("", base_url_v1)
 
     cache_key = _llm_cache_key(
         kind="non_stream",
@@ -649,28 +650,19 @@ def call_llm_non_stream(
     max_attempts = max(2, min(8, max_attempts))
     for attempt in range(max_attempts):
         try:
-            r = _HTTP.post(url, headers=headers, json=payload, timeout=timeout_s)
-            r.encoding = "utf-8"
-            # Cloudflare / upstream timeouts
-            if r.status_code in (520, 524, 502, 503, 504):
-                time.sleep(1.5 * (attempt + 1))
-                last_exc = requests.HTTPError(f"{r.status_code} Server Error for url: {url}")
-                continue
-            r.raise_for_status()
-            try:
-                data = r.json()
-            except Exception as je:
-                # Some gateways return HTML/text for 502 even with 200/invalid JSON.
-                last_exc = je
-                time.sleep(1.5 * (attempt + 1))
-                continue
-            try:
-                out = str(((data.get("choices") or [None])[0] or {}).get("message", {}).get("content") or "")
-                if out.strip():
-                    _cache_set_text(cache_key, out, ttl_s=int(os.getenv("LLM_CACHE_TTL_S", str(60 * 60 * 24 * 7))))
-                return out
-            except Exception:
-                return ""
+            out = call_provider_non_stream(
+                provider=provider,
+                base_url_v1=base_url_v1,
+                api_key=api_key,
+                model=model,
+                temperature=temperature,
+                system_prompt=system_prompt,
+                user_prompt=user_prompt,
+                timeout_s=timeout_s,
+            )
+            if out.strip():
+                _cache_set_text(cache_key, out, ttl_s=int(os.getenv("LLM_CACHE_TTL_S", str(60 * 60 * 24 * 7))))
+            return out
         except Exception as e:
             last_exc = e
             time.sleep(1.5 * (attempt + 1))

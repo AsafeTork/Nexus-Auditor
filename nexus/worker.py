@@ -217,7 +217,11 @@ def run_ui_lab_job(run_id: str, org_id: str, mode: str, payload: dict) -> None:
                 or (getattr(org, "llm_model", "") if org else "")
                 or app.config.get("LLM_DEFAULT_MODEL", "deepseek-chat")
             ).strip()
-            api_key = app.config.get("LLM_API_KEY", "")
+            api_key = str(
+                payload.get("api_key")
+                or (getattr(org, "llm_api_key", "") if org else "")
+                or app.config.get("LLM_API_KEY", "")
+            ).strip()
             append_log(f"[ui-lab] chamando LLM (stream)… model={model}")
 
             acc = ""
@@ -372,7 +376,8 @@ def run_audit_job(audit_id: str) -> None:
             return
 
         base_url_v1 = audit.provider_base_url_v1 or app.config["LLM_BASE_URL_V1"]
-        api_key = app.config.get("LLM_API_KEY", "")
+        org = Organization.query.filter_by(id=audit.org_id).first()
+        api_key = str((getattr(org, "llm_api_key", "") if org else "") or app.config.get("LLM_API_KEY", "")).strip()
         model = audit.model or app.config["LLM_DEFAULT_MODEL"]
         system_prompt = SYSTEM_PROMPT_DEFAULT
         audit_brief = (os.getenv("AUDIT_BRIEF", "") or "").strip()

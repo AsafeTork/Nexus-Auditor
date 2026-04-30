@@ -2,14 +2,22 @@ from __future__ import annotations
 
 import time
 
-from flask import Blueprint, flash, redirect, render_template, request, url_for
+from flask import Blueprint, current_app, flash, redirect, render_template, request, url_for
 from flask_login import login_required, current_user
 
 from .. import db
-from ..models import Subscription, User, is_org_admin
+from ..models import Organization, Subscription, User, is_org_admin
 from ..security import require_admin, require_master
 
 bp = Blueprint("settings", __name__)
+
+
+def _mask(s: str, keep: int = 4) -> str:
+    if not s:
+        return ""
+    if len(s) <= keep:
+        return "*" * len(s)
+    return s[:keep] + "*" * (len(s) - keep)
 
 
 @bp.get("/settings")
@@ -17,6 +25,7 @@ bp = Blueprint("settings", __name__)
 def settings_home():
     sub = Subscription.query.filter_by(org_id=current_user.org_id).first()
     users = User.query.filter_by(org_id=current_user.org_id).order_by(User.created_utc.desc()).all()
+    org = Organization.query.filter_by(id=current_user.org_id).first()
     import os
 
     master = (os.getenv("MASTER_ADMIN_EMAIL", "asafetork@gmail.com") or "").strip().lower()
@@ -28,6 +37,12 @@ def settings_home():
         is_admin=is_org_admin(current_user),
         is_master=is_master,
         master_email=master,
+        llm_defaults={
+            "provider": (getattr(org, "llm_provider", "") or current_app.config.get("LLM_PROVIDER", "openai_compatible")).strip(),
+            "base_url_v1": (getattr(org, "llm_base_url_v1", "") or current_app.config.get("LLM_BASE_URL_V1", "")).strip(),
+            "model": (getattr(org, "llm_model", "") or current_app.config.get("LLM_DEFAULT_MODEL", "")).strip(),
+            "api_key_mask": _mask((getattr(org, "llm_api_key", "") or current_app.config.get("LLM_API_KEY", "")).strip(), 6),
+        },
     )
 
 

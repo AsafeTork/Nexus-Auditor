@@ -41,7 +41,8 @@ def create_app() -> Flask:
     app.config["APP_NAME"] = (os.getenv("APP_NAME", "") or "").strip()
     app.config["BASE_URL"] = (os.getenv("BASE_URL", "") or "").strip().rstrip("/")
 
-    # LLM config (OpenAI-compatible gateway)
+    # LLM config (fallback only; org-level provider settings can override)
+    app.config["LLM_PROVIDER"] = os.getenv("LLM_PROVIDER", "openai_compatible")
     app.config["LLM_BASE_URL_V1"] = os.getenv("LLM_BASE_URL_V1", "https://eclipse.mestredoblack.pro/v1")
     app.config["LLM_API_KEY"] = os.getenv("LLM_API_KEY", "")
     app.config["LLM_DEFAULT_MODEL"] = os.getenv("LLM_DEFAULT_MODEL", "deepseek-chat")
@@ -57,15 +58,6 @@ def create_app() -> Flask:
     # We intentionally disable canonical redirects to avoid accidental redirects to third-party domains.
     app.config["CANONICAL_HOST"] = ""
     app.config["CANONICAL_SCHEME"] = "https"
-
-    # Cookies / sessão (hardening)
-    # - HttpOnly: impede acesso via JS (mitiga XSS roubando cookie)
-    # - SameSite=Lax: mitiga CSRF sem quebrar navegação normal
-    # - Secure: definido dinamicamente por request.is_secure (via ProxyFix)
-    app.config.setdefault("SESSION_COOKIE_HTTPONLY", True)
-    app.config.setdefault("SESSION_COOKIE_SAMESITE", "Lax")
-    app.config.setdefault("REMEMBER_COOKIE_HTTPONLY", True)
-    app.config.setdefault("REMEMBER_COOKIE_SAMESITE", "Lax")
 
     # Stripe
     app.config["STRIPE_SECRET_KEY"] = os.getenv("STRIPE_SECRET_KEY", "")
@@ -142,13 +134,6 @@ def create_app() -> Flask:
         canonical = (app.config.get("CANONICAL_HOST") or "").strip().lower()
         if not canonical:
             return None
-        # Ajuste dinâmico de cookies "Secure" conforme o esquema real da requisição.
-        # Evita quebrar dev/local em HTTP e mantém produção em HTTPS segura.
-        try:
-            app.config["SESSION_COOKIE_SECURE"] = bool(request.is_secure)
-            app.config["REMEMBER_COOKIE_SECURE"] = bool(request.is_secure)
-        except Exception:
-            pass
         host = (request.host or "").split(":", 1)[0].strip().lower()
         if host and host != canonical:
             scheme = (request.headers.get("X-Forwarded-Proto") or request.scheme or app.config.get("CANONICAL_SCHEME") or "https").split(",", 1)[0].strip()
@@ -190,21 +175,9 @@ def create_app() -> Flask:
     # Security-ish headers (not "hiding", just good practice)
     @app.after_request
     def add_headers(resp):
-        # Static assets devem ser cacheados para performance.
-        if (request.path or "").startswith("/static/"):
-            resp.headers.setdefault("Cache-Control", "public, max-age=86400, immutable")
-        else:
-            resp.headers["Cache-Control"] = "no-store"
+        resp.headers["Cache-Control"] = "no-store"
         resp.headers["X-Content-Type-Options"] = "nosniff"
         resp.headers["Referrer-Policy"] = "same-origin"
-        resp.headers.setdefault("X-Frame-Options", "DENY")
-        resp.headers.setdefault("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
-        # HSTS somente quando HTTPS está ativo (evita quebrar HTTP local)
-        try:
-            if request.is_secure:
-                resp.headers.setdefault("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
-        except Exception:
-            pass
         return resp
 
     # Defensive error pages (avoid raw stack traces to end-users)

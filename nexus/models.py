@@ -21,7 +21,9 @@ class Organization(db.Model):
     name = db.Column(db.String(200), nullable=False)
     created_utc = db.Column(db.String(40), default=utc_now)
     # Optional per-org LLM defaults (override env vars in UI/worker)
+    llm_provider = db.Column(db.String(64), default="openai_compatible")
     llm_base_url_v1 = db.Column(db.String(1000), default="")
+    llm_api_key = db.Column(db.Text, default="")
     llm_model = db.Column(db.String(200), default="")
 
 
@@ -68,6 +70,8 @@ class AuditRun(db.Model):
     id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     org_id = db.Column(db.String(36), db.ForeignKey("orgs.id"), nullable=False, index=True)
     site_id = db.Column(db.String(36), db.ForeignKey("sites.id"), nullable=False, index=True)
+    # Optional: if this run was triggered by continuous monitoring.
+    monitor_job_id = db.Column(db.String(36), db.ForeignKey("monitoring_jobs.id"), nullable=True, index=True)
     created_utc = db.Column(db.String(40), default=utc_now)
     updated_utc = db.Column(db.String(40), default=utc_now)
     status = db.Column(db.String(32), default="queued")  # queued|running|done|error
@@ -108,6 +112,164 @@ class Subscription(db.Model):
     updated_utc = db.Column(db.String(40), default=utc_now)
 
 
+class MonitoringJob(db.Model):
+    """
+    Continuous monitoring configuration per target (site).
+    Runs are scheduled externally (cron) via a lightweight tick endpoint,
+    which enqueues AuditRun jobs when they are due.
+    """
+
+    __tablename__ = "monitoring_jobs"
+    id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    org_id = db.Column(db.String(36), db.ForeignKey("orgs.id"), nullable=False, index=True)
+    site_id = db.Column(db.String(36), db.ForeignKey("sites.id"), nullable=False, index=True)
+
+    enabled = db.Column(db.Boolean, default=False)
+    # Frequency in seconds (e.g., 300 = 5min, 3600 = 1h, 86400 = daily)
+    frequency_s = db.Column(db.Integer, default=3600)
+    # "full" or "fast" (reuse existing audit modes)
+    mode = db.Column(db.String(16), default="full")
+
+    # Optional placeholders for future safety gate + scoping.
+    scope_json = db.Column(db.Text, default="")  # JSON string (paths, domains, etc.)
+    safety_policy_ref = db.Column(db.String(200), default="default")
+
+    next_run_utc = db.Column(db.String(40), default="")
+    last_run_utc = db.Column(db.String(40), default="")
+    created_utc = db.Column(db.String(40), default=utc_now)
+    updated_utc = db.Column(db.String(40), default=utc_now)
+
+
+class MonitoringRun(db.Model):
+    """
+    Immutable history entry per monitoring job execution.
+    Stores a snapshot of findings (fingerprints) and a diff vs previous run.
+    """
+
+    __tablename__ = "monitoring_runs"
+    id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    org_id = db.Column(db.String(36), db.ForeignKey("orgs.id"), nullable=False, index=True)
+    site_id = db.Column(db.String(36), db.ForeignKey("sites.id"), nullable=False, index=True)
+    job_id = db.Column(db.String(36), db.ForeignKey("monitoring_jobs.id"), nullable=False, index=True)
+    audit_run_id = db.Column(db.String(36), db.ForeignKey("audit_runs.id"), nullable=False, index=True)
+
+    status = db.Column(db.String(32), default="done")  # done|error
+    findings_hash = db.Column(db.String(80), default="")
+    findings_json = db.Column(db.Text, default="")  # JSON list of keys
+    diff_json = db.Column(db.Text, default="")  # JSON {new/resolved/persisting, counts}
+    decision_json = db.Column(db.Text, default="")  # JSON {top, items, rubric}
+    verification_json = db.Column(db.Text, default="")  # JSON {events, summary, aggregates}
+    created_utc = db.Column(db.String(40), default=utc_now)
+
+
+class MonitoringFinding(db.Model):
+    """
+    Per-job per-finding lifecycle state for verification loop.
+    States:
+      NEW -> PERSISTING -> RESOLVED -> (optional) REOPENED
+    """
+
+    __tablename__ = "monitoring_findings"
+    id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    org_id = db.Column(db.String(36), db.ForeignKey("orgs.id"), nullable=False, index=True)
+    site_id = db.Column(db.String(36), db.ForeignKey("sites.id"), nullable=False, index=True)
+    job_id = db.Column(db.String(36), db.ForeignKey("monitoring_jobs.id"), nullable=False, index=True)
+    finding_key = db.Column(db.String(500), nullable=False, index=True)
+
+    state = db.Column(db.String(32), default="NEW")  # NEW|PERSISTING|RESOLVED|REOPENED
+    first_seen_utc = db.Column(db.String(40), default="")
+    last_seen_utc = db.Column(db.String(40), default="")
+    resolved_utc = db.Column(db.String(40), default="")
+
+    reopen_count = db.Column(db.Integer, default=0)
+    regression_count = db.Column(db.Integer, default=0)
+    resolution_time_s = db.Column(db.Integer, default=0)
+
+    last_recommendation = db.Column(db.Text, default="")
+    last_decision_run_id = db.Column(db.String(36), default="")
+
+    created_utc = db.Column(db.String(40), default=utc_now)
+    updated_utc = db.Column(db.String(40), default=utc_now)
+
+
+class LearningStat(db.Model):
+    """
+    Adaptive learning store (deterministic, explainable).
+    Tracks the historical effectiveness of recommendation patterns per monitoring job.
+    """
+
+    __tablename__ = "learning_stats"
+    id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    org_id = db.Column(db.String(36), db.ForeignKey("orgs.id"), nullable=False, index=True)
+    job_id = db.Column(db.String(36), db.ForeignKey("monitoring_jobs.id"), nullable=False, index=True)
+    finding_key = db.Column(db.String(500), nullable=False, index=True)
+    rec_kind = db.Column(db.String(64), default="unknown")  # template/strategy identifier
+
+    seen_count = db.Column(db.Integer, default=0)
+    resolved_count = db.Column(db.Integer, default=0)
+    open_count = db.Column(db.Integer, default=0)
+    regression_count = db.Column(db.Integer, default=0)
+
+    # Exponential moving average of resolution time (seconds)
+    avg_resolution_s = db.Column(db.Integer, default=0)
+
+    created_utc = db.Column(db.String(40), default=utc_now)
+    updated_utc = db.Column(db.String(40), default=utc_now)
+
+
+class SitePolicy(db.Model):
+    """
+    Safety & policy engine configuration per target/site.
+    This is the single source of truth for gating any action output
+    before we ever enable assisted or automatic execution.
+    """
+
+    __tablename__ = "site_policies"
+    id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    org_id = db.Column(db.String(36), db.ForeignKey("orgs.id"), nullable=False, index=True)
+    site_id = db.Column(db.String(36), db.ForeignKey("sites.id"), nullable=False, index=True)
+
+    # Allow/deny lists for action kinds (JSON array of strings).
+    allowed_action_kinds_json = db.Column(db.Text, default="")  # empty = allow all (subject to forbidden)
+    forbidden_action_kinds_json = db.Column(db.Text, default="")
+
+    # Max risk level that can be considered "safe enough" without confirmation.
+    # One of: LOW|MEDIUM|HIGH|CRITICAL
+    max_risk_level = db.Column(db.String(16), default="HIGH")
+
+    # Even if an action is SAFE_AUTOMATIC, never allow auto-apply unless this is true.
+    allow_auto_apply = db.Column(db.Boolean, default=False)
+
+    # Enforcement rules (deterministic hardening).
+    enforce_csp_report_only = db.Column(db.Boolean, default=True)
+    max_rate_limit_rps = db.Column(db.Integer, default=20)  # cap rate limits
+
+    created_utc = db.Column(db.String(40), default=utc_now)
+    updated_utc = db.Column(db.String(40), default=utc_now)
+
+
+class SiteContext(db.Model):
+    """
+    Runtime context signals per site (deterministic).
+    Used to adjust safety decisions and verification confidence.
+    """
+
+    __tablename__ = "site_contexts"
+    id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    org_id = db.Column(db.String(36), db.ForeignKey("orgs.id"), nullable=False, index=True)
+    site_id = db.Column(db.String(36), db.ForeignKey("sites.id"), nullable=False, index=True)
+
+    # Operator-configured complexity
+    complexity = db.Column(db.String(16), default="MEDIUM")  # LOW|MEDIUM|HIGH
+
+    # Derived each run
+    coverage_quality = db.Column(db.String(16), default="MEDIUM")  # LOW|MEDIUM|HIGH
+    instability_score = db.Column(db.Integer, default=0)  # 0..100
+
+    last_updated_utc = db.Column(db.String(40), default=utc_now)
+    created_utc = db.Column(db.String(40), default=utc_now)
+
+
 def is_org_admin(user: User) -> bool:
     if not user:
         return False
@@ -121,12 +283,11 @@ def is_org_admin(user: User) -> bool:
     if role == "admin":
         return True
 
-    # IMPORTANTE:
-    # Não tente ler getattr(user, "is_admin") aqui, porque `User.is_admin` é uma @property
-    # que chama `is_org_admin(self)` e isso causaria recursão infinita.
-    #
-    # Se você tiver um banco legado, migre para o campo `role` (admin|member).
-    return False
+    # Some older databases may still have is_admin boolean.
+    try:
+        return bool(getattr(user, "is_admin", False))
+    except Exception:
+        return False
 
 
 def is_subscription_active(sub: Subscription | None) -> bool:

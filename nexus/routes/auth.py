@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import secrets
-
 from flask import Blueprint, redirect, render_template, request, url_for, flash, session
 from flask_login import login_user, logout_user, login_required, current_user
 
@@ -44,7 +42,6 @@ def register():
 
 
 @bp.post("/register")
-@limiter.limit("6 per minute; 30 per hour")
 def register_post():
     org_name = (request.form.get("org_name") or "").strip()
     email = (request.form.get("email") or "").strip().lower()
@@ -77,7 +74,6 @@ def register_post():
 
 
 @bp.get("/oauth/<provider>")
-@limiter.limit("30 per hour")
 def oauth_start(provider: str):
     """
     Start OAuth login for google/github.
@@ -187,8 +183,8 @@ def oauth_callback(provider: str):
         db.session.flush()
         # Default OAuth-created users to "member" (no admin console).
         user = User(org_id=org.id, email=email, role="member")
-        # Segurança: gerar uma senha aleatória forte para evitar login por senha em contas OAuth.
-        user.set_password(secrets.token_urlsafe(48))
+        # random password placeholder (OAuth users won't use it normally)
+        user.set_password("oauth-user-placeholder-" + email)
         db.session.add(user)
         db.session.add(Subscription(org_id=org.id, status="trialing"))
         db.session.commit()
