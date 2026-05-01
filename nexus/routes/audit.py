@@ -19,10 +19,13 @@ bp = Blueprint("audit", __name__)
 @bp.post("/sites")
 @login_required
 def create_site():
-    name = (request.form.get("name") or "").strip() or "Site"
     base_url = (request.form.get("base_url") or "").strip()
     if not base_url.startswith(("http://", "https://")):
         base_url = "https://" + base_url
+    parsed = urlparse(base_url)
+    host = (parsed.hostname or "").strip()
+    auto_name = host.replace("www.", "") if host else "Recurso"
+    name = (request.form.get("name") or "").strip() or auto_name
     site = Site(org_id=current_user.org_id, name=name, base_url=base_url)
     db.session.add(site)
     db.session.commit()

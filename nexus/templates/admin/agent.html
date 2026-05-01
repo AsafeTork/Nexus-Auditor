@@ -101,12 +101,15 @@
                 <div class="soft-panel">
                   <div class="flex items-start justify-between gap-4">
                     <div class="min-w-0">
-                      <div class="mono text-xs font-semibold truncate">{{ it.finding_key or "(no key)" }}</div>
-                      <div class="text-xs text-muted mt-1 truncate">{{ it.action_line }}</div>
+                      <div class="text-xs font-semibold">{{ it.problem or it.action_line or it.finding_key }}</div>
+                      <div class="text-xs text-muted mt-1">{{ it.impact }}</div>
+                      <div class="text-[11px] text-muted mt-2">{{ it.money_at_risk }}</div>
+                      <div class="text-[11px] text-muted mt-2"><strong>Urgência:</strong> {{ it.urgency or "Agir agora" }}</div>
+                      <div class="text-[11px] text-muted mt-2"><strong>Ação recomendada:</strong> {{ it.action_recommended or it.action_line }}</div>
                     </div>
                     <div class="text-right">
                       <div class="mono text-xs">score={{ it.score }}</div>
-                      <div class="mono text-[11px] text-muted">level={{ it.level }}</div>
+                      <div class="text-[11px] text-muted">{{ it.financial_short_label or it.financial_label or "Receita em risco" }}</div>
                       <div class="mono text-[11px] text-muted">conf={{ it.confidence if it.confidence is not none else "—" }}</div>
                     </div>
                   </div>

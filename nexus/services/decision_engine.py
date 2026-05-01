@@ -70,6 +70,138 @@ _KW_EXPL = [
 ]
 
 
+def _ecom_problem_copy(f: Finding) -> str:
+    text = " ".join([f.category or "", f.failure or "", f.explanation or "", f.solution or ""]).lower()
+    mappings = [
+        (("checkout", "payment", "gateway"), "Checkout pode falhar e fazer pedidos não serem concluídos."),
+        (("cookie", "session", "login", "auth", "jwt"), "Sessão da compra pode quebrar e interromper o checkout."),
+        (("ssl", "tls", "https", "certificate"), "Sinal de segurança fraco pode reduzir confiança antes do pagamento."),
+        (("xss", "script", "input", "form"), "Campos e scripts inseguros podem prejudicar confiança e conversão."),
+        (("redirect", "open redirect"), "Redirecionamento inseguro pode tirar o cliente do fluxo de compra."),
+        (("cors", "api"), "Integração exposta pode quebrar catálogo, carrinho ou checkout."),
+        (("headers", "hsts", "csp", "referrer-policy"), "Proteção fraca do site pode afetar confiança na compra."),
+        (("sqli", "sql injection", "database"), "Falha crítica pode interromper a operação e afetar vendas."),
+    ]
+    for keywords, message in mappings:
+        if any(k in text for k in keywords):
+            return message
+    failure = (f.failure or "").strip()
+    if failure:
+        failure = failure[:110].rstrip(".")
+        return f"{failure} pode afetar a jornada de compra."
+    return "Problema detectado pode afetar a jornada de compra."
+
+
+def _ecom_impact_copy(f: Finding, level: str) -> str:
+    level = str(level or "").upper()
+    text = " ".join([f.category or "", f.failure or "", f.explanation or "", f.loss or ""]).lower()
+    if any(k in text for k in ("checkout", "payment", "gateway", "cart", "session", "cookie")):
+        return "Pode derrubar vendas ao quebrar checkout, reduzir conversão e enfraquecer a confiança do comprador."
+    if any(k in text for k in ("ssl", "tls", "https", "header", "hsts", "csp")):
+        return "Pode reduzir confiança na compra, afetar conversão e criar atrito antes do checkout."
+    if any(k in text for k in ("xss", "csrf", "redirect", "cors", "api", "sqli")):
+        return "Pode afetar vendas ao comprometer checkout, conversão e confiança em páginas críticas da loja."
+    if level in ("CRITICAL", "HIGH"):
+        return "Pode afetar vendas, checkout, conversão e confiança se continuar aberto."
+    if level == "MEDIUM":
+        return "Pode reduzir conversão, gerar atrito no checkout e desgastar a confiança ao longo do tempo."
+    return "Vale corrigir para proteger vendas, conversão e confiança da loja."
+
+
+def _ecom_money_at_risk_copy(f: Finding, level: str, score: int) -> str:
+    level = str(level or "").upper()
+    score = int(score or 0)
+    text = " ".join([f.category or "", f.failure or "", f.loss or ""]).lower()
+    if any(k in text for k in ("checkout", "payment", "cart", "session")):
+        return "Dinheiro em risco: perda direta de vendas e aumento de abandono no checkout."
+    if any(k in text for k in ("product", "catalog", "search", "script", "performance")):
+        return "Dinheiro em risco: queda de conversão em páginas de produto e menos pedidos concluídos."
+    if any(k in text for k in ("ssl", "tls", "https", "headers", "hsts", "csp", "redirect")):
+        return "Dinheiro em risco: perda de conversão por menor confiança no momento de comprar."
+    if level == "CRITICAL" or score >= 85:
+        return "Dinheiro em risco: perda direta de receita se clientes abandonarem a compra."
+    if level == "HIGH" or score >= 70:
+        return "Dinheiro em risco: queda perceptível de conversão e pedidos concluídos."
+    if level == "MEDIUM":
+        return "Dinheiro em risco: erosão gradual de conversão, confiança e performance comercial."
+    return "Dinheiro em risco: impacto indireto em confiança e conversão se o problema persistir."
+
+
+def _ecom_urgency_copy(level: str) -> str:
+    level = str(level or "").upper()
+    if level == "CRITICAL":
+        return "Agir agora"
+    if level == "HIGH":
+        return "Próximas 24h"
+    if level == "MEDIUM":
+        return "Esta semana"
+    return "Monitorar"
+
+
+def _financial_severity_view(level: str, score: int) -> Dict:
+    level = str(level or "").upper()
+    score = int(score or 0)
+    if level == "CRITICAL" or score >= 85:
+        return {
+            "label": "Checkout em risco / perda imediata",
+            "short_label": "Perda imediata",
+            "summary": "Esse problema pode interromper compras e causar perda imediata de receita.",
+        }
+    if level == "HIGH" or score >= 70:
+        return {
+            "label": "Perda direta de receita",
+            "short_label": "Receita em risco",
+            "summary": "Esse problema pode derrubar vendas já nas próximas sessões de compra.",
+        }
+    if level == "MEDIUM" or score >= 45:
+        return {
+            "label": "Risco de perda de vendas",
+            "short_label": "Vendas em risco",
+            "summary": "Esse problema pode reduzir conversão e fazer a loja perder pedidos ao longo do tempo.",
+        }
+    return {
+        "label": "Impacto baixo em conversão",
+        "short_label": "Conversão sob atenção",
+        "summary": "Esse problema tende a ter impacto menor, mas ainda pode corroer conversão e confiança se persistir.",
+    }
+
+
+def _ecom_action_copy(f: Finding, fallback_rec: str) -> str:
+    text = " ".join([f.category or "", f.failure or "", f.solution or "", f.explanation or ""]).lower()
+    mappings = [
+        (("checkout", "payment", "gateway"), "Validar o fluxo de checkout, pagamento e retorno do pedido antes de liberar tráfego."),
+        (("cookie", "session", "login", "auth", "jwt"), "Reforçar sessão, cookies e login para evitar quebra do carrinho e do checkout."),
+        (("ssl", "tls", "https", "certificate"), "Corrigir HTTPS e sinais de confiança para não perder compradores antes do pagamento."),
+        (("headers", "hsts", "csp", "referrer-policy"), "Ativar proteção básica da loja para aumentar confiança e reduzir risco no checkout."),
+        (("xss", "script", "input", "form"), "Proteger formulários, scripts e entradas para preservar conversão e confiança."),
+        (("redirect", "open redirect"), "Remover redirecionamentos inseguros que podem tirar clientes do fluxo de compra."),
+        (("cors", "api"), "Restringir integrações expostas para estabilizar catálogo, carrinho e checkout."),
+        (("sqli", "sql injection", "database"), "Corrigir a falha crítica e adicionar teste de regressão para proteger operação e vendas."),
+    ]
+    for keywords, copy in mappings:
+        if any(k in text for k in keywords):
+            return copy
+    rec = (fallback_rec or f.solution or "").strip()
+    if rec:
+        return rec[:180]
+    return "Corrigir este ponto primeiro para proteger vendas, checkout, conversão e confiança."
+
+
+def build_ecommerce_finding_view(f: Finding, *, level: str, score: int, confidence: float | None, recommendation: str) -> Dict:
+    fin = _financial_severity_view(level, score)
+    return {
+        "severidade_financeira": fin["label"],
+        "severidade_financeira_curta": fin["short_label"],
+        "resumo_financeiro": fin["summary"],
+        "problema": _ecom_problem_copy(f),
+        "impacto": _ecom_impact_copy(f, level),
+        "dinheiro_em_risco": _ecom_money_at_risk_copy(f, level, score),
+        "urgencia": _ecom_urgency_copy(level),
+        "acao_recomendada": _ecom_action_copy(f, recommendation),
+        "confianca": None if confidence is None else round(float(confidence), 3),
+    }
+
+
 def _exploitability(f: Finding) -> float:
     text = " ".join([f.category, f.failure, f.proof, f.explanation])
     best = 0.25
@@ -161,6 +293,7 @@ def score_finding(f: Finding, *, recurrence_count: int = 1) -> Dict:
         "key": f.key,
         "category": f.category,
         "failure": f.failure,
+        "loss": f.loss,
         "priority_raw": f.priority,
         "complexity": f.complexity,
         "severity_base": severity,
@@ -267,6 +400,15 @@ def build_decision_report(
         except Exception:
             it["safety_gate"] = {"status": "REQUIRES_CONFIRMATION", "reasons": ["Safety gate error; treat as confirmation required."]}
 
+        ecom_view = build_ecommerce_finding_view(
+            f,
+            level=str(it.get("level") or ""),
+            score=int(it.get("score") or 0),
+            confidence=it.get("confidence"),
+            recommendation=str(it.get("recommendation") or ""),
+        )
+        it["ecommerce"] = ecom_view
+
         items.append(it)
     items.sort(key=lambda x: (x.get("score", 0), x.get("level", "")), reverse=True)
     top = items[:top_n]
@@ -280,12 +422,18 @@ def build_decision_report(
             "range": "approximately -7..+7 points",
             "note": "Low confidence increases urgency; high confidence slightly reduces urgency.",
         },
+        "financial_levels": {
+            "LOW": "impacto baixo em conversão",
+            "MEDIUM": "risco de perda de vendas",
+            "HIGH": "perda direta de receita",
+            "CRITICAL": "checkout em risco / perda imediata",
+        },
         "levels": {"CRITICAL": ">=85", "HIGH": "70-84", "MEDIUM": "45-69", "LOW": "<45"},
         "notes": [
-            "Severity comes from the CSV Priority column (Critical/High/Medium/Low).",
-            "Exploitability and exposure are keyword/category heuristics (explainable).",
-            "Recurrence boosts findings that persist across monitoring runs.",
-            "Confidence is learned from verified outcomes and adjusts the final score slightly (explainable).",
+            "A saída para o usuário converte prioridade técnica em impacto financeiro.",
+            "Problemas com mais chance de afetar checkout, conversão e confiança sobem na prioridade.",
+            "Problemas recorrentes recebem mais urgência porque podem continuar queimando receita.",
+            "Confiança histórica ajusta a ordem para destacar o que tende a custar mais dinheiro se permanecer aberto.",
         ],
     }
 
@@ -301,13 +449,26 @@ def decision_markdown(decision: Dict) -> str:
     lines.append("\n\n## Decision engine (priorities)\n")
     lines.append("Top priorities (what to fix first):\n")
     for i, t in enumerate(top, start=1):
-        lines.append(
-            f"{i}. [{t.get('level')}] score={t.get('score')} — {t.get('category')}: {t.get('failure')}"
-        )
+        ev = t.get("ecommerce") or {}
+        sev = (ev.get("severidade_financeira") or "").strip()
+        header = sev if sev else (ev.get('problema') or t.get('failure') or "")
+        lines.append(f"{i}. {header}")
+        problem = (ev.get("problema") or t.get("failure") or "").strip()
+        if problem:
+            lines.append(f"   - Problema: {problem}")
+        impact = (ev.get("impacto") or "").strip()
+        if impact:
+            lines.append(f"   - Impacto: {impact}")
+        money = (ev.get("dinheiro_em_risco") or "").strip()
+        if money:
+            lines.append(f"   - Dinheiro em risco: {money}")
+        urg = (ev.get("urgencia") or "").strip()
+        if urg:
+            lines.append(f"   - Urgência: {urg}")
         conf = t.get("confidence", None)
         if conf is not None:
             lines.append(f"   - Confidence: {conf} (learned from past outcomes)")
-        rec = (t.get("recommendation") or "").strip()
+        rec = (ev.get("acao_recomendada") or t.get("recommendation") or "").strip()
         if rec:
             lines.append(f"   - Action: {rec}")
         ab = t.get("action") or {}
@@ -328,11 +489,12 @@ def decision_markdown(decision: Dict) -> str:
     lines.append("\n<details><summary>Scoring details</summary>")
     rub = decision.get("rubric") or {}
     lines.append(f"- Weights: {json.dumps(rub.get('weights') or {}, ensure_ascii=False)}")
-    lines.append(f"- Levels: {json.dumps(rub.get('levels') or {}, ensure_ascii=False)}")
+    lines.append(f"- Impacto financeiro: {json.dumps(rub.get('financial_levels') or {}, ensure_ascii=False)}")
     lines.append("\nAll findings (score → what it is):\n")
     items = decision.get("items") or []
     for it in items[:40]:
-        lines.append(f"- [{it.get('level')}] {it.get('score')} — {it.get('category')}: {it.get('failure')}")
+        ev = it.get("ecommerce") or {}
+        lines.append(f"- {ev.get('severidade_financeira') or ev.get('problema') or it.get('failure')}")
     if len(items) > 40:
         lines.append(f"- … ({len(items) - 40} more)")
     lines.append("</details>")

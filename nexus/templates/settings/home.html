@@ -30,44 +30,80 @@
 
   <section class="split-showcase" id="provider">
     <div class="glass-card">
-      <div class="eyebrow">Provider config</div>
-      <div class="mt-4 page-title">Choose, validate and save the model stack.</div>
+      <div class="eyebrow">Essencial</div>
+      <div class="mt-4 page-title">Conectar provedor de IA</div>
       <div class="mt-3 page-lead">
-        This is where the product feels reliable: the operator should immediately know which provider is active, whether the key works and which model is selected.
+        Ignore o nicho por um momento: para o SaaS funcionar, ele só precisa de um provedor, uma chave válida e um modelo utilizável. Esta área foi simplificada para exatamente isso.
       </div>
 
       {% if is_admin %}
-        <form class="mt-6 grid grid-cols-1 md:grid-cols-5 gap-4" method="post" action="{{ url_for('admin.admin_llm_save') }}">
+        <div class="mt-5 metric-row">
+          <div class="metric-tile">
+            <div class="metric-label">Passo 1</div>
+            <div class="metric-value text-2xl">Escolha</div>
+            <div class="metric-foot">Selecione o provedor.</div>
+          </div>
+          <div class="metric-tile">
+            <div class="metric-label">Passo 2</div>
+            <div class="metric-value text-2xl">Conecte</div>
+            <div class="metric-foot">Cole a chave e carregue os modelos.</div>
+          </div>
+          <div class="metric-tile">
+            <div class="metric-label">Passo 3</div>
+            <div class="metric-value text-2xl">Use</div>
+            <div class="metric-foot">Valide e salve para o sistema inteiro.</div>
+          </div>
+        </div>
+
+        <form class="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4" method="post" action="{{ url_for('admin.admin_llm_save') }}">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-          <select id="cfgLlmProvider" name="provider" class="input text-sm" onchange="suggestCfgProviderBase()">
-            {% set _p = (llm_defaults.provider or "openai_compatible") %}
-            <option value="openai" {% if _p=="openai" %}selected{% endif %}>OpenAI</option>
-            <option value="openai_compatible" {% if _p=="openai_compatible" %}selected{% endif %}>OpenAI-compatible</option>
-            <option value="openrouter" {% if _p=="openrouter" %}selected{% endif %}>OpenRouter</option>
-            <option value="groq" {% if _p=="groq" %}selected{% endif %}>Groq</option>
-            <option value="anthropic" {% if _p=="anthropic" %}selected{% endif %}>Anthropic</option>
-          </select>
-          <input id="cfgLlmBase" name="base_url_v1" class="input text-sm" placeholder="https://provider/v1" value="{{ llm_defaults.base_url_v1 }}"/>
-          <input id="cfgLlmApiKey" name="api_key" type="password" class="input text-sm" placeholder="Cole nova API key (deixe vazio para manter)" value=""/>
-          <div class="md:col-span-2">
-            <input id="cfgModelSearch" class="input text-sm w-full" placeholder="Search model…" oninput="filterCfgModels()" />
-            <select id="cfgLlmModel" name="model" class="input text-sm w-full mt-2">
-              <option value="{{ llm_defaults.model }}">{{ llm_defaults.model }}</option>
+
+          <div>
+            <div class="text-[11px] text-muted mb-2">Provedor</div>
+            <select id="cfgLlmProvider" name="provider" class="input text-sm" onchange="onCfgProviderChanged()">
+              {% set _p = (llm_defaults.provider or "openai_compatible") %}
+              <option value="openai" {% if _p=="openai" %}selected{% endif %}>OpenAI</option>
+              <option value="openrouter" {% if _p=="openrouter" %}selected{% endif %}>OpenRouter</option>
+              <option value="groq" {% if _p=="groq" %}selected{% endif %}>Groq</option>
+              <option value="anthropic" {% if _p=="anthropic" %}selected{% endif %}>Anthropic</option>
+              <option value="openai_compatible" {% if _p=="openai_compatible" %}selected{% endif %}>Outro compatível</option>
             </select>
           </div>
-          <div class="md:col-span-5 flex items-center gap-3">
-            <button type="button" class="btn-secondary" onclick="loadCfgModels(true)">Load models</button>
-            <button type="button" class="btn-secondary" onclick="validateCfgProvider()">Validate</button>
-            <button class="btn-primary">Save</button>
+
+          <div>
+            <div class="text-[11px] text-muted mb-2">API key</div>
+            <input id="cfgLlmApiKey" name="api_key" type="password" class="input text-sm" placeholder="Cole a chave (deixe vazio para manter a atual)" value=""/>
+          </div>
+
+          <div id="cfgBaseWrap" class="md:col-span-2">
+            <div class="text-[11px] text-muted mb-2">Base URL</div>
+            <input id="cfgLlmBase" name="base_url_v1" class="input text-sm" placeholder="https://provider/v1" value="{{ llm_defaults.base_url_v1 }}"/>
+            <div class="mt-2 text-xs text-muted">Só é necessário alterar manualmente quando o provedor for compatível customizado.</div>
+          </div>
+
+          <div class="md:col-span-2">
+            <div class="text-[11px] text-muted mb-2">Modelo</div>
+            <div class="grid grid-cols-1 md:grid-cols-[1fr_auto_auto] gap-3">
+              <select id="cfgLlmModel" name="model" class="input text-sm w-full">
+                <option value="{{ llm_defaults.model }}">{{ llm_defaults.model or "Selecione um modelo" }}</option>
+              </select>
+              <button type="button" class="btn-secondary" onclick="loadCfgModels(true)">Carregar modelos</button>
+              <button type="button" class="btn-secondary" onclick="validateCfgProvider()">Validar conexão</button>
+            </div>
+            <input id="cfgModelSearch" class="input text-sm w-full mt-3" placeholder="Filtrar modelos carregados…" oninput="filterCfgModels()" />
+          </div>
+
+          <div class="md:col-span-2 flex flex-wrap items-center gap-3">
+            <button class="btn-primary">Salvar e usar</button>
+            <span class="trust-item">Atual: <strong>{{ llm_defaults.provider or "—" }}</strong></span>
+            <span class="trust-item">Modelo: <strong class="mono">{{ llm_defaults.model or "—" }}</strong></span>
+            <span class="trust-item">Chave: <strong class="mono">{{ llm_defaults.api_key_mask or "(vazia)" }}</strong></span>
           </div>
         </form>
-        <div class="mt-3 trust-strip">
-          <span class="trust-item">Current key <strong class="mono">{{ llm_defaults.api_key_mask or "(empty)" }}</strong></span>
-          <span class="trust-item">Provider <strong>{{ llm_defaults.provider or "—" }}</strong></span>
-          <span class="trust-item">Model <strong class="mono">{{ llm_defaults.model or "—" }}</strong></span>
+
+        <div id="cfgLlmValidateOut" class="mt-4 soft-panel text-sm text-muted">
+          Selecione o provedor, cole a chave, carregue os modelos e valide. A ideia aqui é eliminar o máximo de configuração manual.
         </div>
-        <div class="mt-2 text-xs text-muted">Tip: for OpenAI-compatible gateways, use only <span class="mono">.../v1</span>, not <span class="mono">/chat/completions</span>.</div>
-        <div id="cfgLlmValidateOut" class="mt-3 text-xs text-muted"></div>
       {% else %}
         <div class="mt-4 body-text">Only admins can change provider configuration.</div>
         <div class="mt-2 text-xs text-muted mono">
@@ -75,38 +111,20 @@
         </div>
       {% endif %}
     </div>
+
     <div class="soft-panel soft-panel-strong">
-      <div class="section-label">Why this matters</div>
-      <div class="section-title mt-2">A premium setup experience reduces doubt</div>
-      <div class="step-list mt-5">
-        <div class="step-item">
-          <span class="step-index">1</span>
-          <div class="step-copy"><strong>Pick a provider:</strong> choose the vendor you trust or want to test first.</div>
-        </div>
-        <div class="step-item">
-          <span class="step-index">2</span>
-          <div class="step-copy"><strong>Load models:</strong> use the real model list instead of guessing strings manually.</div>
-        </div>
-        <div class="step-item">
-          <span class="step-index">3</span>
-          <div class="step-copy"><strong>Validate before usage:</strong> catch bad keys or unsupported models before the user sees a broken audit.</div>
-        </div>
+      <div class="section-label">Funcionamento base</div>
+      <div class="section-title mt-2">Ferramentas essenciais, do jeito mais curto possível</div>
+      <div class="check-list mt-5">
+        <div class="check-item">O usuário não precisa pensar em endpoint se estiver usando um provedor conhecido.</div>
+        <div class="check-item">O usuário não precisa decorar nome de modelo; a UI puxa a lista real.</div>
+        <div class="check-item">O usuário não precisa adivinhar se está pronto; a validação responde isso claramente.</div>
+        <div class="check-item">O usuário não precisa configurar o mesmo dado em várias telas; o restante do fluxo consome essa base.</div>
       </div>
-      <div class="mt-6 signal-list">
-        <div class="signal-item">
-          <div class="signal-item-copy">
-            <div class="signal-item-title">Visible state</div>
-            <div class="signal-item-sub">The operator should always know which provider and model the org is relying on.</div>
-          </div>
-          <span class="badge badge-ok">Trust</span>
-        </div>
-        <div class="signal-item">
-          <div class="signal-item-copy">
-            <div class="signal-item-title">Low-friction recovery</div>
-            <div class="signal-item-sub">If a provider fails, switching vendors should feel operational, not like a backend incident.</div>
-          </div>
-          <span class="badge badge-warn">Resilience</span>
-        </div>
+      <div class="mt-6 trust-strip">
+        <span class="trust-item">Menos campos</span>
+        <span class="trust-item">Menos memória</span>
+        <span class="trust-item">Menos erro</span>
       </div>
     </div>
   </section>
@@ -191,12 +209,12 @@
 {% if is_admin %}
 <script>
   let __cfgModels = [];
-  function suggestCfgProviderBase(){
+  function suggestCfgProviderBase(force=false){
     const p = (document.getElementById("cfgLlmProvider")?.value || "").trim();
     const el = document.getElementById("cfgLlmBase");
     if(!el) return;
     const current = (el.value || "").trim();
-    if(current) return;
+    if(current && !force) return;
     const defaults = {
       openai: "https://api.openai.com/v1",
       openai_compatible: "",
@@ -205,6 +223,22 @@
       anthropic: "https://api.anthropic.com"
     };
     el.value = defaults[p] || "";
+  }
+  function onCfgProviderChanged(){
+    const p = (document.getElementById("cfgLlmProvider")?.value || "").trim();
+    const wrap = document.getElementById("cfgBaseWrap");
+    if(wrap){
+      wrap.style.display = p === "openai_compatible" ? "" : "none";
+    }
+    suggestCfgProviderBase(true);
+    const sel = document.getElementById("cfgLlmModel");
+    if(sel){ sel.innerHTML = "<option value=''>Selecione um modelo</option>"; }
+    const out = document.getElementById("cfgLlmValidateOut");
+    if(out){
+      out.textContent = p === "openai_compatible"
+        ? "Informe a Base URL do provedor compatível, depois carregue os modelos."
+        : "A Base URL padrão foi aplicada automaticamente. Agora cole a chave e carregue os modelos.";
+    }
   }
   async function loadCfgModels(force=false){
     const provider = (document.getElementById("cfgLlmProvider")?.value || "").trim();
@@ -224,9 +258,9 @@
       }
       __cfgModels = j.models || [];
       renderCfgModels(__cfgModels);
-      if(out) out.textContent = `Models loaded: ${__cfgModels.length}`;
+      if(out) out.textContent = `Modelos carregados: ${__cfgModels.length}. Selecione um e valide a conexão.`;
     }catch(e){
-      if(out) out.textContent = "Could not load models.";
+      if(out) out.textContent = "Não foi possível carregar os modelos.";
     }
   }
   function renderCfgModels(models){
@@ -253,7 +287,7 @@
     const apiKey = (document.getElementById("cfgLlmApiKey")?.value || "").trim();
     const model = (document.getElementById("cfgLlmModel")?.value || "").trim();
     const out = document.getElementById("cfgLlmValidateOut");
-    if(out) out.textContent = "Validating...";
+    if(out) out.textContent = "Validando conexão...";
     try{
       const res = await fetch(`/admin/llm/validate.json`, {
         method: "POST",
@@ -263,13 +297,14 @@
       const j = await res.json();
       if(out){
         out.textContent = j.ok
-          ? `OK · models=${j.models_count || 0} · sample=${j.sample || ""}`
-          : `ERROR · ${j.error || "validation failed"}`;
+          ? `Conexão OK · modelos=${j.models_count || 0} · resposta=${j.sample || ""}`
+          : `Erro · ${j.error || "validation failed"}`;
       }
     }catch(e){
-      if(out) out.textContent = "Validation failed.";
+      if(out) out.textContent = "Falha ao validar a conexão.";
     }
   }
+  onCfgProviderChanged();
   setTimeout(() => loadCfgModels(false), 300);
 </script>
 {% endif %}

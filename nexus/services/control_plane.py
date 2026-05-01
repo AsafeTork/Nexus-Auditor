@@ -242,12 +242,21 @@ def build_agent_cards(org_id: str, *, limit: int = 200) -> List[Dict[str, Any]]:
             rs = sg.get("reasons") or []
             if not isinstance(rs, list):
                 rs = []
+            ecommerce = it.get("ecommerce") or {}
             compact_top.append(
                 {
                     "finding_key": it.get("key") or "",
                     "score": it.get("score"),
                     "level": it.get("level"),
                     "confidence": it.get("confidence"),
+                    "financial_label": ecommerce.get("severidade_financeira") or "",
+                    "financial_short_label": ecommerce.get("severidade_financeira_curta") or "",
+                    "financial_summary": ecommerce.get("resumo_financeiro") or "",
+                    "problem": ecommerce.get("problema") or it.get("failure") or "",
+                    "impact": ecommerce.get("impacto") or "",
+                    "money_at_risk": ecommerce.get("dinheiro_em_risco") or "",
+                    "urgency": ecommerce.get("urgencia") or "",
+                    "action_recommended": ecommerce.get("acao_recomendada") or _summ_action_line(it),
                     "safety_gate": {
                         "status": (sg.get("status") or "REQUIRES_CONFIRMATION"),
                         "reasons": [str(x) for x in rs[:2]],

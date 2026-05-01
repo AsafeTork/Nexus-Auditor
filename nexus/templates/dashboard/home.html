@@ -1,48 +1,37 @@
 {% extends "layout.html" %}
 {% set title = "Dashboard" %}
-{% set subtitle = "Turn security findings into a clear next action, visible proof and buyer-friendly reporting." %}
+{% set subtitle = "Descubra em segundos se sua loja está perdendo vendas, quanto isso pode custar e o que corrigir agora." %}
 {% set page_max_w = "max-w-7xl" %}
 {% block page_actions %}
-  <a class="btn-primary flex items-center gap-2" href="#sites">
+  <a class="btn-primary flex items-center gap-2" href="{{ url_for('dashboard.priorities') }}">
     <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
     </svg>
-    Iniciar fluxo
+    Ver prioridades
   </a>
-  <a class="btn-secondary" href="{{ url_for('dashboard.priorities') }}">Prioridades</a>
-  <a class="btn-secondary" href="{{ url_for('settings.settings_home') }}#provider">Configurar provedor</a>
+  <a class="btn-secondary" href="#sites">Ver sites em risco</a>
 {% endblock %}
 {% block page_context %}
-  <div class="hero-meta">
-    <span class="meta-chip">Org <strong class="mono">{{ current_user.org_id }}</strong></span>
-    <span class="meta-chip">Plan <strong>{{ sub.status if sub else "inactive" }}</strong></span>
-    <span class="meta-chip">Auto-refresh <strong>60s</strong></span>
-  </div>
   <div class="mt-4 page-lead">
-    SaaS vendável precisa responder três perguntas rápido: onde está o risco, o que fazer agora e qual prova de valor já existe. Esta tela foi reorganizada para deixar isso escaneável em poucos segundos.
+    Esta tela existe para responder três perguntas sem esforço: você está perdendo vendas, quanto isso pode custar e o que precisa corrigir agora.
   </div>
 {% endblock %}
 {% block hero_kpis %}
-  <div class="mt-5 metric-row cols-4">
+  <div class="mt-5 metric-row cols-3">
     <div class="metric-tile">
-      <div class="metric-label">Tracked sites</div>
-      <div class="metric-value">{{ kpi.sites }}</div>
-      <div class="metric-foot">Targets under active visibility.</div>
+      <div class="metric-label">Estou perdendo vendas?</div>
+      <div class="metric-value">{{ risk_overview.sales_status_short }}</div>
+      <div class="metric-foot">{{ risk_overview.sales_headline }}</div>
     </div>
     <div class="metric-tile">
-      <div class="metric-label">Runs created</div>
-      <div class="metric-value">{{ kpi.audits }}</div>
-      <div class="metric-foot">Every run builds proof and history.</div>
+      <div class="metric-label">Quanto isso pode me custar?</div>
+      <div class="metric-value">{{ proof_metrics.estimated_loss_label }}</div>
+      <div class="metric-foot">{{ proof_metrics.estimated_loss_detail }}</div>
     </div>
     <div class="metric-tile">
-      <div class="metric-label">Successful runs</div>
-      <div class="metric-value text-success">{{ kpi.done }}</div>
-      <div class="metric-foot">Outputs ready to inspect or present.</div>
-    </div>
-    <div class="metric-tile">
-      <div class="metric-label">Runs with error</div>
-      <div class="metric-value text-danger-soft">{{ kpi.errors }}</div>
-      <div class="metric-foot">Use logs and provider validation to recover fast.</div>
+      <div class="metric-label">O que corrigir agora?</div>
+      <div class="metric-value">{{ risk_overview.immediate_action_urgency }}</div>
+      <div class="metric-foot">{{ risk_overview.immediate_action }}</div>
     </div>
   </div>
 {% endblock %}
@@ -52,198 +41,164 @@
   {% set setup_audit_ready = (kpi.audits or 0) > 0 %}
   {% set setup_priority_ready = (priority_total or 0) > 0 %}
 
-  <section class="card card-focus">
+  <section class="card card-focus risk-shell {% if risk_overview.status == 'CRITICAL' %}risk-state-critical{% elif risk_overview.status == 'AT_RISK' %}risk-state-atrisk{% elif risk_overview.status == 'PROTECTED' %}risk-state-protected{% else %}risk-state-no-data{% endif %}">
     <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-6">
       <div class="min-w-0">
-        <div class="section-label">System status</div>
-        <div class="section-title mt-2">What is happening right now</div>
+        <div class="section-label">PERDA DE VENDAS</div>
+        <div class="section-title mt-2">{{ risk_overview.sales_headline }}</div>
         <div class="body-text mt-2">
-          Following current UX best practices, this area keeps the user informed about system readiness, next steps and missing setup instead of making them infer what is wrong.
+          {{ risk_overview.summary }}
         </div>
-      </div>
-      <div class="trust-strip">
-        <span class="trust-item {% if provider_state.ready %}pill-success{% else %}pill-warn{% endif %}">
-          {{ "Provider ready" if provider_state.ready else "Provider setup required" }}
-        </span>
-        <span class="trust-item {% if setup_sites_ready %}pill-success{% else %}pill-warn{% endif %}">
-          {{ "Site added" if setup_sites_ready else "No site yet" }}
-        </span>
-        <span class="trust-item {% if setup_priority_ready %}pill-success{% else %}pill-warn{% endif %}">
-          {{ "Priorities visible" if setup_priority_ready else "No priorities yet" }}
-        </span>
-      </div>
-    </div>
-
-    <div class="mt-6 value-grid cols-2">
-      <div class="soft-panel soft-panel-strong">
-        <div class="section-title">Setup checklist</div>
-        <div class="body-text mt-2">This checklist reduces recall and shows the shortest path to value.</div>
-        <div class="step-list mt-5">
-          <div class="step-item">
-            <span class="step-index">{% if provider_state.ready %}✓{% else %}1{% endif %}</span>
-            <div class="step-copy"><strong>Configure provider</strong>: {% if provider_state.ready %}ready to use{% else %}add key, load models and validate in Settings{% endif %}</div>
-          </div>
-          <div class="step-item">
-            <span class="step-index">{% if setup_sites_ready %}✓{% else %}2{% endif %}</span>
-            <div class="step-copy"><strong>Create target site</strong>: {% if setup_sites_ready %}at least one site is available{% else %}add your first site URL below{% endif %}</div>
-          </div>
-          <div class="step-item">
-            <span class="step-index">{% if setup_audit_ready %}✓{% else %}3{% endif %}</span>
-            <div class="step-copy"><strong>Run an audit</strong>: {% if setup_audit_ready %}audit history exists{% else %}start with a full run to generate visible output{% endif %}</div>
-          </div>
-          <div class="step-item">
-            <span class="step-index">{% if setup_priority_ready %}✓{% else %}4{% endif %}</span>
-            <div class="step-copy"><strong>Review priorities</strong>: {% if setup_priority_ready %}simplified priorities are available{% else %}priorities will appear after successful data generation{% endif %}</div>
-          </div>
-        </div>
-        <div class="hero-cta-stack">
-          {% if not provider_state.ready %}
-            <a class="btn-primary" href="{{ url_for('settings.settings_home') }}#provider">Configure provider now</a>
-          {% elif not setup_sites_ready %}
-            <a class="btn-primary" href="#createSite">Create your first site</a>
-          {% elif not setup_audit_ready %}
-            <a class="btn-primary" href="#sites">Run your first audit</a>
-          {% else %}
-            <a class="btn-primary" href="{{ url_for('dashboard.priorities') }}">Open priorities</a>
+        <div class="mt-4 risk-topline">
+          {% if demo_mode %}
+            <span class="badge badge-run">DEMO DATA</span>
+            <span class="trust-item">{{ demo_segment_label }}</span>
           {% endif %}
-          <a class="btn-secondary" href="{{ url_for('settings.settings_home') }}#provider">Open setup guide</a>
+          {% if risk_overview.status == "CRITICAL" %}
+            <span class="risk-status-badge risk-status-critical">Perda imediata</span>
+          {% elif risk_overview.status == "AT_RISK" %}
+            <span class="risk-status-badge risk-status-atrisk">Vendas em risco</span>
+          {% elif risk_overview.status == "PROTECTED" %}
+            <span class="risk-status-badge risk-status-protected">Receita protegida</span>
+          {% else %}
+            <span class="risk-status-badge risk-status-no-data">Sem leitura real</span>
+          {% endif %}
+          <span class="trust-item">Corrigir agora: {{ risk_overview.immediate_action }}</span>
         </div>
-      </div>
-      <div class="soft-panel">
-        <div class="section-title">In-context help</div>
-        <div class="body-text mt-2">Instead of long tutorials, the product now places task-specific help where the user actually needs it.</div>
-        <div class="check-list mt-5">
-          <div class="check-item">If the provider is not ready, the dashboard points directly to the exact configuration section.</div>
-          <div class="check-item">If there are no sites, the empty state explains what will appear and how to populate it.</div>
-          <div class="check-item">If there are no priorities, the UI explains that a successful audit is the next step.</div>
-          <div class="check-item">If the user wants a simpler surface, the dedicated priorities page avoids admin-only complexity.</div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <section class="split-showcase" id="sites">
-    <div class="glass-card">
-      <div class="eyebrow">Primary workflow</div>
-      <div class="mt-4 page-title">From target URL to executive-ready output.</div>
-      <div class="mt-3 page-lead">
-        A UI que vende não começa em “configuração”. Ela começa deixando claro o resultado: capturar risco, transformar em prioridade e embalar isso como algo apresentável para decisão.
-      </div>
-      <div class="hero-cta-stack">
-        <a class="btn-primary" href="#createSite">Criar primeiro site</a>
-        <a class="btn-secondary" href="{{ url_for('dashboard.priorities') }}">Abrir prioridades</a>
-        <a class="btn-secondary" href="{{ url_for('settings.settings_home') }}#provider">Checar provedor</a>
-      </div>
-      <div class="mt-6 value-grid cols-3">
-        <div class="feature-card">
-          <div class="feature-card-title">1. Add a target</div>
-          <div class="feature-card-copy">Crie um site e deixe a coleta pronta para virar histórico, prioridade e dossier.</div>
-        </div>
-        <div class="feature-card">
-          <div class="feature-card-title">2. Run an audit</div>
-          <div class="feature-card-copy">Use full ou fast e acompanhe o progresso até o relatório técnico e executivo.</div>
-        </div>
-        <div class="feature-card">
-          <div class="feature-card-title">3. Sell clarity</div>
-          <div class="feature-card-copy">Use Agent, Overview e dossier para mostrar risco real, ação imediata e evolução.</div>
-        </div>
-      </div>
-    </div>
-    <div class="soft-panel soft-panel-strong">
-        <div class="section-label">O que convence</div>
-        <div class="section-title mt-2">Sinais de confiança acima da dobra</div>
-      <div class="signal-list mt-5">
-        <div class="signal-item">
-          <div class="signal-item-copy">
-              <div class="signal-item-title">Mensagem orientada a resultado</div>
-              <div class="signal-item-sub">A headline precisa dizer o que a pessoa conquista, não apenas o que o produto é.</div>
+        {% if demo_mode %}
+          <div class="mt-3 body-text text-warning">{{ demo_note }}</div>
+        {% endif %}
+        <div class="mt-5">
+          <div class="flex items-center justify-between gap-4 text-[11px] text-muted">
+            <span>Menor impacto em vendas</span>
+            <span>Custo sob pressão {{ proof_metrics.estimated_loss_label }}</span>
+            <span>Maior impacto em vendas</span>
           </div>
-          <span class="badge badge-ok">Aplicado</span>
-        </div>
-        <div class="signal-item">
-          <div class="signal-item-copy">
-            <div class="signal-item-title">Prova visível</div>
-            <div class="signal-item-sub">Métricas, status e superfícies reais do produto reduzem incerteza e fazem a ferramenta parecer concreta.</div>
+          <div class="mt-2 risk-bar">
+            <div
+              class="risk-bar-fill {% if risk_overview.status == 'CRITICAL' %}risk-bar-fill-critical{% elif risk_overview.status == 'AT_RISK' %}risk-bar-fill-atrisk{% elif risk_overview.status == 'PROTECTED' %}risk-bar-fill-protected{% else %}risk-bar-fill-no-data{% endif %}"
+              style="width: {{ risk_overview.risk_bar_pct }}%;"
+            ></div>
           </div>
-          <span class="badge badge-ok">Aplicado</span>
-        </div>
-        <div class="signal-item">
-          <div class="signal-item-copy">
-            <div class="signal-item-title">Próximo passo claro</div>
-            <div class="signal-item-sub">Um CTA focado funciona melhor do que várias opções soltas quando o usuário está tentando entender valor rapidamente.</div>
-          </div>
-          <span class="badge badge-ok">Aplicado</span>
-        </div>
-      </div>
-      <div class="mt-6 trust-strip">
-        <span class="trust-item">Hierarquia clara</span>
-        <span class="trust-item">Divulgação progressiva</span>
-        <span class="trust-item">Prova antes do detalhe</span>
-      </div>
-    </div>
-  </section>
-
-  <section class="card card-focus">
-    <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-6">
-      <div class="min-w-0">
-        <div class="section-label">Valor visível</div>
-        <div class="section-title mt-2">O que usuários comuns precisam ver primeiro</div>
-        <div class="body-text mt-2">
-          Em vez de obrigar usuários a entrar em telas administrativas, o workspace principal agora mostra prontidão do provedor, próximos passos e uma visão simplificada de prioridades direto no dashboard.
         </div>
       </div>
       <div class="trust-strip">
-        <span class="trust-item {% if provider_state.ready %}pill-success{% else %}pill-warn{% endif %}">
-          Provedor {{ "pronto" if provider_state.ready else "precisa de ajuste" }}
-        </span>
-        <span class="trust-item">{{ provider_state.provider or "provedor" }}</span>
-        <span class="trust-item mono">{{ provider_state.model or "sem-modelo" }}</span>
+        <span class="trust-item">Problemas que afetam vendas {{ risk_overview.active_issues }}</span>
+        <span class="trust-item">Receita em risco {{ proof_metrics.estimated_loss_label }}</span>
+        <span class="trust-item">Recuperado {{ proof_metrics.risk_drop_pct }}%</span>
+        <span class="trust-item">Correções visíveis {{ proof_metrics.sites_with_action }}</span>
       </div>
     </div>
 
     <div class="mt-6 value-grid cols-2">
-      <div class="soft-panel">
-        <div class="section-title">Estado da configuração</div>
-        <div class="step-list mt-5">
-          <div class="step-item">
-            <span class="step-index">1</span>
-            <div class="step-copy"><strong>Provedor:</strong> {{ provider_state.provider or "Não selecionado" }}</div>
+      <div class="soft-panel soft-panel-strong">
+        <div class="section-title">Quanto isso pode me custar</div>
+        <div class="mt-5 metric-row cols-2">
+          <div class="metric-tile premium-metric {% if risk_overview.status == 'CRITICAL' %}critical-pulse{% endif %}">
+            <div class="metric-label">Receita em risco</div>
+            <div class="metric-value">{{ proof_metrics.estimated_loss_label }}</div>
+            <div class="metric-foot">{{ proof_metrics.estimated_loss_detail }}</div>
           </div>
-          <div class="step-item">
-            <span class="step-index">2</span>
-            <div class="step-copy"><strong>Base URL:</strong> <span class="mono">{{ provider_state.base_url_v1 or "Não configurada" }}</span></div>
+          <div class="metric-tile premium-metric">
+            <div class="metric-label">Pontos que podem derrubar vendas</div>
+            <div class="metric-value">{{ risk_overview.active_issues }}</div>
+            <div class="metric-foot">Itens abertos que podem afetar checkout, conversão e confiança.</div>
           </div>
-          <div class="step-item">
-            <span class="step-index">3</span>
-            <div class="step-copy"><strong>Modelo:</strong> <span class="mono">{{ provider_state.model or "Não configurado" }}</span></div>
+          <div class="metric-tile premium-metric">
+            <div class="metric-label">Problemas resolvidos recentemente</div>
+            <div class="metric-value text-success">{{ proof_metrics.resolved_recent }}</div>
+            <div class="metric-foot">Correções que já deixaram de pressionar suas vendas.</div>
+          </div>
+          <div class="metric-tile premium-metric">
+            <div class="metric-label">Tempo médio para reagir</div>
+            <div class="metric-value">{{ proof_metrics.avg_fix_time_label }}</div>
+            <div class="metric-foot">Quanto tempo sua operação leva para corrigir o que ameaça receita.</div>
           </div>
         </div>
-        <div class="hero-cta-stack">
-          <a class="btn-primary" href="{{ url_for('settings.settings_home') }}#provider">Abrir configuração do provedor</a>
-          <a class="btn-secondary" href="{{ url_for('dashboard.priorities') }}">Ver prioridades simplificadas</a>
+        <div class="mt-5 soft-panel">
+          <div class="section-title">Sinal de recuperação</div>
+          <div class="body-text mt-2">A pressão sobre vendas caiu <strong>{{ proof_metrics.risk_drop_pct }}%</strong> com base no histórico de itens já resolvidos.</div>
+          <div class="mt-4 trust-strip">
+            <span class="trust-item">Taxa de correção {{ proof_metrics.fix_success_rate }}%</span>
+            <span class="trust-item">Regressões {{ proof_metrics.regression_count }}</span>
+            <span class="trust-item">Leituras concluídas {{ kpi.done }}</span>
+          </div>
         </div>
       </div>
-      <div class="soft-panel soft-panel-strong">
-        <div class="section-title">Prévia das prioridades</div>
+
+      <div class="soft-panel">
+        <div class="section-title">O que corrigir agora</div>
+        <div class="body-text mt-2">Comece pelos pontos abaixo para proteger checkout, conversão, confiança e receita.</div>
+        <div class="signal-list mt-5">
+          {% for task in priority_tasks %}
+            <div class="priority-card {% if task.level == 'CRITICAL' %}priority-card-critical{% elif task.level == 'HIGH' %}priority-card-high{% else %}priority-card-medium{% endif %}">
+              <div class="flex items-start justify-between gap-4">
+                <div class="signal-item-copy">
+                  <div class="priority-title-strong">🚨 {{ task.title }}</div>
+                  <div class="signal-item-sub mt-1">{{ task.impact }}</div>
+                  <div class="text-[11px] text-muted mt-2">{{ task.site_name }}</div>
+                </div>
+                <div class="flex flex-col items-end gap-2">
+                  {% if task.level in ["CRITICAL", "HIGH"] %}
+                    <span class="badge badge-err">{{ task.financial_short_label or task.financial_label or "Receita em risco" }}</span>
+                  {% elif task.level == "MEDIUM" %}
+                    <span class="badge badge-warn">{{ task.financial_short_label or task.financial_label or "Vendas em risco" }}</span>
+                  {% else %}
+                    <span class="badge badge-ok">{{ task.financial_short_label or task.financial_label or "Conversão sob atenção" }}</span>
+                  {% endif %}
+                  <span class="urgency-chip {% if task.level == 'CRITICAL' %}urgency-chip-critical{% elif task.level == 'HIGH' %}urgency-chip-high{% else %}urgency-chip-medium{% endif %}">{{ task.urgency }}</span>
+                  {% if task.confidence is defined %}
+                    <span class="trust-item">Confiança {{ (task.confidence * 100)|round|int }}%</span>
+                  {% endif %}
+                </div>
+              </div>
+              <div class="mt-4 body-text">
+                <strong>Como corrigir:</strong> {{ task.how_to_fix }}
+              </div>
+              <div class="mt-3 text-[11px] text-muted">
+                {{ task.money_at_risk }}
+              </div>
+              <div class="mt-4">
+                {% if task.cta_kind == "provider" %}
+                  <a class="btn-secondary" href="{{ url_for('settings.settings_home') }}#provider">Como corrigir</a>
+                {% elif task.cta_kind == "create_site" %}
+                  <a class="btn-secondary" href="#createSite">Como corrigir</a>
+                {% elif task.cta_kind == "sites" %}
+                  <a class="btn-secondary" href="#sites">Como corrigir</a>
+                {% else %}
+                  <a class="btn-secondary" href="{{ url_for('dashboard.priorities') }}">Como corrigir</a>
+                {% endif %}
+              </div>
+            </div>
+          {% else %}
+            <div class="empty-state">
+              <div class="empty-state-title">Ainda sem tarefas prioritárias</div>
+              <div class="empty-state-copy">Assim que houver dados reais, esta área mostrará o que corrigir primeiro e por quê.</div>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="card" id="sites">
+    <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-6">
+      <div class="min-w-0">
+        <div class="section-label">Onde agir primeiro</div>
+        <div class="section-title mt-2">Onde suas vendas podem estar mais expostas agora</div>
         <div class="body-text mt-2">
-          Esta prévia puxa os itens mais úteis do control plane e mantém isso acessível para usuários normais.
+          Esta área mostra onde a perda pode acontecer primeiro, para você atacar os pontos com maior impacto comercial.
         </div>
-        <div class="mt-4 metric-row">
-          <div class="metric-tile">
-            <div class="metric-label">Sites com prioridade</div>
-            <div class="metric-value">{{ priority_total }}</div>
-          </div>
-          <div class="metric-tile">
-            <div class="metric-label">Cards na prévia</div>
-            <div class="metric-value">{{ featured_cards|length }}</div>
-          </div>
-        </div>
+      </div>
+      <div class="trust-strip">
+        <span class="trust-item">Sites com prioridade {{ priority_total }}</span>
+        <span class="trust-item">Pontos visíveis {{ featured_cards|length }}</span>
       </div>
     </div>
 
     <div class="mt-6 grid grid-cols-1 lg:grid-cols-3 gap-4">
       {% for c in featured_cards %}
-        <div class="soft-panel">
+        <div class="site-risk-card {% if c.overall.status == 'CRITICAL' %}site-risk-card-critical{% elif c.overall.status == 'AT_RISK' %}site-risk-card-atrisk{% elif c.overall.status == 'PROTECTED' %}site-risk-card-protected{% endif %}">
           <div class="flex items-start justify-between gap-4">
             <div class="min-w-0">
               <div class="section-title truncate">{{ c.site.name }}</div>
@@ -251,14 +206,26 @@
             </div>
             <div>
               {% if c.overall.status == "CRITICAL" %}
-                <span class="badge badge-err">Crítico</span>
+                <span class="badge badge-err">Perda imediata</span>
               {% elif c.overall.status == "AT_RISK" %}
-                <span class="badge badge-warn">Em risco</span>
+                <span class="badge badge-warn">Vendas em risco</span>
               {% elif c.overall.status == "PROTECTED" %}
-                <span class="badge badge-ok">Protegido</span>
+                <span class="badge badge-ok">Receita protegida</span>
               {% else %}
-                <span class="badge badge-muted">Sem dados</span>
+                <span class="badge badge-muted">Sem leitura</span>
               {% endif %}
+            </div>
+          </div>
+          <div class="mt-4 metric-row">
+            <div class="metric-tile">
+              <div class="metric-label">Pontos abertos</div>
+              <div class="metric-value">{{ c.value.open_findings }}</div>
+            </div>
+            <div class="metric-tile">
+              <div class="metric-label">Situação comercial</div>
+              <div class="metric-value">
+                {{ "Perda imediata" if c.overall.status == "CRITICAL" else ("Vendas em risco" if c.overall.status == "AT_RISK" else ("Receita protegida" if c.overall.status == "PROTECTED" else "Sem leitura")) }}
+              </div>
             </div>
           </div>
           {% if c.top3 and c.top3|length > 0 %}
@@ -266,109 +233,126 @@
               {% for it in c.top3[:2] %}
                 <div class="signal-item">
                   <div class="signal-item-copy">
-                    <div class="signal-item-title truncate">{{ it.action_line or it.finding_key }}</div>
-                    <div class="signal-item-sub truncate">{{ it.finding_key }}</div>
+                    <div class="signal-item-title truncate">{{ it.problem or it.action_line or it.finding_key }}</div>
+                    <div class="signal-item-sub truncate">{{ it.impact }}</div>
+                    <div class="text-[11px] text-muted mt-2">
+                      {{ it.financial_label or it.urgency or "Vale corrigir agora" }}
+                    </div>
                   </div>
                 </div>
               {% endfor %}
+              <div class="mt-4">
+                <a class="btn-secondary" href="{{ url_for('dashboard.priorities') }}">Ver correções</a>
+              </div>
             </div>
           {% else %}
             <div class="empty-state mt-4">
               <div class="empty-state-title">Ainda sem prioridades visíveis</div>
-              <div class="empty-state-copy">Execute uma auditoria bem-sucedida para preencher este card.</div>
+              <div class="empty-state-copy">Faça uma auditoria para transformar este site em um card com risco, impacto e correção sugerida.</div>
             </div>
           {% endif %}
         </div>
       {% else %}
         <div class="empty-state lg:col-span-3">
-          <div class="empty-state-title">Ainda sem prévia de prioridades</div>
-          <div class="empty-state-copy">O dashboard agora reserva espaço para prioridades voltadas ao usuário; quando os scans produzirem dados, esta seção vira a superfície mais útil para usuários comuns.</div>
+          <div class="empty-state-title">Ainda sem leitura de risco por site</div>
+          <div class="empty-state-copy">Quando os scans gerarem dados, esta área mostrará onde o risco está concentrado e qual correção merece atenção primeiro.</div>
         </div>
       {% endfor %}
     </div>
   </section>
 
-  <section class="card card-focus">
-    <div class="flex items-start justify-between gap-6">
-      <div class="min-w-0">
-        <div class="section-label">Create and run</div>
-        <div class="section-title mt-2">Start from a target URL</div>
-        <div class="body-text">Keep the first action obvious: add a site, then launch a full or fast audit from the same surface.</div>
-      </div>
-      <a class="btn-secondary" href="{{ url_for('settings.settings_home') }}#provider">Provider config</a>
-    </div>
+  <section class="card">
+    <details>
+      <summary class="cursor-pointer flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div>
+          <div class="section-label">Base operacional</div>
+          <div class="section-title mt-2">Setup, configuração e execução</div>
+          <div class="body-text">Esses itens continuam disponíveis, mas agora ficam abaixo do painel de risco para não roubar atenção do problema principal.</div>
+        </div>
+        <span class="btn-secondary">Expandir base operacional</span>
+      </summary>
 
-    <div class="mt-6 value-grid cols-2">
-      <div class="form-panel" id="createSite">
-        <div class="section-title">Create site</div>
-        <div class="body-text mt-2">Use a clean name and production URL. This becomes the target used across dashboard, agent and dossier.</div>
-        <form class="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4" method="post" action="{{ url_for('audit.create_site') }}">
-          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-          <input name="name" placeholder="Site name" class="input text-sm" />
-          <input name="base_url" placeholder="https://example.com" class="input md:col-span-2 text-sm" />
-          <button class="btn-primary md:col-span-3">Save site</button>
-        </form>
-      </div>
-      <div class="soft-panel">
-        <div class="section-title">What a paying user expects here</div>
-        <div class="step-list mt-5">
-          <div class="step-item">
-            <span class="step-index">1</span>
-            <div class="step-copy"><strong>Setup confidence:</strong> provider configured and validated before audits start failing silently.</div>
+      <div class="mt-6 value-grid cols-2">
+        <div class="form-panel" id="createSite">
+          <div class="section-title">Cadastrar URL principal</div>
+          <div class="body-text mt-2">Só a URL é obrigatória. O nome é opcional e será preenchido automaticamente se você não informar.</div>
+          <form class="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4" method="post" action="{{ url_for('audit.create_site') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input name="base_url" placeholder="https://exemplo.com" class="input md:col-span-2 text-sm" />
+            <button class="btn-primary">Adicionar</button>
+            <details class="md:col-span-3">
+              <summary class="cursor-pointer text-xs font-semibold text-muted">Nome opcional</summary>
+              <input name="name" placeholder="Nome exibido na interface" class="input text-sm mt-3" />
+            </details>
+          </form>
+        </div>
+        <div class="soft-panel">
+          <div class="section-title">Estado da base</div>
+          <div class="step-list mt-5">
+            <div class="step-item">
+              <span class="step-index">{% if provider_state.ready %}✓{% else %}1{% endif %}</span>
+              <div class="step-copy"><strong>Provedor:</strong> {{ provider_state.provider or "Não configurado" }}</div>
+            </div>
+            <div class="step-item">
+              <span class="step-index">{% if setup_sites_ready %}✓{% else %}2{% endif %}</span>
+              <div class="step-copy"><strong>Sites cadastrados:</strong> {{ kpi.sites }}</div>
+            </div>
+            <div class="step-item">
+              <span class="step-index">{% if setup_audit_ready %}✓{% else %}3{% endif %}</span>
+              <div class="step-copy"><strong>Auditorias criadas:</strong> {{ kpi.audits }}</div>
+            </div>
+            <div class="step-item">
+              <span class="step-index">{% if setup_priority_ready %}✓{% else %}4{% endif %}</span>
+              <div class="step-copy"><strong>Prioridades visíveis:</strong> {{ priority_total }}</div>
+            </div>
           </div>
-          <div class="step-item">
-            <span class="step-index">2</span>
-            <div class="step-copy"><strong>Immediate value:</strong> every run should generate something visible in Agent, not just raw logs.</div>
-          </div>
-          <div class="step-item">
-            <span class="step-index">3</span>
-            <div class="step-copy"><strong>Operational clarity:</strong> success, error and recent history stay scan-friendly for admins and buyers.</div>
+          <div class="hero-cta-stack">
+            <a class="btn-secondary" href="{{ url_for('settings.settings_home') }}#provider">Abrir configuração do provedor</a>
+            <a class="btn-secondary" href="{{ url_for('dashboard.priorities') }}">Ver prioridades simplificadas</a>
           </div>
         </div>
       </div>
-    </div>
 
-    <div class="mt-6 flex flex-col gap-4">
-      {% for s in sites %}
-        <div class="soft-panel">
-          <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <div class="min-w-0">
-              <div class="section-title truncate">{{ s.name }}</div>
-              <div class="body-text mono truncate">{{ s.base_url }}</div>
-              <div class="mt-2 trust-strip">
-                <span class="trust-item">Target ready</span>
-                <span class="trust-item">Can feed Agent / Overview</span>
+      <div class="mt-6 flex flex-col gap-4">
+        {% for s in sites %}
+          <div class="soft-panel">
+            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+              <div class="min-w-0">
+                <div class="section-title truncate">{{ s.name }}</div>
+                <div class="body-text mono truncate">{{ s.base_url }}</div>
+                <div class="mt-2 trust-strip">
+                  <span class="trust-item">URL pronta</span>
+                  <span class="trust-item">Pode gerar risco e prioridades</span>
+                </div>
+              </div>
+              <div class="flex flex-col md:flex-row items-stretch md:items-center gap-4">
+                <form method="post" action="{{ url_for('audit.start_audit') }}" class="flex flex-col md:flex-row gap-4 items-stretch md:items-center">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <input type="hidden" name="site_id" value="{{ s.id }}"/>
+                  <div class="flex gap-4">
+                    <button aria-label="Executar fluxo completo" name="mode" value="full" class="auditStartBtn btn-primary">
+                      <span class="btnText">Executar</span>
+                    </button>
+                    <button aria-label="Executar fluxo rápido" name="mode" value="fast" class="btn-secondary">Rápido</button>
+                  </div>
+                </form>
+                {% if current_user.is_admin %}
+                  <form method="post" action="{{ url_for('audit.delete_site', site_id=s.id) }}" onsubmit="return confirm('Delete this site and all audits?');">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button class="btn-danger">Delete</button>
+                  </form>
+                {% endif %}
               </div>
             </div>
-            <div class="flex flex-col md:flex-row items-stretch md:items-center gap-4">
-              <form method="post" action="{{ url_for('audit.start_audit') }}" class="flex flex-col md:flex-row gap-4 items-stretch md:items-center">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <input type="hidden" name="site_id" value="{{ s.id }}"/>
-                <input name="provider_base_url_v1" value="{{ llm_defaults.base_url_v1 or config['LLM_BASE_URL_V1'] }}" class="mono hidden md:block w-64 input text-xs llmBaseField"/>
-                <input name="model" value="{{ llm_defaults.model or config['LLM_DEFAULT_MODEL'] }}" class="mono hidden md:block w-44 input text-xs llmModelField"/>
-                <div class="flex gap-4">
-                  <button aria-label="Full audit" name="mode" value="full" class="auditStartBtn btn-primary">
-                    <span class="btnText">Full</span>
-                  </button>
-                  <button aria-label="Fast audit" name="mode" value="fast" class="btn-secondary">Fast</button>
-                </div>
-              </form>
-              {% if current_user.is_admin %}
-                <form method="post" action="{{ url_for('audit.delete_site', site_id=s.id) }}" onsubmit="return confirm('Delete this site and all audits?');">
-                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                  <button class="btn-danger">Delete</button>
-                </form>
-              {% endif %}
-            </div>
           </div>
-        </div>
-      {% else %}
-        <div class="empty-state">
-          <div class="empty-state-title">No sites yet</div>
-          <div class="empty-state-copy">The best empty states explain value and next step. Add your first target URL above to unlock audits, agent priorities and buyer-ready proof.</div>
-        </div>
-      {% endfor %}
-    </div>
+        {% else %}
+          <div class="empty-state">
+            <div class="empty-state-title">Ainda sem sites</div>
+            <div class="empty-state-copy">Cadastre a primeira URL para liberar auditorias, prioridades e o painel real de risco.</div>
+          </div>
+        {% endfor %}
+      </div>
+    </details>
   </section>
 
   <!-- Audits -->
