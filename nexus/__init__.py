@@ -75,6 +75,9 @@ def create_app() -> Flask:
     app.config.setdefault("RATELIMIT_STORAGE_URI", os.getenv("REDIS_URL", "") or "memory://")
     limiter.init_app(app)
 
+    # Import models early (before routes, to ensure they're defined once)
+    from . import models  # noqa: E402, F401
+
     # OAuth providers (optional)
     google_id = os.getenv("OAUTH_GOOGLE_CLIENT_ID", "")
     google_secret = os.getenv("OAUTH_GOOGLE_CLIENT_SECRET", "")
@@ -166,9 +169,6 @@ def create_app() -> Flask:
     from .cli import register_cli
 
     register_cli(app)
-
-    # Import models for migrations (must be after app is configured and factories are ready)
-    from . import models  # noqa: E402
 
     # Serve favicon without triggering the error handler.
     @app.get("/favicon.ico")
