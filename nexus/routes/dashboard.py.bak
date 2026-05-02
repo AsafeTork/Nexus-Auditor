@@ -126,40 +126,14 @@ def _format_brl(value: int) -> str:
     return f"R$ {text}"
 
 
-
 def _estimate_revenue_at_risk_monthly(*, open_findings: int, critical_sites: int, at_risk_sites: int, avg_risk_score: int, regression_count: int) -> int:
-    # Phase 1+: Revenue-first estimation (more realistic than fixed table)
-    # Based on: actual ecommerce impact percentages
-    base = 0
-    
-    # Critical sites: could lose 8-12% of monthly revenue (checkout, auth, trust issues)
-    base += (int(critical_sites or 0) * 12000)
-    
-    # At-risk sites: could lose 3-5% of monthly revenue (conversion drops)
-    base += (int(at_risk_sites or 0) * 4500)
-    
-    # Open findings: each discovery costs ~R$ 350/month (previously 1200, now conservative)
-    base += (int(open_findings or 0) * 350)
-    
-    # Risk score elevation: each point above 50 = ~R$ 250/month lost
-    base += max(0, int(avg_risk_score or 0) - 50) * 250
-    
-    # Regressions: performance drops in control = R$ 2500/month per regression
-    base += int(regression_count or 0) * 2500
-    
+    base = (int(open_findings or 0) * 1200)
+    base += (int(critical_sites or 0) * 9000)
+    base += (int(at_risk_sites or 0) * 3500)
+    base += max(0, int(avg_risk_score or 0) - 35) * 140
+    base += int(regression_count or 0) * 1800
     return max(0, int(base))
 
-
-def _revenue_impact_breakdown(findings_by_category: dict) -> dict:
-    """Estimated monthly revenue impact by finding category (Phase 1 preview)"""
-    categories = {
-        "checkout": {"impact_pct": 0.15, "label": "Perda direta de vendas", "weight": 1.0},
-        "ssl/headers": {"impact_pct": 0.03, "label": "Perda por falta de confiança", "weight": 0.8},
-        "auth/session": {"impact_pct": 0.08, "label": "Contas abandonadas", "weight": 0.9},
-        "performance": {"impact_pct": 0.05, "label": "Carrinho abandonado", "weight": 0.7},
-        "other": {"impact_pct": 0.02, "label": "Diversos", "weight": 0.5},
-    }
-    return categories
 
 def _financial_short_label(level: str) -> str:
     level = str(level or "").upper()
