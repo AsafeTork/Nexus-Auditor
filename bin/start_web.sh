@@ -32,13 +32,36 @@ if [ "$INSTANCE_NUM" = "0" ]; then
     # Add timeout and retries to handle concurrent upgrade attempts
     for attempt in 1 2 3; do
         echo "[nexus] migration attempt $attempt/3..."
+
+        # Debug: Test if Python/Flask works
+        echo "[nexus] testing Python import..."
+        python -c "import flask; print('[nexus] Flask import OK')" 2>&1 || echo "[nexus] Flask import FAILED"
+
+        echo "[nexus] testing app import..."
+        python -c "from app import app; print('[nexus] App import OK')" 2>&1 || echo "[nexus] App import FAILED"
+
         MIGRATION_LOG=$(mktemp)
         MIGRATION_LOG_STDERR=$(mktemp)
         MIGRATION_LOG_STDOUT=$(mktemp)
 
+        echo "[nexus] starting flask db upgrade..."
         # Run migration with verbose output and separate stderr/stdout
-        timeout 60 python -u -m flask --app app:app db upgrade \
-            > "$MIGRATION_LOG_STDOUT" 2> "$MIGRATION_LOG_STDERR" || EXIT_CODE=$?
+        timeout 30 python -u -c "
+import sys
+import os
+print('[nexus] Python started', flush=True)
+print(f'[nexus] CWD: {os.getcwd()}', flush=True)
+print(f'[nexus] DATABASE_URL: {os.getenv(\"DATABASE_URL\", \"NOT SET\")[:50]}...', flush=True)
+
+from flask_migrate import upgrade
+from app import app
+
+print('[nexus] About to create app context', flush=True)
+with app.app_context():
+    print('[nexus] App context created, starting upgrade', flush=True)
+    upgrade()
+    print('[nexus] Upgrade complete', flush=True)
+" > "$MIGRATION_LOG_STDOUT" 2> "$MIGRATION_LOG_STDERR" || EXIT_CODE=$?
 
         EXIT_CODE=${EXIT_CODE:-$?}
 
