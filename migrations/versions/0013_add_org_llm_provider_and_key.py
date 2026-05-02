@@ -1,6 +1,6 @@
 """add org llm provider and api key
 
-Revision ID: 0013_org_llm_provider
+Revision ID: 0013_add_org_llm_provider_and_key
 Revises: 0012_add_site_contexts
 Create Date: 2026-04-30
 """
@@ -10,7 +10,7 @@ from __future__ import annotations
 from alembic import op
 import sqlalchemy as sa
 
-revision = "0013_org_llm_provider"
+revision = "0013_add_org_llm_provider_and_key"
 down_revision = "0012_add_site_contexts"
 branch_labels = None
 depends_on = None
