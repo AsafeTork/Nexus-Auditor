@@ -1,28 +1,37 @@
-"""add site financial context
-
-Revision ID: 0014
-Revises: 0013_add_org_llm_provider_and_key
-Create Date: 2025-05-02 16:30:00
-
 """
+Orphaned migration - placeholder
+
+This is a stub migration created to fix a mismatch between the database
+and the migration files. The original migration was deleted from the codebase
+but still exists in the database.
+
+Revision ID: 0014_add_site_financial_context
+Revises: 0013_add_org_llm_provider_and_key
+Create Date: 2026-05-02
+"""
+
+from __future__ import annotations
+
 from alembic import op
 import sqlalchemy as sa
 
 
-# revision identifiers, used by Alembic.
-revision = '0014'
-down_revision = '0013_add_org_llm_provider_and_key'
+revision = "0014_add_site_financial_context"
+down_revision = "0013_add_org_llm_provider_and_key"
 branch_labels = None
 depends_on = None
 
 
-def upgrade():
-    op.add_column('sites', sa.Column('aov', sa.Float(), nullable=True, server_default='150.0'))
-    op.add_column('sites', sa.Column('monthly_sessions', sa.Integer(), nullable=True, server_default='50000'))
-    op.add_column('sites', sa.Column('conversion_rate', sa.Float(), nullable=True, server_default='0.025'))
+def upgrade() -> None:
+    # This migration was previously removed from the codebase.
+    # It should already be applied to the database, so nothing to do.
+    pass
 
 
-def downgrade():
-    op.drop_column('sites', 'conversion_rate')
-    op.drop_column('sites', 'monthly_sessions')
-    op.drop_column('sites', 'aov')
+def downgrade() -> None:
+    # Cannot downgrade - original migration code is lost
+    raise NotImplementedError(
+        "Cannot downgrade past migration 0014_add_site_financial_context. "
+        "This migration was removed from the codebase. "
+        "To fix this, manually remove the migration entry from alembic_version table."
+    )
