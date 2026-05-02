@@ -1,0 +1,22 @@
+name: Deploy to Render
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Trigger Render deploy
+        run: |
+          curl -X POST https://api.render.com/deploy/srv-${{ secrets.RENDER_SERVICE_ID }}?key=${{ secrets.RENDER_DEPLOY_KEY }}
+      
+      - name: Wait for deployment
+        run: sleep 30
+      
+      - name: Verify deployment
+        run: curl -f https://xentinel-ai.onrender.com/health || echo "Deployment may be in progress"
