@@ -167,6 +167,9 @@ def create_app() -> Flask:
 
     register_cli(app)
 
+    # Import models for migrations (must be after app is configured and factories are ready)
+    from . import models  # noqa: E402
+
     # Serve favicon without triggering the error handler.
     @app.get("/favicon.ico")
     def favicon():
@@ -198,6 +201,3 @@ def create_app() -> Flask:
         return render_template("error.html", code=500, request_id=rid, message="Erro interno. Consulte os logs do serviço."), 500
 
     return app
-
-
-from . import models  # noqa: E402  (ensure models are imported for migrations)
