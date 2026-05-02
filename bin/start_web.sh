@@ -49,18 +49,25 @@ if [ "$INSTANCE_NUM" = "0" ]; then
         timeout 30 python -u -c "
 import sys
 import os
+import traceback
+
 print('[nexus] Python started', flush=True)
 print(f'[nexus] CWD: {os.getcwd()}', flush=True)
 print(f'[nexus] DATABASE_URL: {os.getenv(\"DATABASE_URL\", \"NOT SET\")[:50]}...', flush=True)
 
-from flask_migrate import upgrade
-from app import app
+try:
+    from flask_migrate import upgrade
+    from app import app
 
-print('[nexus] About to create app context', flush=True)
-with app.app_context():
-    print('[nexus] App context created, starting upgrade', flush=True)
-    upgrade()
-    print('[nexus] Upgrade complete', flush=True)
+    print('[nexus] About to create app context', flush=True)
+    with app.app_context():
+        print('[nexus] App context created, starting upgrade', flush=True)
+        upgrade()
+        print('[nexus] Upgrade complete', flush=True)
+except Exception as e:
+    print(f'[nexus] ERROR: {type(e).__name__}: {e}', flush=True)
+    traceback.print_exc()
+    sys.exit(1)
 " > "$MIGRATION_LOG_STDOUT" 2> "$MIGRATION_LOG_STDERR" || EXIT_CODE=$?
 
         EXIT_CODE=${EXIT_CODE:-$?}
