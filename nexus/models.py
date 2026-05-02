@@ -17,6 +17,7 @@ def utc_now() -> str:
 
 class Organization(db.Model):
     __tablename__ = "orgs"
+    __table_args__ = {"extend_existing": True}
     id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     name = db.Column(db.String(200), nullable=False)
     created_utc = db.Column(db.String(40), default=utc_now)
@@ -29,6 +30,7 @@ class Organization(db.Model):
 
 class User(UserMixin, db.Model):
     __tablename__ = "users"
+    __table_args__ = {"extend_existing": True}
     id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     org_id = db.Column(db.String(36), db.ForeignKey("orgs.id"), nullable=False)
     email = db.Column(db.String(320), unique=True, nullable=False, index=True)
@@ -58,29 +60,17 @@ def load_user(user_id: str):
 
 class Site(db.Model):
     __tablename__ = "sites"
+    __table_args__ = {"extend_existing": True}
     id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     org_id = db.Column(db.String(36), db.ForeignKey("orgs.id"), nullable=False, index=True)
     name = db.Column(db.String(200), nullable=False)
     base_url = db.Column(db.String(1000), nullable=False)
     created_utc = db.Column(db.String(40), default=utc_now)
-class Site(db.Model):
-    __tablename__ = "sites"
-    id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
-    org_id = db.Column(db.String(36), db.ForeignKey("orgs.id"), nullable=False, index=True)
-    name = db.Column(db.String(200), nullable=False)
-    base_url = db.Column(db.String(1000), nullable=False)
-    created_utc = db.Column(db.String(40), default=utc_now)
-    
-    # Phase 2+: Financial context for revenue intelligence
-    aov = db.Column(db.Float, default=150.0)  # Average Order Value (R$)
-    monthly_sessions = db.Column(db.Integer, default=50000)  # Monthly unique sessions
-    conversion_rate = db.Column(db.Float, default=0.025)  # 2.5% = 0.025
-    # Calculated: monthly_revenue_baseline = aov * monthly_sessions * conversion_rate
-
 
 
 class AuditRun(db.Model):
     __tablename__ = "audit_runs"
+    __table_args__ = {"extend_existing": True}
     id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     org_id = db.Column(db.String(36), db.ForeignKey("orgs.id"), nullable=False, index=True)
     site_id = db.Column(db.String(36), db.ForeignKey("sites.id"), nullable=False, index=True)
@@ -104,6 +94,7 @@ class AuditRun(db.Model):
 
 class AuditEvent(db.Model):
     __tablename__ = "audit_events"
+    __table_args__ = {"extend_existing": True}
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     audit_run_id = db.Column(db.String(36), db.ForeignKey("audit_runs.id"), nullable=False, index=True)
     # epoch milliseconds exceed 32-bit int; use BigInteger
@@ -115,6 +106,7 @@ class AuditEvent(db.Model):
 
 class Subscription(db.Model):
     __tablename__ = "subscriptions"
+    __table_args__ = {"extend_existing": True}
     id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     org_id = db.Column(db.String(36), db.ForeignKey("orgs.id"), nullable=False, index=True)
     status = db.Column(db.String(32), default="trialing")  # inactive|trialing|active|past_due|canceled
@@ -134,6 +126,7 @@ class MonitoringJob(db.Model):
     """
 
     __tablename__ = "monitoring_jobs"
+    __table_args__ = {"extend_existing": True}
     id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     org_id = db.Column(db.String(36), db.ForeignKey("orgs.id"), nullable=False, index=True)
     site_id = db.Column(db.String(36), db.ForeignKey("sites.id"), nullable=False, index=True)
@@ -161,6 +154,7 @@ class MonitoringRun(db.Model):
     """
 
     __tablename__ = "monitoring_runs"
+    __table_args__ = {"extend_existing": True}
     id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     org_id = db.Column(db.String(36), db.ForeignKey("orgs.id"), nullable=False, index=True)
     site_id = db.Column(db.String(36), db.ForeignKey("sites.id"), nullable=False, index=True)
@@ -184,6 +178,7 @@ class MonitoringFinding(db.Model):
     """
 
     __tablename__ = "monitoring_findings"
+    __table_args__ = {"extend_existing": True}
     id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     org_id = db.Column(db.String(36), db.ForeignKey("orgs.id"), nullable=False, index=True)
     site_id = db.Column(db.String(36), db.ForeignKey("sites.id"), nullable=False, index=True)
@@ -213,6 +208,7 @@ class LearningStat(db.Model):
     """
 
     __tablename__ = "learning_stats"
+    __table_args__ = {"extend_existing": True}
     id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     org_id = db.Column(db.String(36), db.ForeignKey("orgs.id"), nullable=False, index=True)
     job_id = db.Column(db.String(36), db.ForeignKey("monitoring_jobs.id"), nullable=False, index=True)
@@ -227,11 +223,6 @@ class LearningStat(db.Model):
     # Exponential moving average of resolution time (seconds)
     avg_resolution_s = db.Column(db.Integer, default=0)
 
-    # Phase 5: Financial learning
-    revenue_impact_predicted = db.Column(db.Float, default=0.0)  # Predicted R$ loss
-    revenue_impact_observed = db.Column(db.Float, default=0.0)  # Actual R$ recovered post-fix
-    prediction_error_pct = db.Column(db.Float, default=0.0)  # observed / predicted %
-    
     created_utc = db.Column(db.String(40), default=utc_now)
     updated_utc = db.Column(db.String(40), default=utc_now)
 
@@ -244,6 +235,7 @@ class SitePolicy(db.Model):
     """
 
     __tablename__ = "site_policies"
+    __table_args__ = {"extend_existing": True}
     id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     org_id = db.Column(db.String(36), db.ForeignKey("orgs.id"), nullable=False, index=True)
     site_id = db.Column(db.String(36), db.ForeignKey("sites.id"), nullable=False, index=True)
@@ -274,6 +266,7 @@ class SiteContext(db.Model):
     """
 
     __tablename__ = "site_contexts"
+    __table_args__ = {"extend_existing": True}
     id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     org_id = db.Column(db.String(36), db.ForeignKey("orgs.id"), nullable=False, index=True)
     site_id = db.Column(db.String(36), db.ForeignKey("sites.id"), nullable=False, index=True)
