@@ -330,3 +330,42 @@ def sort_findings_by_roi(cards: list, site_context: dict = None) -> list:
     
     return cards
 
+
+
+def update_financial_learning(org_id: str, finding_key: str, predicted_impact: float, observed_impact: float):
+    """
+    Phase 5: Track prediction error over time
+    When a finding is resolved, compare predicted vs actual impact
+    Learn from discrepancies to improve future estimates
+    """
+    try:
+        from ..models import LearningStat
+        
+        # Find learning stat for this finding
+        stat = LearningStat.query.filter_by(
+            org_id=org_id,
+            finding_key=finding_key
+        ).first()
+        
+        if not stat:
+            return False
+        
+        # Record financial impact
+        stat.revenue_impact_predicted = float(predicted_impact or 0)
+        stat.revenue_impact_observed = float(observed_impact or 0)
+        
+        # Calculate prediction error %
+        if predicted_impact > 0:
+            stat.prediction_error_pct = (observed_impact - predicted_impact) / predicted_impact * 100
+        
+        # Mark as updated
+        from datetime import datetime, timezone
+        stat.updated_utc = datetime.now(timezone.utc).isoformat()
+        
+        db.session.commit()
+        return True
+        
+    except Exception as e:
+        print(f"Error updating financial learning: {e}")
+        return False
+

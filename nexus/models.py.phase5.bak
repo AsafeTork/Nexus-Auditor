@@ -227,11 +227,6 @@ class LearningStat(db.Model):
     # Exponential moving average of resolution time (seconds)
     avg_resolution_s = db.Column(db.Integer, default=0)
 
-    # Phase 5: Financial learning
-    revenue_impact_predicted = db.Column(db.Float, default=0.0)  # Predicted R$ loss
-    revenue_impact_observed = db.Column(db.Float, default=0.0)  # Actual R$ recovered post-fix
-    prediction_error_pct = db.Column(db.Float, default=0.0)  # observed / predicted %
-    
     created_utc = db.Column(db.String(40), default=utc_now)
     updated_utc = db.Column(db.String(40), default=utc_now)
 
