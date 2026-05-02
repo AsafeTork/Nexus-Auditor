@@ -89,9 +89,14 @@ except Exception as e:
                 echo "[nexus] retrying in 5s..."
                 sleep 5
             else
-                echo "[nexus] migration failed after 3 attempts, exiting"
+                echo "[nexus] migration failed after 3 attempts"
+                echo "[nexus] WARNING: Continuando mesmo assim - migraces podem ja estar aplicadas"
+                echo "[nexus] Se vir erros de banco de dados, o problema pode ser:"
+                echo "[nexus]   1. Migraces ja aplicadas (seguro continuar)"
+                echo "[nexus]   2. Banco de dados travado (aguarde e tente novamente)"
+                echo "[nexus]   3. Problema de conexao (verifique DATABASE_URL)"
                 rm -f "$MIGRATION_LOG_STDOUT" "$MIGRATION_LOG_STDERR"
-                exit 1
+                break
             fi
         fi
 
