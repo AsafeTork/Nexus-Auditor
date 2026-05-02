@@ -16,15 +16,24 @@ if [ "$INSTANCE_NUM" = "0" ]; then
     # Add timeout and retries to handle concurrent upgrade attempts
     for attempt in 1 2 3; do
         echo "[nexus] migration attempt $attempt/3..."
-        if python -m flask --app app:app db upgrade 2>&1; then
+        MIGRATION_LOG=$(mktemp)
+        if python -m flask --app app:app db upgrade > "$MIGRATION_LOG" 2>&1; then
             echo "[nexus] migrations completed successfully"
+            rm -f "$MIGRATION_LOG"
             break
         else
+            EXIT_CODE=$?
+            echo "[nexus] migration attempt failed with exit code $EXIT_CODE"
+            echo "[nexus] === Migration Error Output ==="
+            cat "$MIGRATION_LOG"
+            echo "[nexus] === End Migration Error Output ==="
+            rm -f "$MIGRATION_LOG"
+
             if [ $attempt -lt 3 ]; then
-                echo "[nexus] migration attempt failed, retrying in 5s..."
+                echo "[nexus] retrying in 5s..."
                 sleep 5
             else
-                echo "[nexus] migration failed after 3 attempts"
+                echo "[nexus] migration failed after 3 attempts, exiting"
                 exit 1
             fi
         fi
