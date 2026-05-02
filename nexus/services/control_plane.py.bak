@@ -294,39 +294,3 @@ def build_agent_cards(org_id: str, *, limit: int = 200) -> List[Dict[str, Any]]:
         )
 
     return cards
-
-
-def sort_findings_by_roi(cards: list, site_context: dict = None) -> list:
-    """
-    Phase 4: Sort findings by ROI (not just severity)
-    ROI = (revenue_impact * confidence) / time_to_fix_hours
-    
-    Returns cards sorted with top3 re-ranked by ROI
-    """
-    for card in cards:
-        # Re-rank top3 by ROI
-        top3 = card.get("top3") or []
-        avg_time_h = max(1, card.get("value", {}).get("avg_time_to_fix_s", 0) / 3600)
-        
-        for finding in top3:
-            # Extract financial impact (default: 5k if HIGH severity, 2k if MEDIUM)
-            level = str(finding.get("level", "").upper())
-            revenue_impact = {
-                "CRITICAL": 12000,
-                "HIGH": 5000,
-                "MEDIUM": 2000,
-                "LOW": 500,
-            }.get(level, 1000)
-            
-            # Confidence from ecommerce data
-            confidence = finding.get("ecommerce", {}).get("confidence", 0.7)
-            
-            # ROI = R$/month / hours to fix
-            roi = (revenue_impact * confidence) / max(1, avg_time_h)
-            finding["_roi_score"] = roi
-        
-        # Sort by ROI descending
-        card["top3"] = sorted(top3, key=lambda f: f.get("_roi_score", 0), reverse=True)
-    
-    return cards
-
