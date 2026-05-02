@@ -13,30 +13,46 @@ INSTANCE_NUM="${INSTANCE_NUM:-0}"
 
 if [ "$INSTANCE_NUM" = "0" ]; then
     echo "[nexus] running migrations (flask db upgrade) - instance $INSTANCE_NUM"
+    echo "[nexus] DATABASE_URL: ${DATABASE_URL:0:50}..."
+    echo "[nexus] SQLALCHEMY_DATABASE_URI: ${SQLALCHEMY_DATABASE_URI:0:50}..."
+
     # Add timeout and retries to handle concurrent upgrade attempts
     for attempt in 1 2 3; do
         echo "[nexus] migration attempt $attempt/3..."
         MIGRATION_LOG=$(mktemp)
-        if python -m flask --app app:app db upgrade > "$MIGRATION_LOG" 2>&1; then
+        MIGRATION_LOG_STDERR=$(mktemp)
+        MIGRATION_LOG_STDOUT=$(mktemp)
+
+        # Run migration with verbose output and separate stderr/stdout
+        timeout 60 python -u -m flask --app app:app db upgrade \
+            > "$MIGRATION_LOG_STDOUT" 2> "$MIGRATION_LOG_STDERR" || EXIT_CODE=$?
+
+        EXIT_CODE=${EXIT_CODE:-$?}
+
+        echo "[nexus] migration attempt failed with exit code $EXIT_CODE"
+        echo "[nexus] === STDOUT ==="
+        cat "$MIGRATION_LOG_STDOUT"
+        echo "[nexus] === STDERR ==="
+        cat "$MIGRATION_LOG_STDERR"
+        echo "[nexus] === END ==="
+
+        # Check if migration succeeded (exit code 0)
+        if [ "$EXIT_CODE" = "0" ]; then
             echo "[nexus] migrations completed successfully"
-            rm -f "$MIGRATION_LOG"
+            rm -f "$MIGRATION_LOG_STDOUT" "$MIGRATION_LOG_STDERR"
             break
         else
-            EXIT_CODE=$?
-            echo "[nexus] migration attempt failed with exit code $EXIT_CODE"
-            echo "[nexus] === Migration Error Output ==="
-            cat "$MIGRATION_LOG"
-            echo "[nexus] === End Migration Error Output ==="
-            rm -f "$MIGRATION_LOG"
-
             if [ $attempt -lt 3 ]; then
                 echo "[nexus] retrying in 5s..."
                 sleep 5
             else
                 echo "[nexus] migration failed after 3 attempts, exiting"
+                rm -f "$MIGRATION_LOG_STDOUT" "$MIGRATION_LOG_STDERR"
                 exit 1
             fi
         fi
+
+        rm -f "$MIGRATION_LOG_STDOUT" "$MIGRATION_LOG_STDERR"
     done
 else
     echo "[nexus] skipping migrations on instance $INSTANCE_NUM (only run on instance 0)"
