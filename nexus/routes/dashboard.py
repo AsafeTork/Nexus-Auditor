@@ -150,6 +150,59 @@ def _estimate_revenue_at_risk_monthly(*, open_findings: int, critical_sites: int
     return max(0, int(base))
 
 
+
+def _calculate_dynamic_revenue_impact(site, finding_category: str, severity_level: str) -> dict:
+    """
+    Phase 3: Dynamic revenue impact based on shop context
+    Args:
+        site: Site object with aov, monthly_sessions, conversion_rate
+        finding_category: 'checkout', 'ssl/headers', 'auth/session', 'performance', etc
+        severity_level: 'CRITICAL', 'HIGH', 'MEDIUM', 'LOW'
+    Returns:
+        {"impact_pct": 0.15, "monthly_loss": 12500, "label": "...", "confidence": 0.85}
+    """
+    # Baseline monthly revenue
+    baseline_revenue = (site.aov or 150) * (site.monthly_sessions or 50000) * (site.conversion_rate or 0.025)
+    
+    # Impact % by category
+    category_impacts = {
+        "checkout": 0.15,  # Can lose 15% of orders
+        "ssl/headers": 0.03,  # Reduce conversions by 3% (trust signal)
+        "auth/session": 0.08,  # Session drops = 8% cart abandonment
+        "performance": 0.05,  # 1s latency = 7% conversion drop
+        "forms/input": 0.06,  # Broken forms = 6% conversions
+        "redirect": 0.04,  # Exposed paths = 4% bounce
+        "dependency": 0.02,  # Package vulnerabilities = 2%
+        "other": 0.02,  # Generic = 2%
+    }
+    
+    impact_pct = category_impacts.get(finding_category, 0.02)
+    
+    # Severity multiplier (override base impact if CRITICAL)
+    severity_multipliers = {
+        "CRITICAL": 1.0,  # Use full impact
+        "HIGH": 0.8,  # 80% of impact
+        "MEDIUM": 0.5,  # 50% of impact
+        "LOW": 0.2,  # 20% of impact
+    }
+    severity_mult = severity_multipliers.get(severity_level, 0.5)
+    adjusted_impact_pct = impact_pct * severity_mult
+    
+    monthly_loss = int(baseline_revenue * adjusted_impact_pct)
+    
+    # Confidence: CRITICAL findings are more confident
+    confidence = severity_multipliers.get(severity_level, 0.5)
+    
+    return {
+        "impact_pct": adjusted_impact_pct,
+        "monthly_loss": monthly_loss,
+        "baseline_monthly": int(baseline_revenue),
+        "label": f"R$ {monthly_loss:,.0f}/mês em risco",
+        "confidence": confidence,
+        "category": finding_category,
+    }
+
+
 def _revenue_impact_breakdown(findings_by_category: dict) -> dict:
     """Estimated monthly revenue impact by finding category (Phase 1 preview)"""
     categories = {
@@ -738,3 +791,45 @@ def home():
 def priorities():
     cards = build_agent_cards(current_user.org_id, limit=250)
     return render_template("dashboard/priorities.html", cards=cards)
+
+
+def _estimate_revenue_at_risk_monthly_v2(*, site, open_findings: list, critical_sites: int, at_risk_sites: int) -> dict:
+    """
+    Phase 3: Dynamic revenue estimation using shop metrics + finding details
+    Args:
+        site: Site object with financial context
+        open_findings: list of finding dicts with category/level
+        critical_sites: count of critical sites
+        at_risk_sites: count of at-risk sites
+    """
+    total_loss = 0
+    breakdown = {}
+    
+    # If we have shop context, use dynamic calculation per finding
+    if site and open_findings:
+        for finding in open_findings:
+            category = finding.get("category", "other")
+            level = finding.get("level", "MEDIUM")
+            
+            impact = _calculate_dynamic_revenue_impact(site, category, level)
+            total_loss += impact["monthly_loss"]
+            
+            if category not in breakdown:
+                breakdown[category] = 0
+            breakdown[category] += impact["monthly_loss"]
+    else:
+        # Fallback to Phase 1 estimation
+        total_loss = 0
+        if critical_sites:
+            total_loss += critical_sites * 12000
+        if at_risk_sites:
+            total_loss += at_risk_sites * 4500
+        if open_findings:
+            total_loss += len(open_findings) * 350
+    
+    return {
+        "total_monthly_loss": max(0, total_loss),
+        "breakdown_by_category": breakdown,
+        "confidence": 0.75,  # Will improve in Phase 5 with learning
+    }
+
