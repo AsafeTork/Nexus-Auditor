@@ -12,7 +12,7 @@ from flask import Blueprint, current_app, jsonify, render_template, request, red
 from flask_login import login_required, current_user
 from sqlalchemy import text, func
 
-from .. import db
+from .. import csrf, db
 from ..models import AuditEvent, AuditRun, Organization, Site, Subscription, User, is_org_admin
 from ..security import require_admin
 from ..services.queueing import enqueue_ui_lab
@@ -804,6 +804,7 @@ def ui_lab_run_json(run_id: str):
 
 
 @bp.route("/admin/llm/models.json", methods=["GET", "POST"])
+@csrf.exempt
 @login_required
 @require_admin
 def admin_llm_models():
@@ -883,6 +884,7 @@ def admin_llm_models():
 
 
 @bp.post("/admin/llm/validate.json")
+@csrf.exempt
 @login_required
 @require_admin
 def admin_llm_validate():
