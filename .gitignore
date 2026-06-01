@@ -1,39 +1,35 @@
-
-# python
+# Python
 __pycache__/
 *.pyc
+*.pyo
+*.pyd
 
-__pycache__/
-*.pyc
-
-__pycache__/
-*.pyc
-
-__pycache__/
-*.pyc
-
-__pycache__/
-*.pyc
-
-__pycache__/
-*.pyc
-
-__pycache__/
-*.pyc
-
-__pycache__/
-*.pyc
-
-__pycache__/
-*.pyc
-
-__pycache__/
-*.pyc
-
-__pycache__/
-*.pyc
-
-__pycache__/
-*.pyc
-
+# Environment
 .env
+.env.*
+!.env.example
+
+# Databases
+*.db
+*.sqlite
+*.sqlite3
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker volumes
+postgres_data/
+redis_data/
+
+# Build artifacts
+dist/
+build/
+*.egg-info/
+
+# IDE
+.vscode/
+.idea/

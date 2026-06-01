@@ -1,12 +1,19 @@
 from __future__ import annotations
 
-from flask import Blueprint, redirect, render_template, request, url_for, flash, session
+from flask import Blueprint, redirect, render_template, request, url_for, flash
 from flask_login import login_user, logout_user, login_required, current_user
 
 from .. import db, oauth, limiter
 from ..models import Organization, User, Subscription
 
 bp = Blueprint("auth", __name__)
+
+
+@bp.get("/")
+def landing():
+    if current_user.is_authenticated:
+        return redirect(url_for("dashboard.home"))
+    return render_template("landing.html")
 
 
 @bp.get("/login")

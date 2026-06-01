@@ -43,7 +43,7 @@ def create_app() -> Flask:
 
     # LLM config (fallback only; org-level provider settings can override)
     app.config["LLM_PROVIDER"] = os.getenv("LLM_PROVIDER", "openai_compatible")
-    app.config["LLM_BASE_URL_V1"] = os.getenv("LLM_BASE_URL_V1", "https://eclipse.mestredoblack.pro/v1")
+    app.config["LLM_BASE_URL_V1"] = os.getenv("LLM_BASE_URL_V1", "")
     app.config["LLM_API_KEY"] = os.getenv("LLM_API_KEY", "")
     app.config["LLM_DEFAULT_MODEL"] = os.getenv("LLM_DEFAULT_MODEL", "deepseek-chat")
 
@@ -62,7 +62,11 @@ def create_app() -> Flask:
     # Stripe
     app.config["STRIPE_SECRET_KEY"] = os.getenv("STRIPE_SECRET_KEY", "")
     app.config["STRIPE_WEBHOOK_SECRET"] = os.getenv("STRIPE_WEBHOOK_SECRET", "")
-    app.config["STRIPE_PRICE_ID"] = os.getenv("STRIPE_PRICE_ID", "")
+    app.config["STRIPE_PRICE_ID_STARTER"] = os.getenv("STRIPE_PRICE_ID_STARTER", "")
+    app.config["STRIPE_PRICE_ID_PRO"] = os.getenv("STRIPE_PRICE_ID_PRO", "")
+    app.config["STRIPE_PRICE_ID_GROWTH"] = os.getenv("STRIPE_PRICE_ID_GROWTH", "")
+    app.config["RESEND_API_KEY"] = os.getenv("RESEND_API_KEY", "")
+    app.config["EMAIL_FROM"] = os.getenv("EMAIL_FROM", "noreply@xentinel.onrender.com")
 
     # Init extensions
     db.init_app(app)
@@ -187,7 +191,7 @@ def create_app() -> Flask:
     @app.errorhandler(404)
     def not_found(_e):
         rid = str(uuid.uuid4())
-        return render_template("error.html", code=404, request_id=rid, message="Página não encontrada."), 404
+        return render_template("error.html", code=404, request_id=rid, message="Page not found."), 404
 
     @app.errorhandler(500)
     def internal_error(e):
@@ -198,6 +202,6 @@ def create_app() -> Flask:
             app.logger.error("500 request_id=%s path=%s err=%s\n%s", rid, request.path, str(e), tb)
         except Exception:
             pass
-        return render_template("error.html", code=500, request_id=rid, message="Erro interno. Consulte os logs do serviço."), 500
+        return render_template("error.html", code=500, request_id=rid, message="Internal error. Please try again or contact support."), 500
 
     return app
