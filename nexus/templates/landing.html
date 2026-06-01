@@ -1,5 +1,3 @@
-{% extends "layout.html" %}
-{% block body %}
 <!doctype html>
 <html lang="en">
 <head>
@@ -8,16 +6,85 @@
   <title>Xentinel — Revenue Protection for Shopify Stores</title>
   <meta name="description" content="Xentinel finds where your Shopify store is losing sales, quantifies the revenue impact, and tells you exactly what to fix first."/>
   <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}"/>
+  <link rel="apple-touch-icon" href="{{ url_for('static', filename='apple-touch-icon.png') }}"/>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}"/>
+  <style>
+    :root {
+      --c-ok: #10b981;
+      --c-warn: #f59e0b;
+      --c-err: #ef4444;
+      --c-accent: #6366f1;
+      --c-bg: #0b0b0c;
+      --c-surface: #111113;
+      --c-border: rgba(148,163,184,.14);
+      --c-text: #e2e8f0;
+      --c-muted: #94a3b8;
+    }
+    body { background: var(--c-bg); color: var(--c-text); font-family: Inter, ui-sans-serif, system-ui; }
+    .grad-bg {
+      background:
+        radial-gradient(1100px 600px at 10% -15%, rgba(79,70,229,.13), transparent 62%),
+        radial-gradient(900px 500px at 95% 5%, rgba(99,102,241,.09), transparent 55%),
+        var(--c-bg);
+    }
+    .glow-brand { box-shadow: 0 0 40px rgba(99,102,241,.22); }
+    .glow-ok { box-shadow: 0 0 30px rgba(16,185,129,.18); }
+    .pricing-highlight {
+      background: linear-gradient(180deg, rgba(79,70,229,.10) 0%, transparent 100%);
+      border-color: rgba(99,102,241,.45);
+      box-shadow: 0 0 0 1px rgba(99,102,241,.18), 0 20px 50px rgba(0,0,0,.4);
+    }
+    .stat-block { border: 1px solid var(--c-border); background: rgba(255,255,255,.02); border-radius: 14px; padding: 20px 24px; }
+    .mock-terminal {
+      border: 1px solid rgba(148,163,184,.16);
+      background: rgba(11,11,12,.88);
+      border-radius: 16px;
+      overflow: hidden;
+    }
+    .mock-terminal-bar {
+      background: rgba(255,255,255,.03);
+      border-bottom: 1px solid var(--c-border);
+      padding: 10px 14px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .mock-dot { width: 10px; height: 10px; border-radius: 50%; }
+    .risk-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .03em;
+    }
+    .risk-chip-crit { background: rgba(239,68,68,.12); border: 1px solid rgba(239,68,68,.30); color: #fca5a5; }
+    .risk-chip-warn { background: rgba(245,158,11,.10); border: 1px solid rgba(245,158,11,.28); color: #fde68a; }
+    .risk-chip-ok { background: rgba(16,185,129,.10); border: 1px solid rgba(16,185,129,.26); color: #6ee7b7; }
+    .mock-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 16px;
+      border-bottom: 1px solid rgba(148,163,184,.07);
+      font-size: 13px;
+    }
+    .mock-row:last-child { border-bottom: 0; }
+    .mock-label { color: var(--c-text); font-weight: 600; }
+    .mock-sub { color: var(--c-muted); font-size: 11px; margin-top: 2px; }
+    .mock-loss { font-family: "JetBrains Mono", monospace; font-size: 12px; color: #fca5a5; font-weight: 700; }
+  </style>
 </head>
-<body class="bg-app">
+<body class="grad-bg">
 
 <!-- NAV -->
-<header class="sticky top-0 z-50 border-b border-app" style="background:rgba(11,11,12,.85);backdrop-filter:blur(12px);">
+<header class="sticky top-0 z-50 border-b border-app" style="background:rgba(11,11,12,.88);backdrop-filter:blur(14px);">
   <div class="mx-auto max-w-6xl px-6 h-16 flex items-center justify-between gap-6">
     <div class="flex items-center gap-3">
       <div class="h-8 w-8 rounded-xl bg-brand-weak flex items-center justify-center overflow-hidden border border-brand">
@@ -25,53 +92,144 @@
       </div>
       <span class="text-sm font-bold tracking-tight text-white">Xentinel</span>
     </div>
+    <div class="hidden md:flex items-center gap-8 text-sm text-muted">
+      <a href="#how" class="hover:text-white transition-colors">How it works</a>
+      <a href="#pricing" class="hover:text-white transition-colors">Pricing</a>
+    </div>
     <div class="flex items-center gap-3">
       <a class="btn-secondary text-sm" href="{{ url_for('auth.login') }}">Sign in</a>
-      <a class="btn-primary text-sm" href="{{ url_for('auth.register') }}">Start free trial</a>
+      <a class="btn-primary text-sm" href="{{ url_for('auth.register') }}">Start free</a>
     </div>
   </div>
 </header>
 
 <!-- HERO -->
-<section class="mx-auto max-w-6xl px-6 pt-20 pb-16 text-center">
-  <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-brand bg-brand-weak text-xs font-semibold text-brand-2 mb-8">
-    <span class="w-1.5 h-1.5 bg-brand-2 rounded-full animate-pulse"></span>
-    Revenue protection for Shopify stores
+<section class="mx-auto max-w-6xl px-6 pt-20 pb-6">
+  <div class="flex flex-col lg:flex-row items-center gap-14">
+    <!-- Left: copy -->
+    <div class="flex-1 min-w-0 text-center lg:text-left">
+      <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-brand bg-brand-weak text-xs font-semibold text-brand-2 mb-8">
+        <span class="w-1.5 h-1.5 bg-brand-2 rounded-full animate-pulse"></span>
+        AI-powered revenue protection
+      </div>
+      <h1 class="text-4xl md:text-5xl xl:text-6xl font-extrabold tracking-tight text-white leading-[1.07]">
+        Is your store<br/>losing sales <span style="color:#818cf8">right now?</span>
+      </h1>
+      <p class="mt-6 text-lg text-muted leading-relaxed max-w-xl lg:max-w-none">
+        Xentinel scans your Shopify store, calculates the exact revenue at risk per issue, and ranks what to fix first — in plain English, not developer jargon.
+      </p>
+      <div class="mt-10 flex flex-col sm:flex-row items-center lg:justify-start justify-center gap-4">
+        <a class="btn-primary btn-lg px-8 glow-brand" href="{{ url_for('auth.register') }}">
+          Start free trial — no card needed
+        </a>
+        <a class="btn-secondary btn-lg px-6" href="{{ url_for('auth.login') }}">Sign in</a>
+      </div>
+      <p class="mt-5 text-xs text-muted">14-day free trial · Cancel anytime · No setup fees</p>
+
+      <!-- Trust stats -->
+      <div class="mt-10 grid grid-cols-3 gap-4 max-w-sm lg:max-w-none mx-auto lg:mx-0">
+        <div class="stat-block text-center">
+          <div class="text-2xl font-extrabold text-white">$8k+</div>
+          <div class="text-xs text-muted mt-1">avg monthly loss found</div>
+        </div>
+        <div class="stat-block text-center">
+          <div class="text-2xl font-extrabold text-white">2min</div>
+          <div class="text-xs text-muted mt-1">to first audit result</div>
+        </div>
+        <div class="stat-block text-center">
+          <div class="text-2xl font-extrabold text-white">100%</div>
+          <div class="text-xs text-muted mt-1">free to start</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right: product mockup -->
+    <div class="flex-shrink-0 w-full max-w-sm lg:max-w-md xl:max-w-lg">
+      <div class="mock-terminal">
+        <div class="mock-terminal-bar">
+          <div class="mock-dot" style="background:#ef4444;"></div>
+          <div class="mock-dot" style="background:#f59e0b;"></div>
+          <div class="mock-dot" style="background:#22c55e;"></div>
+          <span class="ml-3 text-xs text-muted font-mono">Xentinel · shop-demo.com · scan complete</span>
+        </div>
+        <div class="p-4">
+          <!-- Risk header -->
+          <div class="flex items-center justify-between mb-4 px-2">
+            <div class="text-xs font-bold text-white uppercase tracking-widest">Revenue at risk</div>
+            <span class="risk-chip risk-chip-crit">AT RISK</span>
+          </div>
+          <!-- Findings -->
+          <div class="mock-row">
+            <div>
+              <div class="mock-label">Checkout flow broken on mobile</div>
+              <div class="mock-sub">Payment step fails after address entry · CR −3.2%</div>
+            </div>
+            <div class="mock-loss">−$4,200/mo</div>
+          </div>
+          <div class="mock-row">
+            <div>
+              <div class="mock-label">Missing trust badge on cart page</div>
+              <div class="mock-sub">No SSL indicator visible · buyers losing confidence</div>
+            </div>
+            <div class="mock-loss">−$2,800/mo</div>
+          </div>
+          <div class="mock-row">
+            <div>
+              <div class="mock-label">3rd-party script blocking load</div>
+              <div class="mock-sub">Product page 4.1s LCP · abandonment +18%</div>
+            </div>
+            <span class="risk-chip risk-chip-warn">−$1,400/mo</span>
+          </div>
+          <div class="mock-row">
+            <div>
+              <div class="mock-label">Cart recovery email not firing</div>
+              <div class="mock-sub">Abandoned cart webhook silent for 6 days</div>
+            </div>
+            <span class="risk-chip risk-chip-warn">−$960/mo</span>
+          </div>
+          <!-- Total bar -->
+          <div class="mx-2 mt-4 p-3 rounded-xl" style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.22);">
+            <div class="flex items-center justify-between">
+              <div class="text-xs text-muted uppercase tracking-widest font-bold">Total estimated monthly loss</div>
+              <div class="font-mono font-extrabold text-base" style="color:#fca5a5;">−$9,360</div>
+            </div>
+            <div class="mt-2 h-1.5 rounded-full" style="background:rgba(239,68,68,.15);">
+              <div class="h-1.5 rounded-full" style="background:linear-gradient(90deg,#fb7185,#ef4444);width:78%;"></div>
+            </div>
+          </div>
+          <!-- CTA bottom -->
+          <div class="mt-4 px-2">
+            <div class="p-3 rounded-xl flex items-center justify-between" style="background:rgba(99,102,241,.10);border:1px solid rgba(99,102,241,.22);">
+              <div>
+                <div class="text-xs font-bold" style="color:#c7d2fe;">Fix #1 first: checkout mobile bug</div>
+                <div class="text-xs text-muted mt-0.5">Est. fix time: 2h · Revenue recovered: +$4,200/mo</div>
+              </div>
+              <span class="risk-chip" style="background:rgba(99,102,241,.12);border:1px solid rgba(99,102,241,.30);color:#c7d2fe;">Act now</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
-  <h1 class="text-4xl md:text-6xl font-extrabold tracking-tight text-white leading-tight max-w-4xl mx-auto">
-    Is your store losing sales<br class="hidden md:block"/> <span class="text-brand-2">right now?</span>
-  </h1>
-  <p class="mt-6 text-lg text-muted max-w-2xl mx-auto leading-relaxed">
-    Xentinel scans your store, calculates the exact revenue at risk, and ranks what to fix first — so you stop losing money before you even knew you were.
-  </p>
-  <div class="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
-    <a class="btn-primary btn-lg px-8" href="{{ url_for('auth.register') }}">
-      Start free trial — no credit card needed
-    </a>
-    <a class="btn-secondary btn-lg px-8" href="{{ url_for('auth.login') }}">
-      Sign in
-    </a>
-  </div>
-  <p class="mt-4 text-xs text-muted">14-day free trial · Cancel anytime · No setup fees</p>
 </section>
 
-<!-- 3 QUESTIONS STRIP -->
-<section class="border-y border-app bg-surface2">
-  <div class="mx-auto max-w-6xl px-6 py-10 grid grid-cols-1 md:grid-cols-3 gap-px">
+<!-- 3 QUESTIONS -->
+<section class="border-y border-app" style="background:rgba(17,17,19,.50);" id="how">
+  <div class="mx-auto max-w-6xl px-6 py-12 grid grid-cols-1 md:grid-cols-3 gap-px">
     <div class="flex flex-col items-center text-center p-8">
-      <div class="text-3xl font-extrabold text-white">01</div>
+      <div class="text-3xl font-extrabold" style="color:#818cf8;">01</div>
       <div class="mt-3 text-sm font-bold text-brand-2 uppercase tracking-widest">Are you losing sales?</div>
-      <div class="mt-2 text-sm text-muted">Know in seconds if your checkout, conversion rate, or trust signals are under threat — before customers leave silently.</div>
+      <div class="mt-2 text-sm text-muted leading-relaxed">Know in seconds if your checkout, conversion, or trust signals are under threat — before customers leave silently.</div>
     </div>
     <div class="flex flex-col items-center text-center p-8 border-y md:border-y-0 md:border-x border-app">
-      <div class="text-3xl font-extrabold text-white">02</div>
+      <div class="text-3xl font-extrabold" style="color:#818cf8;">02</div>
       <div class="mt-3 text-sm font-bold text-brand-2 uppercase tracking-widest">How much is it costing?</div>
-      <div class="mt-2 text-sm text-muted">Each issue is translated into a dollar estimate — so you always know the real financial weight of what's broken.</div>
+      <div class="mt-2 text-sm text-muted leading-relaxed">Each issue is translated into a dollar estimate — so you always know the real financial weight of what's broken.</div>
     </div>
     <div class="flex flex-col items-center text-center p-8">
-      <div class="text-3xl font-extrabold text-white">03</div>
+      <div class="text-3xl font-extrabold" style="color:#818cf8;">03</div>
       <div class="mt-3 text-sm font-bold text-brand-2 uppercase tracking-widest">What to fix first?</div>
-      <div class="mt-2 text-sm text-muted">Issues are ranked by revenue impact, not severity. Fix the thing that costs the most, not the thing that looks the worst.</div>
+      <div class="mt-2 text-sm text-muted leading-relaxed">Issues ranked by revenue impact. Fix the thing that costs the most money — not the one that looks the worst in a log.</div>
     </div>
   </div>
 </section>
@@ -82,45 +240,45 @@
     <div class="eyebrow">How it works</div>
     <h2 class="mt-4 text-3xl font-extrabold text-white">Everything your store needs to stop losing money</h2>
   </div>
-  <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
     <div class="card">
       <div class="w-10 h-10 rounded-xl bg-brand-weak flex items-center justify-center border border-brand mb-5">
-        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" class="text-brand-2"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="color:#818cf8"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
       </div>
       <div class="section-title">Revenue impact scoring</div>
-      <div class="body-text mt-2">Every finding is scored by its financial impact on your store. You always see the dollar value at stake, not just a severity label.</div>
+      <div class="body-text mt-2">Every finding shows the dollar value at stake — not a generic severity label. You always know what matters most to your bottom line.</div>
     </div>
     <div class="card">
       <div class="w-10 h-10 rounded-xl bg-brand-weak flex items-center justify-center border border-brand mb-5">
-        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" class="text-brand-2"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="color:#818cf8"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
       </div>
-      <div class="section-title">AI-powered prioritization</div>
-      <div class="body-text mt-2">Our decision engine uses AI to understand context, history, and patterns — then surfaces the three things that matter most right now.</div>
+      <div class="section-title">AI prioritization</div>
+      <div class="body-text mt-2">Our decision engine uses AI to read context, history, and patterns — then surfaces the 3 things that matter most right now.</div>
     </div>
     <div class="card">
       <div class="w-10 h-10 rounded-xl bg-brand-weak flex items-center justify-center border border-brand mb-5">
-        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" class="text-brand-2"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="color:#818cf8"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
       </div>
       <div class="section-title">Continuous monitoring</div>
-      <div class="body-text mt-2">Xentinel watches your store around the clock. The moment a new issue appears that threatens revenue, you're the first to know.</div>
+      <div class="body-text mt-2">Xentinel watches your store around the clock. The moment a new issue threatens revenue, you're the first to know.</div>
     </div>
     <div class="card">
       <div class="w-10 h-10 rounded-xl bg-brand-weak flex items-center justify-center border border-brand mb-5">
-        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" class="text-brand-2"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="color:#818cf8"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
       </div>
-      <div class="section-title">Guided remediation</div>
-      <div class="body-text mt-2">Each issue comes with a step-by-step fix guide — written in plain English, not dev-speak. No guessing, no digging through documentation.</div>
+      <div class="section-title">Guided fixes</div>
+      <div class="body-text mt-2">Each issue comes with a step-by-step fix guide — written in plain English, not dev-speak. No guessing, no digging through docs.</div>
     </div>
     <div class="card">
       <div class="w-10 h-10 rounded-xl bg-brand-weak flex items-center justify-center border border-brand mb-5">
-        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" class="text-brand-2"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="color:#818cf8"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
       </div>
       <div class="section-title">Safety gate</div>
-      <div class="body-text mt-2">Every automated action passes through a deterministic safety gate with rate limits and rollback guarantees. No surprises, no downtime.</div>
+      <div class="body-text mt-2">Every automated action passes through a deterministic safety layer with rate limits and rollback guarantees. No surprises, no downtime.</div>
     </div>
     <div class="card">
       <div class="w-10 h-10 rounded-xl bg-brand-weak flex items-center justify-center border border-brand mb-5">
-        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" class="text-brand-2"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"/></svg>
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="color:#818cf8"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"/></svg>
       </div>
       <div class="section-title">Proof of value</div>
       <div class="body-text mt-2">Track resolved issues, revenue recovered, and fix success rate over time. See exactly how much Xentinel has saved your store.</div>
@@ -136,7 +294,7 @@
       <h2 class="mt-4 text-3xl font-extrabold text-white">Simple, honest pricing</h2>
       <p class="mt-3 text-muted">Start free. Upgrade when you see results. Cancel anytime.</p>
     </div>
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
       <!-- Starter -->
       <div class="card flex flex-col">
         <div class="section-label">Starter</div>
@@ -152,7 +310,7 @@
         <a class="btn-secondary w-full mt-8 text-center" href="{{ url_for('auth.register') }}">Start 14-day free trial</a>
       </div>
       <!-- Pro (highlighted) -->
-      <div class="card flex flex-col border-brand" style="background:linear-gradient(180deg,rgba(79,70,229,.08) 0%,transparent 100%);">
+      <div class="card flex flex-col pricing-highlight -mt-2 pb-8 pt-8">
         <div class="flex items-center justify-between">
           <div class="section-label text-brand-2">Pro</div>
           <span class="badge badge-run">Most popular</span>
@@ -168,7 +326,7 @@
           <li class="check-item">Audit history &amp; dossiers</li>
           <li class="check-item">Slack &amp; email alerts</li>
         </ul>
-        <a class="btn-primary w-full mt-8 text-center" href="{{ url_for('auth.register') }}">Start 14-day free trial</a>
+        <a class="btn-primary w-full mt-8 text-center glow-brand" href="{{ url_for('auth.register') }}">Start 14-day free trial</a>
       </div>
       <!-- Growth -->
       <div class="card flex flex-col">
@@ -187,15 +345,23 @@
         <a class="btn-secondary w-full mt-8 text-center" href="{{ url_for('auth.register') }}">Start 14-day free trial</a>
       </div>
     </div>
+    <!-- Trust strip below pricing -->
+    <div class="mt-10 trust-strip justify-center">
+      <span class="trust-item">No setup fees</span>
+      <span class="trust-item">Cancel anytime</span>
+      <span class="trust-item">Instant activation</span>
+      <span class="trust-item">14-day free trial</span>
+    </div>
   </div>
 </section>
 
 <!-- FINAL CTA -->
 <section class="border-t border-app">
   <div class="mx-auto max-w-2xl px-6 py-20 text-center">
-    <h2 class="text-3xl font-extrabold text-white">Stop losing sales you don't know about</h2>
-    <p class="mt-4 text-muted">Join stores using Xentinel to protect their revenue every day.</p>
-    <a class="btn-primary btn-lg px-10 mt-8 inline-block" href="{{ url_for('auth.register') }}">
+    <div class="eyebrow justify-center">Start protecting your revenue</div>
+    <h2 class="mt-5 text-3xl font-extrabold text-white">Stop losing sales you don't know about</h2>
+    <p class="mt-4 text-muted leading-relaxed">Most Shopify stores have 3–5 revenue-killing issues right now.<br/>Most owners have no idea. Xentinel tells you in minutes.</p>
+    <a class="btn-primary btn-lg px-10 mt-8 inline-block glow-brand" href="{{ url_for('auth.register') }}">
       Start free trial
     </a>
     <p class="mt-4 text-xs text-muted">No credit card required · 14-day free trial · Cancel anytime</p>
@@ -213,12 +379,11 @@
     </div>
     <div class="text-xs text-muted">
       © 2025 Xentinel ·
-      <a class="underline hover:text-white" href="{{ url_for('auth.login') }}">Sign in</a> ·
-      <a class="underline hover:text-white" href="{{ url_for('auth.register') }}">Create account</a>
+      <a class="underline hover:text-white transition-colors" href="{{ url_for('auth.login') }}">Sign in</a> ·
+      <a class="underline hover:text-white transition-colors" href="{{ url_for('auth.register') }}">Create account</a>
     </div>
   </div>
 </footer>
 
 </body>
 </html>
-{% endblock %}
