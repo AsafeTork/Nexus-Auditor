@@ -842,6 +842,69 @@ body{ font-family: Inter, ui-sans-serif, system-ui; }
 .flash-ok { border-color: rgba(16,185,129,.28); background: rgba(16,185,129,.06); color: #86efac; }
 .flash-err{ border-color: rgba(239,68,68,.28);  background: rgba(239,68,68,.06);  color: #fca5a5; }
 
+/* ── Onboarding setup guide ──────────────────────── */
+.onboarding-card{
+  background: linear-gradient(135deg, rgba(99,102,241,.10) 0%, rgba(11,11,12,0) 65%);
+  border: 1px solid rgba(99,102,241,.22);
+  border-radius: 16px;
+  padding: 20px 24px 24px;
+}
+.onboarding-top{
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  margin-bottom: 20px;
+}
+.onboarding-steps{ display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.setup-step-arrow{ color: #334155; font-size: 12px; }
+.setup-step{
+  font-size: 11px; font-weight: 600;
+  padding: 3px 10px; border-radius: 20px; border: 1px solid; white-space: nowrap;
+}
+.setup-step-active{ background:rgba(99,102,241,.15); border-color:rgba(99,102,241,.40); color:#818cf8; }
+.setup-step-done  { background:rgba(74,222,128,.10);  border-color:rgba(74,222,128,.30);  color:#4ade80; }
+.setup-step-todo  { background:transparent; border-color:rgba(148,163,184,.18); color:#475569; }
+.onboarding-body{
+  display: grid; grid-template-columns: 1fr 1fr; gap: 28px; align-items: start;
+}
+@media(max-width:768px){
+  .onboarding-body{ grid-template-columns: 1fr; }
+  .onboarding-terminal-wrap{ display: none; }
+}
+
+/* ── Mock terminal (onboarding demo) ────────────── */
+.onboarding-terminal-wrap{ border-radius: 12px; overflow: hidden; }
+.term-bar{
+  background: rgba(255,255,255,.07);
+  padding: 8px 14px;
+  display: flex; align-items: center; gap: 6px;
+}
+.term-dot{ width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.term-label{ flex: 1; text-align: center; font-size: 11px; color: #475569; font-family: "JetBrains Mono", monospace; }
+.term-body{
+  background: rgba(0,0,0,.60);
+  border: 1px solid rgba(255,255,255,.06); border-top: none;
+  padding: 14px 16px;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 11px; line-height: 1.8;
+  min-height: 240px; max-height: 290px;
+  overflow-y: auto;
+}
+.term-line{ white-space: pre; }
+.t-cmd      { color: #e2e8f0; font-weight: 700; }
+.t-ok       { color: #4ade80; }
+.t-err      { color: #fb7185; font-weight: 600; }
+.t-err-soft { color: rgba(251,113,133,.55); }
+.t-warn     { color: #fbbf24; font-weight: 600; }
+.t-warn-soft{ color: rgba(251,191,36,.50); }
+.t-dim      { color: #334155; }
+.t-accent   { color: #818cf8; }
+.term-cursor{
+  display: inline-block; width: 7px; height: 13px;
+  background: #6366F1;
+  animation: termBlink .8s step-end infinite;
+  vertical-align: text-bottom; margin-left: 2px;
+}
+@keyframes termBlink{ 0%,100%{opacity:1} 50%{opacity:0} }
+
 /* Agent-loop strategy section inside priority items */
 .agent-loop-wrap{
   margin-top: 20px;

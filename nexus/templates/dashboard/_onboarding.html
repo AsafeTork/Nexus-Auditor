@@ -1,0 +1,159 @@
+{% if setup_step < 3 %}
+<section id="onboardingGuide" class="onboarding-card">
+
+  <div class="onboarding-top">
+    <div class="flex items-center gap-3 min-w-0">
+      <span class="eyebrow shrink-0">Get started</span>
+      <div class="onboarding-steps">
+        <span class="setup-step {% if setup_step > 0 %}setup-step-done{% else %}setup-step-active{% endif %}">
+          {% if setup_step > 0 %}✓{% else %}1{% endif %}&nbsp;Connect AI
+        </span>
+        <span class="setup-step-arrow">›</span>
+        <span class="setup-step {% if setup_step > 1 %}setup-step-done{% elif setup_step == 1 %}setup-step-active{% else %}setup-step-todo{% endif %}">
+          {% if setup_step > 1 %}✓{% else %}2{% endif %}&nbsp;Add store
+        </span>
+        <span class="setup-step-arrow">›</span>
+        <span class="setup-step {% if setup_step > 2 %}setup-step-done{% elif setup_step == 2 %}setup-step-active{% else %}setup-step-todo{% endif %}">
+          {% if setup_step > 2 %}✓{% else %}3{% endif %}&nbsp;First scan
+        </span>
+      </div>
+    </div>
+    <button class="btn-secondary shrink-0" style="font-size:12px;padding:6px 12px" onclick="dismissOnboarding()" type="button">Skip</button>
+  </div>
+
+  <div class="onboarding-body">
+
+    <!-- Left: step-specific action -->
+    <div>
+      {% if setup_step == 0 %}
+        <div class="section-title">Connect your AI</div>
+        <div class="body-text mt-2">The engine needs a working key to scan sites, detect risks, and estimate revenue impact. Eclipse, Groq, DeepSeek, OpenRouter and OpenAI all work.</div>
+        <div class="mt-5 flex flex-col gap-3">
+          <a class="btn-primary" href="{{ url_for('settings.settings_home') }}#provider">Open provider config</a>
+          <span class="text-xs text-muted">~2 min: pick provider → paste key → load models → validate.</span>
+        </div>
+
+      {% elif setup_step == 1 %}
+        <div class="section-title">Add your store</div>
+        <div class="body-text mt-2">One URL is enough. The engine scans it, finds what threatens sales, and shows what to fix first.</div>
+        <form class="mt-5 flex flex-col gap-3" method="post" action="{{ url_for('audit.create_site') }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input name="base_url" placeholder="https://your-store.com" class="input text-sm" required />
+          <button class="btn-primary">Add site</button>
+        </form>
+        <span class="mt-2 text-xs text-muted block">Name is filled automatically. Just paste the URL.</span>
+
+      {% elif setup_step == 2 %}
+        <div class="section-title">Run your first scan</div>
+        <div class="body-text mt-2">Start the analysis on your store. In a few minutes you'll see every risk affecting your sales, the estimated cost, and what to fix first.</div>
+        <div class="mt-5 flex flex-col gap-3">
+          {% for s in sites[:1] %}
+          <form method="post" action="{{ url_for('audit.start_audit') }}" class="flex gap-3 items-center">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="site_id" value="{{ s.id }}" />
+            <span class="mono text-xs text-muted truncate flex-1">{{ s.base_url }}</span>
+            <button name="mode" value="full" class="btn-primary auditStartBtn shrink-0">
+              <span class="btnText">Run scan</span>
+            </button>
+          </form>
+          {% endfor %}
+          <span class="text-xs text-muted">Full scan takes 2–5 min. Results appear automatically.</span>
+        </div>
+      {% endif %}
+
+      <div class="mt-6 flex items-center gap-2 text-[11px] text-muted">
+        <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+        This guide stays available even if skipped — use the <strong>Setup guide</strong> button above to reopen it.
+      </div>
+    </div>
+
+    <!-- Right: animated mock terminal -->
+    <div class="onboarding-terminal-wrap">
+      <div class="term-bar">
+        <span class="term-dot" style="background:#ff5f57"></span>
+        <span class="term-dot" style="background:#ffbd2e"></span>
+        <span class="term-dot" style="background:#28c840"></span>
+        <span class="term-label">xentinel › analyze</span>
+      </div>
+      <div class="term-body" id="termLines"></div>
+    </div>
+
+  </div>
+</section>
+
+<script>
+(function(){
+  var lines = [
+    {t:"> xentinel analyze store.com",          c:"t-cmd"},
+    {t:"  Initializing audit engine...",         c:"t-dim"},
+    {t:"  Scanning checkout flow...",            c:"t-dim"},
+    {t:"",                                       c:"t-dim"},
+    {t:"✗ CRITICAL  Broken checkout may block orders",        c:"t-err"},
+    {t:"            Revenue at risk: ~$8,400/mo",              c:"t-err-soft"},
+    {t:"✗ CRITICAL  Weak trust signal may hurt conversion",   c:"t-err"},
+    {t:"            Revenue at risk: ~$5,200/mo",              c:"t-err-soft"},
+    {t:"✗ HIGH      Session issue may break the cart",        c:"t-warn"},
+    {t:"            ~$4,700/mo cart abandonment",              c:"t-warn-soft"},
+    {t:"⚠ MEDIUM    Slow catalog loading",                    c:"t-warn-soft"},
+    {t:"⚠ MEDIUM    Uncontrolled third-party script",         c:"t-warn-soft"},
+    {t:"",                                                     c:"t-dim"},
+    {t:"────────────────────────────────────────",            c:"t-dim"},
+    {t:"✓ Scan done  5 issues · $18,400/mo at risk",          c:"t-ok"},
+    {t:"  Fix rate 72% · Avg response 2h 14min",              c:"t-dim"},
+    {t:"  → Run on your store for real numbers",              c:"t-accent"},
+  ];
+
+  var container = document.getElementById("termLines");
+  if(!container) return;
+
+  var cursor = null;
+  var idx = 0;
+
+  function showCursor(){
+    if(cursor) cursor.remove();
+    cursor = document.createElement("span");
+    cursor.className = "term-cursor";
+    container.appendChild(cursor);
+  }
+
+  function addLine(){
+    if(idx >= lines.length){ showCursor(); return; }
+    var item = lines[idx++];
+    var el = document.createElement("div");
+    el.className = "term-line " + item.c;
+    el.textContent = item.t;
+    container.appendChild(el);
+    container.scrollTop = container.scrollHeight;
+    var delay = item.t === "" ? 60 : item.t.indexOf("─") >= 0 ? 80 : item.t.startsWith("  ") ? 90 : 270;
+    setTimeout(addLine, delay);
+  }
+
+  setTimeout(addLine, 500);
+
+  // Dismiss / restore
+  window.dismissOnboarding = function(){
+    var g = document.getElementById("onboardingGuide");
+    if(g) g.style.display = "none";
+    try{ localStorage.setItem("xentinel_ob","1"); }catch(e){}
+    var b = document.getElementById("showOnboardingBtn");
+    if(b) b.style.removeProperty("display");
+  };
+  window.showOnboardingGuide = function(){
+    var g = document.getElementById("onboardingGuide");
+    if(g) g.style.removeProperty("display");
+    try{ localStorage.removeItem("xentinel_ob"); }catch(e){}
+    var b = document.getElementById("showOnboardingBtn");
+    if(b) b.style.display = "none";
+  };
+
+  try{
+    if(localStorage.getItem("xentinel_ob") === "1"){
+      var g = document.getElementById("onboardingGuide");
+      if(g) g.style.display = "none";
+      var b = document.getElementById("showOnboardingBtn");
+      if(b) b.style.removeProperty("display");
+    }
+  }catch(e){}
+})();
+</script>
+{% endif %}

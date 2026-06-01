@@ -618,11 +618,21 @@ def home():
         demo_note = ""
         demo_segment_label = ""
 
+    if not provider_ready:
+        setup_step = 0
+    elif sites_count == 0:
+        setup_step = 1
+    elif total_audits == 0:
+        setup_step = 2
+    else:
+        setup_step = 3
+
     return render_template(
         "dashboard/home.html",
         sites=sites,
         audits=audits,
         sub=sub,
+        setup_step=setup_step,
         llm_defaults={
             "provider": provider,
             "base_url_v1": (getattr(org, "llm_base_url_v1", "") or "").strip(),

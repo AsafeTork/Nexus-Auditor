@@ -3,20 +3,18 @@
 {% set subtitle = "Discover in seconds if your store is losing sales, how much it could cost, and what to fix now." %}
 {% set page_max_w = "max-w-7xl" %}
 {% block page_actions %}
+{% if setup_step < 3 %}
+<button id="showOnboardingBtn" class="btn-secondary" onclick="showOnboardingGuide()" type="button" style="display:none">Setup guide</button>
+{% endif %}
 <a class="btn-primary flex items-center gap-2" href="{{ url_for('dashboard.priorities') }}">
-  <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24"
-    stroke="currentColor">
+  <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
   </svg>
   Action Plan
 </a>
-<a class="btn-secondary" href="#sites">Sites at risk</a>
+<a class="btn-secondary" href="#sites">Sites</a>
 {% endblock %}
-{% block page_context %}
-<div class="mt-4 page-lead">
-  This screen answers three questions at a glance: are you losing sales, how much could it cost, and what to fix now.
-</div>
-{% endblock %}
+{% block page_context %}{% endblock %}
 {% block hero_kpis %}
 <div class="mt-5 metric-row cols-3">
   <div class="metric-tile">
@@ -37,6 +35,7 @@
 </div>
 {% endblock %}
 {% block content %}
+{% include "dashboard/_onboarding.html" %}
 <div class="flex flex-col gap-8">
   {% set setup_sites_ready = (kpi.sites or 0) > 0 %}
   {% set setup_audit_ready = (kpi.audits or 0) > 0 %}
