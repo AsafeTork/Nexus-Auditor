@@ -1,11 +1,12 @@
 services:
+  # ── Web Service ────────────────────────────────────────────────
   - type: web
-    name: nexus-auditor-web
+    name: xentinel
     env: docker
     dockerfilePath: ./Dockerfile
     dockerContext: .
     autoDeploy: true
-    plan: starter
+    plan: free
     envVars:
       - key: DATABASE_URL
         sync: false
@@ -13,9 +14,17 @@ services:
         sync: false
       - key: SECRET_KEY
         sync: false
-      - key: LLM_BASE_URL_V1
+      - key: APP_NAME
+        value: Xentinel
+      - key: BASE_URL
+        sync: false
+      - key: FLASK_ENV
+        value: production
+      - key: MASTER_ADMIN_EMAIL
         sync: false
       - key: LLM_PROVIDER
+        value: openai_compatible
+      - key: LLM_BASE_URL_V1
         sync: false
       - key: LLM_API_KEY
         sync: false
@@ -25,7 +34,15 @@ services:
         sync: false
       - key: STRIPE_WEBHOOK_SECRET
         sync: false
-      - key: STRIPE_PRICE_ID
+      - key: STRIPE_PRICE_ID_STARTER
+        sync: false
+      - key: STRIPE_PRICE_ID_PRO
+        sync: false
+      - key: STRIPE_PRICE_ID_GROWTH
+        sync: false
+      - key: RESEND_API_KEY
+        sync: false
+      - key: EMAIL_FROM
         sync: false
       - key: OAUTH_GOOGLE_CLIENT_ID
         sync: false
@@ -35,69 +52,26 @@ services:
         sync: false
       - key: OAUTH_GITHUB_CLIENT_SECRET
         sync: false
-      - key: AUDIT_BRIEF
-        sync: false
-      - key: AUDIT_REFLECT
-        sync: false
-      - key: AUDIT_ATTACK_TOTAL_MODE
-        sync: false
-      - key: AUDIT_MAX_CONSECUTIVE_LLM_FAILURES
-        sync: false
-      - key: AUDIT_MARKET_RESEARCH
-        sync: false
-      - key: CATCHALL_API_KEY
-        sync: false
-      - key: AUDIT_MARKET_DAYS
-        sync: false
-      - key: AUDIT_MARKET_MODE
-        sync: false
-      - key: AUDIT_MARKET_LIMIT
-        sync: false
-      - key: AUDIT_MARKET_POLL_MAX_S
-        sync: false
-      - key: AUDIT_MARKET_POLL_INTERVAL_S
-        sync: false
-      - key: AUDIT_MARKET_CACHE_TTL_S
-        sync: false
-      - key: AUDIT_MARKET_QUERY
-        sync: false
-      - key: AUDIT_MARKET_CONTEXT
-        sync: false
-      - key: LLM_MODELS_CACHE_TTL_S
-        sync: false
-      - key: LLM_MODELS_ALLOWLIST
-        sync: false
-      - key: DASH_CACHE_TTL_S
-        sync: false
-      - key: ADMIN_GLOBAL_USERS
-        sync: false
       - key: MONITOR_TICK_TOKEN
         sync: false
-      - key: DECISION_TOP_N
-        sync: false
-      - key: MONITOR_DECISION_LOOKBACK
-        sync: false
       - key: LEARNING_ENABLED
-        sync: false
+        value: "1"
+      - key: DECISION_TOP_N
+        value: "3"
       - key: POLICY_DEFAULT_MAX_RISK_LEVEL
-        sync: false
-      - key: POLICY_DEFAULT_MAX_RATE_RPS
-        sync: false
-      - key: CONTEXT_LOOKBACK
-        sync: false
-      - key: APP_NAME
-        sync: false
-      - key: BASE_URL
-        sync: false
+        value: HIGH
+      - key: DASH_CACHE_TTL_S
+        value: "60"
     startCommand: bash bin/start_web.sh
 
+  # ── Background Worker ──────────────────────────────────────────
   - type: worker
-    name: nexus-auditor-worker
+    name: xentinel-worker
     env: docker
     dockerfilePath: ./Dockerfile
     dockerContext: .
     autoDeploy: true
-    plan: starter
+    plan: free
     envVars:
       - key: DATABASE_URL
         sync: false
@@ -105,74 +79,16 @@ services:
         sync: false
       - key: SECRET_KEY
         sync: false
-      - key: LLM_BASE_URL_V1
-        sync: false
       - key: LLM_PROVIDER
+        value: openai_compatible
+      - key: LLM_BASE_URL_V1
         sync: false
       - key: LLM_API_KEY
         sync: false
       - key: LLM_DEFAULT_MODEL
         sync: false
-      - key: OAUTH_GOOGLE_CLIENT_ID
-        sync: false
-      - key: OAUTH_GOOGLE_CLIENT_SECRET
-        sync: false
-      - key: OAUTH_GITHUB_CLIENT_ID
-        sync: false
-      - key: OAUTH_GITHUB_CLIENT_SECRET
-        sync: false
-      - key: AUDIT_BRIEF
-        sync: false
-      - key: AUDIT_REFLECT
-        sync: false
-      - key: AUDIT_ATTACK_TOTAL_MODE
-        sync: false
-      - key: AUDIT_MAX_CONSECUTIVE_LLM_FAILURES
-        sync: false
-      - key: AUDIT_MARKET_RESEARCH
-        sync: false
-      - key: CATCHALL_API_KEY
-        sync: false
-      - key: AUDIT_MARKET_DAYS
-        sync: false
-      - key: AUDIT_MARKET_MODE
-        sync: false
-      - key: AUDIT_MARKET_LIMIT
-        sync: false
-      - key: AUDIT_MARKET_POLL_MAX_S
-        sync: false
-      - key: AUDIT_MARKET_POLL_INTERVAL_S
-        sync: false
-      - key: AUDIT_MARKET_CACHE_TTL_S
-        sync: false
-      - key: AUDIT_MARKET_QUERY
-        sync: false
-      - key: AUDIT_MARKET_CONTEXT
-        sync: false
-      - key: LLM_MODELS_CACHE_TTL_S
-        sync: false
-      - key: LLM_MODELS_ALLOWLIST
-        sync: false
-      - key: DASH_CACHE_TTL_S
-        sync: false
-      - key: ADMIN_GLOBAL_USERS
-        sync: false
-      - key: MONITOR_TICK_TOKEN
-        sync: false
-      - key: DECISION_TOP_N
-        sync: false
-      - key: MONITOR_DECISION_LOOKBACK
-        sync: false
       - key: LEARNING_ENABLED
-        sync: false
+        value: "1"
       - key: POLICY_DEFAULT_MAX_RISK_LEVEL
-        sync: false
-      - key: POLICY_DEFAULT_MAX_RATE_RPS
-        sync: false
-      - key: CONTEXT_LOOKBACK
-        sync: false
-      - key: APP_NAME
-        sync: false
-      - key: BASE_URL
-        sync: false
+        value: HIGH
     startCommand: python -m nexus.worker
