@@ -12,6 +12,14 @@ body{ font-family: Inter, ui-sans-serif, system-ui; }
   --accent-weak: rgba(99,102,241,.12);
   --danger: #ef4444;
   --danger-weak: rgba(239,68,68,.14);
+
+  /* Semantic aliases used throughout dashboard templates */
+  --c-ok:     #4ade80;
+  --c-warn:   #fbbf24;
+  --c-err:    #fb7185;
+  --c-accent: #6366F1;
+  --c-bg-subtle:     rgba(255,255,255,.03);
+  --c-border-subtle: rgba(148,163,184,.16);
 }
 
 /* Utility classes (avoid heavy Tailwind rewrites) */
@@ -216,7 +224,7 @@ body{ font-family: Inter, ui-sans-serif, system-ui; }
 .hero{
   position: relative;
   border-radius: 16px;
-  padding: 22px;
+  padding: 24px;
   border: 1px solid rgba(148,163,184,.18);
   background:
     radial-gradient(900px 520px at 15% -10%, rgba(79,70,229,.14), rgba(11,11,12,0) 62%),
@@ -277,7 +285,7 @@ body{ font-family: Inter, ui-sans-serif, system-ui; }
 /* Typography hierarchy (3 levels) */
 .page-title{ font-size: 24px; font-weight: 800; letter-spacing: -0.025em; }
 .section-title{ font-size: 15px; font-weight: 600; letter-spacing: -0.01em; color: #c7d2fe; }
-.body-text{ font-size: 13px; font-weight: 400; color: #a1a1aa; }
+.body-text{ font-size: 13px; font-weight: 400; color: #b0b8c8; }
 .page-subtitle{ font-size: 13px; font-weight: 400; color: rgba(148,163,184,.92); }
 
 /* Button size variant (for primary CTA like Sign in) */
@@ -435,6 +443,12 @@ body{ font-family: Inter, ui-sans-serif, system-ui; }
   background: rgba(255,255,255,.02);
   border-radius:16px;
   padding:16px;
+  transition: border-color .18s ease, background .18s ease, transform .18s ease;
+}
+.metric-tile:hover{
+  border-color: rgba(148,163,184,.28);
+  background: rgba(255,255,255,.04);
+  transform: translateY(-1px);
 }
 .metric-label{
   font-size:11px;
@@ -781,3 +795,49 @@ body{ font-family: Inter, ui-sans-serif, system-ui; }
 .text-success{ color:#86efac; }
 .text-warning{ color:#fde68a; }
 .text-danger-soft{ color:#fca5a5; }
+
+/* Topbar glassmorphism (replaces inline style on layout.html) */
+.topbar-glass{
+  background: rgba(11,11,12,.80);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+/* System health pill states (JS toggles these instead of inline style.borderColor) */
+.sys-pill-ok  { border-color: rgba(16,185,129,.32) !important; }
+.sys-pill-warn{ border-color: rgba(245,158,11,.36)  !important; }
+
+/* Sidebar brand name — not a link, should not look like section-title */
+.sidebar-brand{ font-size: 14px; font-weight: 700; color: var(--app-text); letter-spacing: -.015em; line-height: 1.25; }
+
+/* GA4 integration banners */
+.ga4-connect-banner{
+  margin-top: 20px;
+  padding: 16px;
+  background: rgba(99,102,241,.07);
+  border: 1px dashed rgba(99,102,241,.24);
+  border-radius: 12px;
+}
+.ga4-synced-banner{
+  margin-top: 20px;
+  padding: 16px;
+  background: rgba(74,222,128,.07);
+  border: 1px solid rgba(74,222,128,.22);
+  border-radius: 12px;
+}
+
+/* Recovery estimate inside priority cards */
+.recovery-estimate-panel{
+  margin-top: 16px;
+  padding: 12px 14px;
+  background: rgba(74,222,128,.08);
+  border-left: 2px solid #4ade80;
+  border-radius: 0 10px 10px 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* Flash message category variants */
+.flash-ok { border-color: rgba(16,185,129,.28); background: rgba(16,185,129,.06); color: #86efac; }
+.flash-err{ border-color: rgba(239,68,68,.28);  background: rgba(239,68,68,.06);  color: #fca5a5; }

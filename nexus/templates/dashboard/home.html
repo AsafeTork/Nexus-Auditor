@@ -132,36 +132,35 @@
         </div>
 
         {% if not proof_metrics.ga_connected %}
-        <div class="mt-5 p-4 bg-[var(--c-accent)]/5 border border-[var(--c-accent)]/20 rounded shadow-sm border-dashed">
+        <div class="ga4-connect-banner">
           <div class="flex items-center justify-between gap-4">
             <div>
-              <div class="text-xs font-bold uppercase tracking-widest text-[var(--c-accent)] flex items-center gap-2">
-                <span class="w-1.5 h-1.5 bg-[var(--c-accent)] rounded-full animate-pulse"></span>
+              <div class="text-xs font-bold uppercase tracking-widest flex items-center gap-2" style="color:var(--c-accent)">
+                <span class="w-1.5 h-1.5 rounded-full animate-pulse" style="background:var(--c-accent)"></span>
                 Real-Time Anchor
               </div>
-              <div class="text-[11px] text-muted mt-1">Connect your Google Analytics to calibrate revenue at risk in real time.</div>
+              <div class="body-text mt-1">Connect Google Analytics to calibrate revenue at risk in real time.</div>
             </div>
-            <a href="#" class="btn-primary py-2 px-4 text-[10px] whitespace-nowrap"><i class="ph ph-plug-connect"></i>
-              Connect GA4</a>
+            <a href="#" class="btn-primary text-xs whitespace-nowrap">Connect GA4</a>
           </div>
         </div>
         {% else %}
-        <div class="mt-5 p-4 bg-[var(--c-ok)]/5 border border-[var(--c-ok)]/20 rounded">
-          <div class="flex items-center gap-2 mb-2">
-            <i class="ph-bold ph-check-circle text-[var(--c-ok)]"></i>
-            <span class="text-xs font-bold text-[var(--c-ok)] uppercase tracking-widest">Synced with GA4</span>
+        <div class="ga4-synced-banner">
+          <div class="flex items-center gap-2 mb-3">
+            <i class="ph-bold ph-check-circle" style="color:var(--c-ok)"></i>
+            <span class="text-xs font-bold uppercase tracking-widest" style="color:var(--c-ok)">Synced with GA4</span>
           </div>
-          <div class="grid grid-cols-3 gap-2 mt-1">
-            <div class="p-2 bg-black/20 rounded text-center">
-              <div class="text-[9px] text-muted uppercase">Sessions (24h)</div>
+          <div class="grid grid-cols-3 gap-2">
+            <div class="p-2 rounded text-center" style="background:rgba(0,0,0,.20)">
+              <div class="text-[11px] text-muted uppercase">Sessions (24h)</div>
               <div class="text-xs font-mono text-white">3,120</div>
             </div>
-            <div class="p-2 bg-black/20 rounded text-center">
-              <div class="text-[9px] text-muted uppercase">Conversion</div>
+            <div class="p-2 rounded text-center" style="background:rgba(0,0,0,.20)">
+              <div class="text-[11px] text-muted uppercase">Conversion</div>
               <div class="text-xs font-mono text-white">1.85%</div>
             </div>
-            <div class="p-2 bg-black/20 rounded text-center">
-              <div class="text-[9px] text-muted uppercase">AOV</div>
+            <div class="p-2 rounded text-center" style="background:rgba(0,0,0,.20)">
+              <div class="text-[11px] text-muted uppercase">AOV</div>
               <div class="text-xs font-mono text-white">$162</div>
             </div>
           </div>
@@ -184,7 +183,7 @@
                 <div class="text-[11px] text-muted mt-2">{{ task.site_name }}</div>
 
                 {% if task.impact_data and task.impact_data.narrative %}
-                <div class="mt-2 text-[10px] text-muted opacity-80"
+                <div class="mt-2 text-xs text-muted opacity-80"
                   aria-label="Probabilistic estimate: {{ task.impact_data.affected_sessions }} sessions × {{ (task.impact_data.conversion_rate * 100)|round(1) }}% conversion × AOV ${{ task.impact_data.avg_order_value }}"
                   title="Probabilistic estimate: {{ task.impact_data.affected_sessions }} sessions × {{ (task.impact_data.conversion_rate * 100)|round(1) }}% conversion × AOV ${{ task.impact_data.avg_order_value }}">
                   <i class="ph ph-trend-up"></i> {{ task.impact_data.loss_range }} <span
@@ -204,7 +203,7 @@
                   class="urgency-chip {% if task.level == 'CRITICAL' %}urgency-chip-critical{% elif task.level == 'HIGH' %}urgency-chip-high{% else %}urgency-chip-medium{% endif %}">{{
                   task.urgency }}</span>
                 {% if task.confidence is defined and task.confidence > 0.80 %}
-                <span class="trust-item">Risco Verificado</span>
+                <span class="trust-item">Verified Risk</span>
                 {% endif %}
               </div>
             </div>
@@ -213,13 +212,11 @@
             </div>
 
             {% if task.agent_loop and task.agent_loop.after_impact %}
-            <div
-              class="mt-4 p-3 bg-[var(--c-ok)]/10 border-l-2 border-[var(--c-ok)] rounded-r flex items-center justify-between">
-              <div class="text-[10px] uppercase tracking-widest font-bold text-[var(--c-ok)] flex items-center gap-2">
+            <div class="recovery-estimate-panel">
+              <div class="text-xs uppercase tracking-widest font-bold flex items-center gap-2" style="color:var(--c-ok)">
                 <i class="ph-bold ph-magic-wand"></i> Estimated Recovery
               </div>
-              <div class="text-[var(--c-ok)] font-bold text-xs">{{ task.agent_loop.after_impact }} <span
-                  class="opacity-50 font-normal">/mo</span></div>
+              <div class="font-bold text-xs" style="color:var(--c-ok)">{{ task.agent_loop.after_impact }} <span class="opacity-50 font-normal">/mo</span></div>
             </div>
             {% endif %}
 
@@ -555,7 +552,7 @@
 
 <script>
   // Auto refresh every 60s (keeps the dashboard live). You can also click the refresh icon.
-  setInterval(() => { try { location.reload(); } catch (e) { } }, 60000);
+  setInterval(() => { try { location.reload(); } catch (e) { } }, 180000);
 
   function spinnerSvg() {
     return '<svg class="animate-spin h-4 w-4 inline-block mr-2 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">' +
