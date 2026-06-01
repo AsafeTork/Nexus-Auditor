@@ -1,20 +1,12 @@
 {% extends "layout.html" %}
-{% set title = "Priorities" %}
-{% set subtitle = "Per-site risk, top actions, and proof of progress — without reading raw audit logs." %}
+{% set title = "Action Plan" %}
+{% set subtitle = "What to fix in each site to stop losing sales." %}
 {% set page_max_w = "max-w-7xl" %}
 {% block page_actions %}
-<a class="btn-primary" href="{{ url_for('dashboard.home') }}">Back to dashboard</a>
+<a class="btn-secondary" href="{{ url_for('dashboard.home') }}">Dashboard</a>
 {% endblock %}
 {% block content %}
 <div class="flex flex-col gap-6">
-  <section class="glass-card">
-    <div class="eyebrow">Simplified view</div>
-    <div class="mt-4 page-title">What needs your attention now</div>
-    <div class="mt-3 page-lead">
-      The most actionable output from every audit run: per-site status, top priorities, and visible proof of progress.
-    </div>
-  </section>
-
   <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
     {% for c in cards %}
     <section class="card card-hover">
@@ -67,54 +59,51 @@
                   <span class="flex items-center gap-1"><i class="ph ph-users"></i> {{ it.impact_data.affected_sessions }} sessions affected</span>
                   <span class="flex items-center gap-1"><i class="ph ph-shopping-cart"></i> CR {{ (it.impact_data.conversion_rate * 100)|round(1) }}%</span>
                   <span class="flex items-center gap-1"><i class="ph ph-currency-circle-dollar"></i> AOV ${{ it.impact_data.avg_order_value }}</span>
-                  <span class="flex items-center gap-1 text-[var(--c-accent)] opacity-100 bg-[var(--c-bg-subtle)] px-1 rounded">{{ it.impact_data.narrative }}</span>
+                  <span class="flex items-center gap-1 text-[var(--c-accent)] opacity-100 bg-surface2 px-1 rounded">{{ it.impact_data.narrative }}</span>
                 </div>
                 {% endif %}
 
                 {% if it.agent_loop %}
-                <div class="mt-6 border-l-2 border-[var(--c-accent)] pl-4 py-2 bg-[var(--c-bg-subtle)] rounded-r-lg group hover:border-[var(--c-ok)] transition-all">
+                <div class="agent-loop-wrap">
                   <div class="font-mono text-[var(--c-accent)] mb-4 uppercase tracking-tighter text-[11px] flex items-center justify-between">
                     <span class="flex items-center gap-2">
-                      <i class="ph-bold ph-robot"></i> Recommended strategy <span class="opacity-50 text-[9px] font-normal">(Active monitoring)</span>
+                      <i class="ph-bold ph-robot"></i> Recommended strategy <span class="opacity-50 font-normal">(Active monitoring)</span>
                     </span>
-                    <span class="badge badge-ok py-1 px-2 text-[10px] animate-pulse">Reliability verified</span>
+                    <span class="badge badge-ok py-1 px-2 text-xs animate-pulse">Verified</span>
                   </div>
 
                   <div class="space-y-3">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      <div class="step-box bg-black/30 p-3 rounded border border-white/5">
-                        <span class="text-muted block mb-1 text-[9px] uppercase tracking-widest font-bold">1. Detect</span>
+                      <div class="bg-black/30 p-3 rounded border border-white/5">
+                        <span class="text-muted block mb-1 text-[11px] uppercase tracking-widest font-bold">1. Detect</span>
                         <span class="font-medium text-[var(--c-err)]">{{ it.agent_loop.detect }}</span>
                       </div>
-                      <div class="step-box bg-black/30 p-3 rounded border border-white/5">
-                        <span class="text-muted block mb-1 text-[9px] uppercase tracking-widest font-bold">2. Investigate</span>
+                      <div class="bg-black/30 p-3 rounded border border-white/5">
+                        <span class="text-muted block mb-1 text-[11px] uppercase tracking-widest font-bold">2. Investigate</span>
                         <span class="text-muted opacity-80 italic">{{ it.agent_loop.investigate }}</span>
                       </div>
                     </div>
 
-                    <div class="step-box bg-white/5 p-4 rounded border border-[var(--c-err)] border-dashed">
+                    <div class="bg-white/5 p-4 rounded border border-dashed" style="border-color:var(--c-err)">
                       <div class="flex justify-between items-center mb-1">
-                        <span class="text-[var(--c-err)] text-[9px] uppercase font-bold tracking-widest">3. Baseline (Revenue at risk)</span>
-                        <i class="ph ph-trend-down text-[var(--c-err)]"></i>
+                        <span class="text-[11px] uppercase font-bold tracking-widest" style="color:var(--c-err)">3. Baseline — Revenue at risk</span>
+                        <i class="ph ph-trend-down" style="color:var(--c-err)"></i>
                       </div>
                       <strong class="text-white text-lg">{{ it.agent_loop.baseline_impact }}</strong>
                     </div>
 
-                    <div class="step-box bg-black p-3 rounded border border-white/10">
-                      <span class="text-muted block mb-2 text-[9px] uppercase tracking-widest font-bold">4. Mock execute ({{ it.agent_loop.mock_execute.language }})</span>
+                    <div class="bg-black/50 p-3 rounded border border-white/10">
+                      <span class="text-muted block mb-2 text-[11px] uppercase tracking-widest font-bold">4. Fix ({{ it.agent_loop.mock_execute.language }})</span>
                       <pre class="font-mono text-[11px] text-[var(--c-accent)] opacity-90 overflow-x-auto">> {{ it.agent_loop.mock_execute.snippet[:300] }}</pre>
                     </div>
 
-                    <div class="step-box bg-[var(--c-ok)]/10 p-4 rounded border border-[var(--c-ok)] relative overflow-hidden shadow-[0_0_15px_rgba(0,188,126,0.1)]">
-                      <div class="absolute top-0 right-0 p-2 opacity-20">
-                        <i class="ph-bold ph-check-circle text-4xl"></i>
-                      </div>
+                    <div class="agent-step-recovery p-4 rounded relative overflow-hidden">
                       <div class="flex justify-between items-center mb-1">
-                        <span class="text-[var(--c-ok)] text-[9px] uppercase font-bold tracking-widest">5. Impact (Sales recovery)</span>
-                        <i class="ph ph-trend-up text-[var(--c-ok)]"></i>
+                        <span class="text-xs uppercase font-bold tracking-widest" style="color:var(--c-ok)">5. Impact — Sales recovery</span>
+                        <i class="ph ph-trend-up" style="color:var(--c-ok)"></i>
                       </div>
                       <strong class="text-white text-lg">{{ it.agent_loop.after_impact }}</strong>
-                      <div class="mt-2 text-[10px] text-[var(--c-ok)] opacity-90 font-medium">✓ Conversion successfully restored in simulation.</div>
+                      <div class="mt-2 text-xs opacity-80 font-medium" style="color:var(--c-ok)">Conversion restored in simulation.</div>
                     </div>
                   </div>
                 </div>
@@ -144,8 +133,8 @@
     {% else %}
     <section class="card">
       <div class="empty-state">
-        <div class="empty-state-title">No sites</div>
-        <div class="empty-state-copy">Add a site from the dashboard to unlock this priorities view.</div>
+        <div class="empty-state-title">No sites yet</div>
+        <div class="empty-state-copy">Add a site from the dashboard to unlock the action plan.</div>
       </div>
     </section>
     {% endfor %}

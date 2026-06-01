@@ -841,3 +841,17 @@ body{ font-family: Inter, ui-sans-serif, system-ui; }
 /* Flash message category variants */
 .flash-ok { border-color: rgba(16,185,129,.28); background: rgba(16,185,129,.06); color: #86efac; }
 .flash-err{ border-color: rgba(239,68,68,.28);  background: rgba(239,68,68,.06);  color: #fca5a5; }
+
+/* Agent-loop strategy section inside priority items */
+.agent-loop-wrap{
+  margin-top: 20px;
+  padding: 14px 16px;
+  background: rgba(99,102,241,.05);
+  border-left: 2px solid var(--c-accent);
+  border-radius: 0 10px 10px 0;
+}
+.agent-step-recovery{
+  background: rgba(74,222,128,.07);
+  border: 1px solid rgba(74,222,128,.30);
+  border-radius: 10px;
+}

@@ -15,19 +15,6 @@
 {% endblock %}
 {% block content %}
 <div class="flex flex-col gap-6">
-  <section class="card card-focus">
-    <div class="section-label">Overview</div>
-    <div class="section-title mt-2">Configuration that keeps the product usable</div>
-    <div class="mt-3 page-lead">
-      A buyer-friendly SaaS needs clear setup states. This screen was reorganized so provider configuration, access control and billing feel operational instead of hidden.
-    </div>
-    <div class="mt-5 trust-strip">
-      <span class="trust-item">Org <strong class="mono">{{ current_user.org_id }}</strong></span>
-      <span class="trust-item">Role <strong>{{ current_user.role or "member" }}</strong></span>
-      <span class="trust-item">Master <strong class="mono">{{ master_email or "—" }}</strong></span>
-    </div>
-  </section>
-
   <section class="split-showcase" id="provider">
     <div class="glass-card">
       <div class="eyebrow">Essential</div>
@@ -37,24 +24,6 @@
       </div>
 
       {% if is_admin %}
-        <div class="mt-5 metric-row">
-          <div class="metric-tile">
-            <div class="metric-label">Step 1</div>
-            <div class="metric-value text-2xl">Choose</div>
-            <div class="metric-foot">Select your provider.</div>
-          </div>
-          <div class="metric-tile">
-            <div class="metric-label">Step 2</div>
-            <div class="metric-value text-2xl">Connect</div>
-            <div class="metric-foot">Paste your key and load models.</div>
-          </div>
-          <div class="metric-tile">
-            <div class="metric-label">Step 3</div>
-            <div class="metric-value text-2xl">Use</div>
-            <div class="metric-foot">Validate and save for the whole system.</div>
-          </div>
-        </div>
-
         <form class="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4" method="post" action="{{ url_for('admin.admin_llm_save') }}">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
