@@ -109,10 +109,10 @@
   </div>
 
   <div class="mt-5">
-    <div class="text-xs font-extrabold text-brand-2">Últimas auditorias</div>
+    <div class="text-xs font-extrabold text-brand-2">Latest audits</div>
     <div class="mt-6 flex flex-col gap-4">
       {% for a in audits %}
-        <a aria-label="Abrir auditoria {{ a.id }}" href="{{ url_for('admin.admin_audit_detail', audit_id=a.id) }}" class="block bg-surface2 rounded-xl p-4 hover:bg-surface border border-app">
+        <a aria-label="Open audit {{ a.id }}" href="{{ url_for('admin.admin_audit_detail', audit_id=a.id) }}" class="block bg-surface2 rounded-xl p-4 hover:bg-surface border border-app">
           <div class="flex items-center justify-between">
             <div class="mono text-xs">{{ a.target_domain }}</div>
             <div class="text-[11px] text-muted">{{ a.status }}</div>
@@ -127,7 +127,7 @@
 </div>
 <script>
   // Keep the admin console live (auto refresh every 60s). Refresh icon is also available.
-  setInterval(() => { try { location.reload(); } catch(e){} }, 60000);
+  setInterval(() => { try { location.reload(); } catch(e){} }, 180000);
 
 </script>
 {% endblock %}

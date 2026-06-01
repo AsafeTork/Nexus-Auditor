@@ -74,18 +74,19 @@ def _diagnostics() -> Dict[str, Any]:
         (getattr(org, "llm_model", "") if org else "")
         or current_app.config.get("LLM_DEFAULT_MODEL", "")
     )
+    effective_base = canonical_base_url_v1(provider, base_url)
     out["llm"] = {
         "provider": provider,
-        "base_url_v1": canonical_base_url_v1(provider, base_url),
+        "base_url_v1": effective_base,
         "model": model,
         "api_key_mask": mask_secret(api_key, 6),
     }
     try:
-        if not base_url or not model:
+        if not effective_base or not model:
             raise RuntimeError("LLM provider/base_url/model not configured.")
         diag = validate_provider(
             provider=provider,
-            base_url_v1=base_url,
+            base_url_v1=effective_base,
             api_key=api_key,
             model=model,
             timeout_s=max(12, min(30, int(os.getenv("LLM_TIMEOUT_S", "20")))),
