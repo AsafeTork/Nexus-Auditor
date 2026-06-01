@@ -29,79 +29,78 @@ if [ "$INSTANCE_NUM" = "0" ]; then
     echo "[nexus] DATABASE_URL: ${DATABASE_URL:0:50}..."
     echo "[nexus] SQLALCHEMY_DATABASE_URI: ${SQLALCHEMY_DATABASE_URI:-not set (using DATABASE_URL)}"
 
-    # Add timeout and retries to handle concurrent upgrade attempts
+    # Run migrations with retries. Use a generous timeout for cold Render free-tier Postgres.
+    MIGRATION_OK=0
     for attempt in 1 2 3; do
         echo "[nexus] migration attempt $attempt/3..."
 
-        # Debug: Test if Python/Flask works
-        echo "[nexus] testing Python import..."
-        python -c "import flask; print('[nexus] Flask import OK')" 2>&1 || echo "[nexus] Flask import FAILED"
-
-        echo "[nexus] testing app import..."
-        python -c "from app import app; print('[nexus] App import OK')" 2>&1 || echo "[nexus] App import FAILED"
-
-        MIGRATION_LOG=$(mktemp)
-        MIGRATION_LOG_STDERR=$(mktemp)
         MIGRATION_LOG_STDOUT=$(mktemp)
+        MIGRATION_LOG_STDERR=$(mktemp)
+        EXIT_CODE=0
 
-        echo "[nexus] starting flask db upgrade..."
-        # Run migration with verbose output and separate stderr/stdout
-        timeout 30 python -u -c "
-import sys
-import os
-import traceback
+        timeout 120 python -u -c "
+import sys, os, traceback
 
 print('[nexus] Python started', flush=True)
 print(f'[nexus] CWD: {os.getcwd()}', flush=True)
-print(f'[nexus] DATABASE_URL: {os.getenv(\"DATABASE_URL\", \"NOT SET\")[:50]}...', flush=True)
+print(f'[nexus] DATABASE_URL prefix: {os.getenv(\"DATABASE_URL\", \"NOT SET\")[:40]}...', flush=True)
 
 try:
     from flask_migrate import upgrade
     from app import app
-
-    print('[nexus] About to create app context', flush=True)
     with app.app_context():
-        print('[nexus] App context created, starting upgrade', flush=True)
+        print('[nexus] running flask db upgrade...', flush=True)
         upgrade()
-        print('[nexus] Upgrade complete', flush=True)
+        print('[nexus] flask db upgrade complete', flush=True)
 except Exception as e:
-    print(f'[nexus] ERROR: {type(e).__name__}: {e}', flush=True)
+    print(f'[nexus] alembic error: {type(e).__name__}: {e}', flush=True)
     traceback.print_exc()
     sys.exit(1)
 " > "$MIGRATION_LOG_STDOUT" 2> "$MIGRATION_LOG_STDERR" || EXIT_CODE=$?
 
-        EXIT_CODE=${EXIT_CODE:-$?}
-
-        echo "[nexus] migration attempt failed with exit code $EXIT_CODE"
         echo "[nexus] === STDOUT ==="
         cat "$MIGRATION_LOG_STDOUT"
         echo "[nexus] === STDERR ==="
         cat "$MIGRATION_LOG_STDERR"
-        echo "[nexus] === END ==="
+        echo "[nexus] === END (exit=$EXIT_CODE) ==="
+        rm -f "$MIGRATION_LOG_STDOUT" "$MIGRATION_LOG_STDERR"
 
-        # Check if migration succeeded (exit code 0)
         if [ "$EXIT_CODE" = "0" ]; then
             echo "[nexus] migrations completed successfully"
-            rm -f "$MIGRATION_LOG_STDOUT" "$MIGRATION_LOG_STDERR"
+            MIGRATION_OK=1
             break
         else
             if [ $attempt -lt 3 ]; then
-                echo "[nexus] retrying in 5s..."
-                sleep 5
-            else
-                echo "[nexus] migration failed after 3 attempts"
-                echo "[nexus] WARNING: Continuando mesmo assim - migraces podem ja estar aplicadas"
-                echo "[nexus] Se vir erros de banco de dados, o problema pode ser:"
-                echo "[nexus]   1. Migraces ja aplicadas (seguro continuar)"
-                echo "[nexus]   2. Banco de dados travado (aguarde e tente novamente)"
-                echo "[nexus]   3. Problema de conexao (verifique DATABASE_URL)"
-                rm -f "$MIGRATION_LOG_STDOUT" "$MIGRATION_LOG_STDERR"
-                break
+                echo "[nexus] retrying in 10s..."
+                sleep 10
             fi
         fi
-
-        rm -f "$MIGRATION_LOG_STDOUT" "$MIGRATION_LOG_STDERR"
     done
+
+    # Fallback: if Alembic failed, use db.create_all() so tables at least exist.
+    if [ "$MIGRATION_OK" = "0" ]; then
+        echo "[nexus] WARNING: Alembic upgrade failed after 3 attempts — running db.create_all() fallback"
+        EXIT_CODE=0
+        timeout 60 python -u -c "
+import sys, traceback
+try:
+    from app import app
+    from nexus import db
+    with app.app_context():
+        db.create_all()
+        print('[nexus] db.create_all() succeeded', flush=True)
+except Exception as e:
+    print(f'[nexus] db.create_all() error: {e}', flush=True)
+    traceback.print_exc()
+    sys.exit(1)
+" || EXIT_CODE=$?
+        if [ "$EXIT_CODE" = "0" ]; then
+            echo "[nexus] fallback tables created — app can start"
+        else
+            echo "[nexus] FATAL: could not create database tables — check DATABASE_URL and Render Postgres"
+            exit 1
+        fi
+    fi
 else
     echo "[nexus] skipping migrations on instance $INSTANCE_NUM (only run on instance 0)"
     # Wait for instance 0 to finish migrations before starting
