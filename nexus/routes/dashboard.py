@@ -428,7 +428,7 @@ def _build_demo_dashboard_state(site_type: str) -> dict:
     }
 
 
-@bp.get("/")
+@bp.get("/dashboard")
 @login_required
 def home():
     org = Organization.query.filter_by(id=current_user.org_id).first()
