@@ -62,10 +62,17 @@
             <div class="text-[11px] text-muted mb-2">Provider</div>
             <select id="cfgLlmProvider" name="provider" class="input text-sm" onchange="onCfgProviderChanged()">
               {% set _p = (llm_defaults.provider or "openai_compatible") %}
-              <option value="openai" {% if _p=="openai" %}selected{% endif %}>OpenAI</option>
-              <option value="openrouter" {% if _p=="openrouter" %}selected{% endif %}>OpenRouter</option>
-              <option value="groq" {% if _p=="groq" %}selected{% endif %}>Groq</option>
-              <option value="anthropic" {% if _p=="anthropic" %}selected{% endif %}>Anthropic</option>
+              <option value="openai"            {% if _p=="openai"            %}selected{% endif %}>OpenAI</option>
+              <option value="anthropic"         {% if _p=="anthropic"         %}selected{% endif %}>Anthropic (Claude)</option>
+              <option value="openrouter"        {% if _p=="openrouter"        %}selected{% endif %}>OpenRouter</option>
+              <option value="groq"              {% if _p=="groq"              %}selected{% endif %}>Groq (ultra-fast)</option>
+              <option value="deepseek"          {% if _p=="deepseek"          %}selected{% endif %}>DeepSeek</option>
+              <option value="together"          {% if _p=="together"          %}selected{% endif %}>Together AI</option>
+              <option value="mistral"           {% if _p=="mistral"           %}selected{% endif %}>Mistral AI</option>
+              <option value="fireworks"         {% if _p=="fireworks"         %}selected{% endif %}>Fireworks AI</option>
+              <option value="perplexity"        {% if _p=="perplexity"        %}selected{% endif %}>Perplexity</option>
+              <option value="gemini"            {% if _p=="gemini"            %}selected{% endif %}>Google Gemini</option>
+              <option value="eclipse"           {% if _p=="eclipse"           %}selected{% endif %}>Eclipse Provider (80+ open-source)</option>
               <option value="openai_compatible" {% if _p=="openai_compatible" %}selected{% endif %}>Other compatible</option>
             </select>
           </div>
@@ -216,28 +223,34 @@
     const current = (el.value || "").trim();
     if(current && !force) return;
     const defaults = {
-      openai: "https://api.openai.com/v1",
+      openai:            "https://api.openai.com/v1",
+      anthropic:         "https://api.anthropic.com",
+      openrouter:        "https://openrouter.ai/api/v1",
+      groq:              "https://api.groq.com/openai/v1",
+      deepseek:          "https://api.deepseek.com",
+      together:          "https://api.together.ai/v1",
+      mistral:           "https://api.mistral.ai/v1",
+      fireworks:         "https://api.fireworks.ai/inference/v1",
+      perplexity:        "https://api.perplexity.ai",
+      gemini:            "https://generativelanguage.googleapis.com/v1beta/openai",
+      eclipse:           "https://eclipseprovider.pro/v1",
       openai_compatible: "",
-      openrouter: "https://openrouter.ai/api/v1",
-      groq: "https://api.groq.com/openai/v1",
-      anthropic: "https://api.anthropic.com"
     };
-    el.value = defaults[p] || "";
+    el.value = defaults[p] ?? "";
   }
   function onCfgProviderChanged(){
     const p = (document.getElementById("cfgLlmProvider")?.value || "").trim();
     const wrap = document.getElementById("cfgBaseWrap");
-    if(wrap){
-      wrap.style.display = p === "openai_compatible" ? "" : "none";
-    }
+    const showBase = p === "openai_compatible";
+    if(wrap){ wrap.style.display = showBase ? "" : "none"; }
     suggestCfgProviderBase(true);
     const sel = document.getElementById("cfgLlmModel");
     if(sel){ sel.innerHTML = "<option value=''>Select a model</option>"; }
     const out = document.getElementById("cfgLlmValidateOut");
     if(out){
-      out.textContent = p === "openai_compatible"
+      out.textContent = showBase
         ? "Enter the Base URL for your compatible provider, then load models."
-        : "Default Base URL applied automatically. Paste your key and load models.";
+        : "Default Base URL applied automatically. Paste your API key and click Load models.";
     }
   }
   async function loadCfgModels(force=false){

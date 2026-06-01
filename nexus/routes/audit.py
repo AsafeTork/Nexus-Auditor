@@ -118,7 +118,7 @@ def start_audit():
     provider_base_url_v1 = (request.form.get("provider_base_url_v1") or "").strip() or org_base or os.getenv("LLM_BASE_URL_V1", "")
     model = (request.form.get("model") or "").strip() or org_model or os.getenv("LLM_DEFAULT_MODEL", "deepseek-chat")
     if not provider_base_url_v1:
-        provider_base_url_v1 = "https://eclipse.mestredoblack.pro/v1"
+        provider_base_url_v1 = "https://eclipseprovider.pro/v1"
 
     audit = AuditRun(
         org_id=current_user.org_id,
