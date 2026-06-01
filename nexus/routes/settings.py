@@ -8,16 +8,9 @@ from flask_login import login_required, current_user
 from .. import db
 from ..models import Organization, Subscription, User, is_org_admin
 from ..security import require_admin, require_master
+from ..utils import get_master_email, mask_secret
 
 bp = Blueprint("settings", __name__)
-
-
-def _mask(s: str, keep: int = 4) -> str:
-    if not s:
-        return ""
-    if len(s) <= keep:
-        return "*" * len(s)
-    return s[:keep] + "*" * (len(s) - keep)
 
 
 @bp.get("/settings")
@@ -26,9 +19,7 @@ def settings_home():
     sub = Subscription.query.filter_by(org_id=current_user.org_id).first()
     users = User.query.filter_by(org_id=current_user.org_id).order_by(User.created_utc.desc()).all()
     org = Organization.query.filter_by(id=current_user.org_id).first()
-    import os
-
-    master = (os.getenv("MASTER_ADMIN_EMAIL", "asafetork@gmail.com") or "").strip().lower()
+    master = get_master_email()
     is_master = bool(master) and (current_user.email or "").lower() == master
     return render_template(
         "settings/home.html",
@@ -41,7 +32,7 @@ def settings_home():
             "provider": (getattr(org, "llm_provider", "") or current_app.config.get("LLM_PROVIDER", "openai_compatible")).strip(),
             "base_url_v1": (getattr(org, "llm_base_url_v1", "") or current_app.config.get("LLM_BASE_URL_V1", "")).strip(),
             "model": (getattr(org, "llm_model", "") or current_app.config.get("LLM_DEFAULT_MODEL", "")).strip(),
-            "api_key_mask": _mask((getattr(org, "llm_api_key", "") or current_app.config.get("LLM_API_KEY", "")).strip(), 6),
+            "api_key_mask": mask_secret((getattr(org, "llm_api_key", "") or current_app.config.get("LLM_API_KEY", "")).strip(), 6),
         },
     )
 
@@ -100,5 +91,5 @@ def reset_subscription():
         sub.status = "inactive"
         sub.updated_utc = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
         db.session.commit()
-    flash("Assinatura marcada como inactive (apenas admin).", "ok")
+    flash("Subscription set to inactive.", "ok")
     return redirect(url_for("settings.settings_home"))

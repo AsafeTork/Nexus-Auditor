@@ -20,40 +20,27 @@ from ..services.github import create_issue
 from ..services.audit_engine import list_models
 from ..services.control_plane import build_agent_cards
 from ..services.llm_providers import canonical_base_url_v1, list_provider_models, normalize_provider, validate_provider
+from ..utils import get_master_email, mask_secret
 
 bp = Blueprint("admin", __name__)
 
 
 def _is_master_admin() -> bool:
-    master = (os.getenv("MASTER_ADMIN_EMAIL", "") or "").strip().lower()
+    master = get_master_email()
     return bool(master) and (str(getattr(current_user, "email", "") or "").strip().lower() == master)
 
 
 def _allow_global_admin_view() -> bool:
-    """
-    If enabled, any admin can manage all users/orgs (not only MASTER_ADMIN_EMAIL).
-    Default: off.
-    """
+    """Any admin can manage all orgs when ADMIN_GLOBAL_USERS=1."""
     return str(os.getenv("ADMIN_GLOBAL_USERS", "0") or "0").strip().lower() in ("1", "true", "yes", "on")
 
 
 def _master_email() -> str:
-    return (os.getenv("MASTER_ADMIN_EMAIL", "") or "").strip().lower()
-
-
-def _mask(s: str, keep: int = 4) -> str:
-    if not s:
-        return ""
-    if len(s) <= keep:
-        return "*" * len(s)
-    return s[:keep] + "*" * (len(s) - keep)
+    return get_master_email()
 
 
 def _diagnostics() -> Dict[str, Any]:
-    """
-    Quick server-side health checks for admin panel.
-    Avoid exposing secrets.
-    """
+    """Server-side health check snapshot; never exposes raw secrets."""
     out: Dict[str, Any] = {"ts_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())}
 
     # DB
@@ -91,7 +78,7 @@ def _diagnostics() -> Dict[str, Any]:
         "provider": provider,
         "base_url_v1": canonical_base_url_v1(provider, base_url),
         "model": model,
-        "api_key_mask": _mask(api_key, 6),
+        "api_key_mask": mask_secret(api_key, 6),
     }
     try:
         if not base_url or not model:
@@ -135,7 +122,7 @@ def admin_home():
         llm_defaults={
             "provider": (getattr(org, "llm_provider", "openai_compatible") or "openai_compatible").strip(),
             "base_url_v1": (getattr(org, "llm_base_url_v1", "") or "").strip(),
-            "api_key_mask": _mask((getattr(org, "llm_api_key", "") or "").strip(), 6),
+            "api_key_mask": mask_secret((getattr(org, "llm_api_key", "") or "").strip(), 6),
             "model": (getattr(org, "llm_model", "") or "").strip(),
         },
     )

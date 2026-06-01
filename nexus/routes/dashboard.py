@@ -69,7 +69,7 @@ def _risk_label(score: int) -> str:
 def _format_duration(seconds: int) -> str:
     seconds = int(seconds or 0)
     if seconds <= 0:
-        return "24h (estim.)"
+        return "N/A"
     hours = round(seconds / 3600.0, 1)
     if hours < 24:
         return f"{hours}h"
@@ -99,14 +99,11 @@ def _sales_status_short(status: str) -> str:
 
 
 def _sales_headline(status: str) -> str:
-    status = str(status or "").upper()
-    if status == "CRITICAL":
-        return "Yes, your store may be losing sales right now."
-    if status == "AT_RISK":
-        return "Your store has clear signals of sales loss."
-    if status == "PROTECTED":
-        return "No strong signal of sales loss right now."
-    return "Connect your store to measure real sales loss."
+    return {
+        "CRITICAL": "Yes, your store may be losing sales right now.",
+        "AT_RISK": "Your store has clear signals of sales loss.",
+        "PROTECTED": "No strong signal of sales loss right now.",
+    }.get(str(status or "").upper(), "Connect your store to measure real sales loss.")
 
 
 def _sales_summary(status: str, active_issues: int) -> str:
@@ -121,17 +118,13 @@ def _sales_summary(status: str, active_issues: int) -> str:
 
 
 def _format_brl(value: int) -> str:
-    """Format integer as Brazilian Real currency string.
-    Ensures non-negative values and uses comma as decimal separator.
-    """
+    """Format as BRL currency string (comma decimal, dot thousands)."""
     value = int(max(0, int(value or 0)))
     text = f"{value:,.0f}".replace(",", "_").replace(".", ",").replace("_", ".")
     return f"R$ {text}"
 
 def _financial_short_label(level: str) -> str:
-    """Return a concise label for financial risk levels.
-    Maps known levels to short uppercase strings; unknown levels are returned unchanged.
-    """
+    """Short uppercase label for a financial risk level; unknown levels pass through unchanged."""
     level = (level or "").upper()
     return {
         "CRITICAL": "CRIT",
@@ -139,7 +132,6 @@ def _financial_short_label(level: str) -> str:
         "MEDIUM": "MED",
         "LOW": "LOW",
     }.get(level, level)
-
 
 
 from ..services.revenue_impact import calculate_global_score, RevenueImpact

@@ -15,6 +15,6 @@ def test_register_and_login(client):
 
 
 def test_home_requires_auth(client):
-    r = client.get("/", follow_redirects=False)
+    r = client.get("/dashboard", follow_redirects=False)
     assert r.status_code in (302, 401)
 
