@@ -20,14 +20,14 @@
     <a class="btn-secondary" href="{{ url_for('admin.admin_home') }}">Back</a>
   </div>
 
-  <!-- Console: terminal geral (somente exibição) -->
+  <!-- Console: general output terminal (read-only) -->
   <section class="mt-6 card card-focus">
     <div class="flex items-center justify-between gap-6">
       <div>
         <div class="section-title">Console</div>
-        <div class="body-text">Tudo que é erro primeiro, depois o restante (org scope).</div>
+        <div class="body-text">Errors first, then all other events within org scope.</div>
         <div class="text-[11px] text-muted mt-1">
-          Nota: a seção de UI/Backend Lab pode conter histórico antigo. Use refresh para ver o estado atual.
+          Note: the UI/Backend Lab section may contain older history. Use refresh to see current state.
         </div>
       </div>
       <button class="btn-secondary icon-btn" aria-label="Copy console" onclick="copyText('consoleBox')">

@@ -129,7 +129,7 @@ def start_audit():
         target_domain=(urlparse(site.base_url).hostname or ""),
         logs=f"MODE={mode}\n",
         markdown_text="",
-        csv_text="Categoria;Falha;Prova Técnica;Explicação;Prejuízo Estimado;Solução;Prioridade;Complexity\n",
+        csv_text="Category;Failure;Technical Proof;Explanation;Estimated Loss;Solution;Priority;Complexity\n",
     )
     db.session.add(audit)
     db.session.commit()

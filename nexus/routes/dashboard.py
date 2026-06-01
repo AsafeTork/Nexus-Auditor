@@ -80,45 +80,44 @@ def _format_duration(seconds: int) -> str:
 def _risk_summary(status: str, active_issues: int) -> str:
     status = str(status or "").upper()
     if status == "CRITICAL":
-        return "Seu site está vulnerável a problemas que podem afetar segurança, confiança e usuários."
+        return "Your site is vulnerable to issues that may affect security, trust, and users."
     if status == "AT_RISK":
-        return f"Seu site tem {active_issues} problema(s) ativo(s) que merecem atenção antes de impactar usuários ou reputação."
+        return f"Your site has {active_issues} active issue(s) that need attention before they impact users or reputation."
     if status == "PROTECTED":
-        return "Seu site está protegido no momento, com risco visível sob controle e prioridades menores para acompanhar."
-    return "Ainda não há dados suficientes para medir o risco real do site. Configure a base e rode a primeira auditoria."
+        return "Your site is currently protected, with visible risk under control and minor priorities to monitor."
+    return "Not enough data yet to measure real site risk. Set up the base configuration and run the first audit."
 
 
 def _sales_status_short(status: str) -> str:
     status = str(status or "").upper()
     return {
-        "CRITICAL": "Perda imediata",
-        "AT_RISK": "Vendas em risco",
-        "PROTECTED": "Receita protegida",
-        "NO_DATA": "Sem leitura real",
-    }.get(status, "Sem leitura real")
+        "CRITICAL": "Immediate loss",
+        "AT_RISK": "Sales at risk",
+        "PROTECTED": "Revenue protected",
+        "NO_DATA": "No real data",
+    }.get(status, "No real data")
 
 
 def _sales_headline(status: str) -> str:
     status = str(status or "").upper()
     if status == "CRITICAL":
-        return "Sim, sua loja pode estar perdendo vendas agora."
+        return "Yes, your store may be losing sales right now."
     if status == "AT_RISK":
-        return "Sua loja tem sinais claros de perda de vendas."
+        return "Your store has clear signals of sales loss."
     if status == "PROTECTED":
-        return "Não há sinal forte de perda de vendas agora."
-    return "Conecte sua loja para medir perda de vendas real."
+        return "No strong signal of sales loss right now."
+    return "Connect your store to measure real sales loss."
 
 
 def _sales_summary(status: str, active_issues: int) -> str:
-    # existing function body unchanged
     status = str(status or "").upper()
     if status == "CRITICAL":
-        return "Problemas ativos podem interromper checkout, reduzir conversão e derrubar receita imediatamente."
+        return "Active issues may interrupt checkout, reduce conversion, and drop revenue immediately."
     if status == "AT_RISK":
-        return f"Existem {active_issues} pontos ativos que podem enfraquecer checkout, conversão e confiança do comprador."
+        return f"There are {active_issues} active points that may weaken checkout, conversion, and buyer trust."
     if status == "PROTECTED":
-        return "Os sinais atuais indicam checkout mais estável, confiança preservada e menor risco de perda comercial."
-    return "Ainda não há dados reais suficientes para mostrar o que ameaça suas vendas."
+        return "Current signals indicate a more stable checkout, preserved trust, and lower risk of commercial loss."
+    return "Not enough real data yet to show what is threatening your sales."
 
 
 def _format_brl(value: int) -> str:
@@ -192,14 +191,14 @@ def _build_priority_tasks(cards: list[dict], *, provider_ready: bool, has_sites:
     if not provider_ready:
         return [
             {
-                "site_name": "Base do sistema",
-                "title": "Conectar o motor de análise",
-                "financial_label": "Receita sem visibilidade",
-                "financial_short_label": "Receita sem leitura",
-                "impact": "Sem isso o produto não consegue mostrar o que ameaça vendas, checkout, conversão e confiança.",
-                "money_at_risk": "Dinheiro em risco: perda de clareza sobre onde a loja pode estar perdendo pedidos.",
-                "how_to_fix": "Abra Configurações, valide a chave do provedor e selecione um modelo funcional.",
-                "urgency": "Agir agora",
+                "site_name": "System setup",
+                "title": "Connect the analysis engine",
+                "financial_label": "Revenue without visibility",
+                "financial_short_label": "No data reading",
+                "impact": "Without this, the product cannot show what threatens sales, checkout, conversion, and trust.",
+                "money_at_risk": "Revenue at risk: no clarity on where your store may be losing orders.",
+                "how_to_fix": "Open Settings, validate your provider key, and select a working model.",
+                "urgency": "Act now",
                 "level": "HIGH",
                 "score": 100,
                 "cta_kind": "provider",
@@ -208,14 +207,14 @@ def _build_priority_tasks(cards: list[dict], *, provider_ready: bool, has_sites:
     if not has_sites:
         return [
             {
-                "site_name": "Primeiro alvo",
-                "title": "Adicionar o site principal",
-                "financial_label": "Vendas sem proteção",
-                "financial_short_label": "Sem leitura de vendas",
-                "impact": "Sem um site cadastrado o sistema não consegue avaliar vendas, checkout, conversão e confiança.",
-                "money_at_risk": "Dinheiro em risco: você continua sem visibilidade sobre os pontos que podem estar derrubando receita.",
-                "how_to_fix": "Cadastre a URL principal do site para habilitar análises e histórico.",
-                "urgency": "Agir agora",
+                "site_name": "First target",
+                "title": "Add your main site",
+                "financial_label": "Sales without protection",
+                "financial_short_label": "No sales data",
+                "impact": "Without a site, the system cannot evaluate sales, checkout, conversion, or trust.",
+                "money_at_risk": "Revenue at risk: no visibility into what may be hurting your bottom line.",
+                "how_to_fix": "Register your site URL to enable analysis and historical tracking.",
+                "urgency": "Act now",
                 "level": "HIGH",
                 "score": 90,
                 "cta_kind": "create_site",
@@ -224,14 +223,14 @@ def _build_priority_tasks(cards: list[dict], *, provider_ready: bool, has_sites:
     if not has_audits:
         return [
             {
-                "site_name": "Primeira leitura",
-                "title": "Executar a primeira auditoria",
-                "financial_label": "Receita sem diagnóstico",
-                "financial_short_label": "Sem diagnóstico",
-                "impact": "É ela que revela os pontos que podem afetar vendas, checkout, conversão e confiança.",
-                "money_at_risk": "Dinheiro em risco: sem auditoria você não enxerga onde a loja pode estar perdendo pedidos agora.",
-                "how_to_fix": "Inicie um fluxo completo em um dos sites cadastrados para popular o painel.",
-                "urgency": "Agir agora",
+                "site_name": "First scan",
+                "title": "Run the first audit",
+                "financial_label": "Revenue without diagnosis",
+                "financial_short_label": "No diagnosis",
+                "impact": "The audit reveals what may affect sales, checkout, conversion, and trust.",
+                "money_at_risk": "Revenue at risk: without an audit you cannot see where your store is losing orders right now.",
+                "how_to_fix": "Start a full flow on one of your registered sites to populate the dashboard.",
+                "urgency": "Act now",
                 "level": "HIGH",
                 "score": 80,
                 "cta_kind": "sites",
@@ -261,74 +260,74 @@ def _build_demo_dashboard_state(site_type: str) -> dict:
     demo_map = {
         "ecommerce": {
             "segment_label": "E-commerce",
-            "site_name_1": "Loja principal",
-            "site_name_2": "Catálogo e checkout",
+            "site_name_1": "Main store",
+            "site_name_2": "Catalog & checkout",
             "base_url_1": "https://shop-demo.com",
             "base_url_2": "https://store-demo.com",
-            "summary": "Exemplo de leitura para e-commerce: o checkout pode falhar, a confiança do comprador pode cair e a sessão pode quebrar a compra.",
-            "impact_anchor": "Perda direta de receita",
-            "immediate_action": "Corrija primeiro o checkout, depois o sinal de confiança e em seguida a sessão da compra.",
+            "summary": "Sample e-commerce scan: checkout may fail, buyer trust may drop, and session issues may break purchases.",
+            "impact_anchor": "Direct revenue loss",
+            "immediate_action": "Fix checkout first, then trust signals, then session continuity.",
             "findings": [
-                {"title": "Checkout com falha pode travar pedidos", "impact": "Pode interromper a compra no momento de pagamento e causar perda imediata de vendas.", "urgency": "Agir agora", "confidence": 0.93, "status": "open", "level": "CRITICAL", "how_to_fix": "Validar o fluxo de checkout, pagamento e retorno do pedido antes de liberar mais tráfego."},
-                {"title": "Sinal de confiança fraco pode derrubar conversão", "impact": "Pode fazer compradores abandonarem a compra por desconfiança no momento mais sensível.", "urgency": "Agir agora", "confidence": 0.89, "status": "open", "level": "CRITICAL", "how_to_fix": "Reforçar HTTPS, sinais visuais de confiança e proteção nas páginas de produto e checkout."},
-                {"title": "Problema de sessão pode quebrar o carrinho", "impact": "Pode apagar a continuidade da compra, elevar abandono e reduzir pedidos concluídos.", "urgency": "Próximas 24h", "confidence": 0.86, "status": "open", "level": "CRITICAL", "how_to_fix": "Reforçar cookies, expiração de sessão e recuperação do carrinho no backend."},
-                {"title": "Catálogo lento pode reduzir adição ao carrinho", "impact": "Pode diminuir descoberta de produto e conversão ao longo da navegação.", "urgency": "Esta semana", "confidence": 0.73, "status": "open", "level": "MEDIUM", "how_to_fix": "Ajustar scripts e carregamento de páginas de produto para preservar velocidade comercial."},
-                {"title": "Tag externa sem controle pode atrasar páginas de venda", "impact": "Pode reduzir conversão ao atrasar páginas de produto, vitrine e carrinho.", "urgency": "Esta semana", "confidence": 0.69, "status": "open", "level": "MEDIUM", "how_to_fix": "Limitar scripts externos e priorizar o carregamento do que ajuda a vender."},
-                {"title": "Redirecionamento inseguro no checkout resolvido", "impact": "Uma falha que poderia afetar compra já foi corrigida recentemente.", "urgency": "Resolvido", "confidence": 0.78, "status": "resolved", "level": "LOW", "how_to_fix": "Correção confirmada no fluxo de pagamento e navegação."},
+                {"title": "Broken checkout may block orders", "impact": "Can interrupt purchases at payment and cause immediate revenue loss.", "urgency": "Act now", "confidence": 0.93, "status": "open", "level": "CRITICAL", "how_to_fix": "Validate checkout flow, payment handling, and order confirmation before sending more traffic."},
+                {"title": "Weak trust signal may hurt conversion", "impact": "Can cause buyers to abandon at the most sensitive point of the purchase.", "urgency": "Act now", "confidence": 0.89, "status": "open", "level": "CRITICAL", "how_to_fix": "Strengthen HTTPS, visual trust signals, and protection on product and checkout pages."},
+                {"title": "Session issue may break the cart", "impact": "Can erase purchase continuity, increase abandonment, and reduce completed orders.", "urgency": "Next 24h", "confidence": 0.86, "status": "open", "level": "CRITICAL", "how_to_fix": "Strengthen cookies, session expiry, and cart recovery in the backend."},
+                {"title": "Slow catalog may reduce add-to-cart rate", "impact": "Can decrease product discovery and conversion throughout browsing.", "urgency": "This week", "confidence": 0.73, "status": "open", "level": "MEDIUM", "how_to_fix": "Tune scripts and product page load times to preserve commercial speed."},
+                {"title": "Uncontrolled third-party tag may delay sales pages", "impact": "Can reduce conversion by slowing product, storefront, and cart pages.", "urgency": "This week", "confidence": 0.69, "status": "open", "level": "MEDIUM", "how_to_fix": "Limit external scripts and prioritize loading of revenue-critical assets."},
+                {"title": "Insecure redirect in checkout resolved", "impact": "A flaw that could have affected purchases was recently fixed.", "urgency": "Resolved", "confidence": 0.78, "status": "resolved", "level": "LOW", "how_to_fix": "Fix confirmed in payment and navigation flow."},
             ],
             "card_actions": [
-                ("Blindar o checkout para evitar perda imediata", "demo|checkout-fail", "CRITICAL", 98, 0.93),
-                ("Reforçar confiança para proteger conversão", "demo|trust-issue", "CRITICAL", 93, 0.89),
-                ("Proteger sessão e continuidade do carrinho", "demo|cart-session", "CRITICAL", 89, 0.86),
-                ("Estabilizar busca e catálogo para preservar conversão", "demo|catalog-stability", "MEDIUM", 58, 0.73),
+                ("Harden checkout to prevent immediate loss", "demo|checkout-fail", "CRITICAL", 98, 0.93),
+                ("Strengthen trust signals to protect conversion", "demo|trust-issue", "CRITICAL", 93, 0.89),
+                ("Protect session and cart continuity", "demo|cart-session", "CRITICAL", 89, 0.86),
+                ("Stabilize search and catalog to preserve conversion", "demo|catalog-stability", "MEDIUM", 58, 0.73),
             ],
         },
         "saas": {
             "segment_label": "SaaS",
-            "site_name_1": "Aplicação principal",
-            "site_name_2": "Área logada",
+            "site_name_1": "Main application",
+            "site_name_2": "Logged-in area",
             "base_url_1": "https://app-demo.com",
             "base_url_2": "https://dashboard-demo.com",
-            "summary": "Exemplo de risco para SaaS: falhas visíveis podem quebrar fluxo logado, gerar suporte e elevar churn.",
-            "impact_anchor": "Perda de usuários ativos",
-            "immediate_action": "Veja abaixo como a plataforma priorizaria riscos que ameaçam retenção e uso diário.",
+            "summary": "Sample SaaS scan: visible failures may break the logged-in flow, generate support load, and increase churn.",
+            "impact_anchor": "Active user loss",
+            "immediate_action": "See below how the platform would prioritize risks threatening retention and daily use.",
             "findings": [
-                {"title": "Erro pode quebrar fluxo do usuário logado", "impact": "Perda de usuários ativos ao interromper a experiência principal da conta.", "urgency": "Agir agora", "confidence": 0.90, "status": "open", "level": "CRITICAL", "how_to_fix": "Mapeie erros do fluxo logado e proteja as rotas essenciais com testes e fallback."},
-                {"title": "Instabilidade pode aumentar churn", "impact": "Quedas e respostas inconsistentes prejudicam retenção e confiança no produto.", "urgency": "Agir agora", "confidence": 0.87, "status": "open", "level": "CRITICAL", "how_to_fix": "Aumente resiliência nas rotas críticas e trate erros de forma previsível para o usuário."},
-                {"title": "API exposta pode afetar sessão e dados", "impact": "Pode comprometer experiência logada e criar risco operacional imediato.", "urgency": "24h", "confidence": 0.83, "status": "open", "level": "CRITICAL", "how_to_fix": "Reforce autenticação, rate limit e validação nas rotas de API mais sensíveis."},
-                {"title": "Dependência instável pode gerar lentidão recorrente", "impact": "Afeta produtividade e aumenta atrito em uso diário.", "urgency": "Esta semana", "confidence": 0.72, "status": "open", "level": "MEDIUM", "how_to_fix": "Atualize dependências com histórico de falha e revise gargalos do backend."},
-                {"title": "Evento assíncrono sem proteção suficiente", "impact": "Pode criar erros silenciosos e desgaste na operação do suporte.", "urgency": "Esta semana", "confidence": 0.68, "status": "open", "level": "MEDIUM", "how_to_fix": "Aplique fila, retry controlado e observabilidade nos eventos principais."},
-                {"title": "Sessão insegura em rota secundária resolvida", "impact": "Um ponto de atrito e risco para usuários já foi removido.", "urgency": "Resolvido", "confidence": 0.77, "status": "resolved", "level": "LOW", "how_to_fix": "Correção verificada na área logada."},
+                {"title": "Error may break logged-in user flow", "impact": "Loss of active users by interrupting the core account experience.", "urgency": "Act now", "confidence": 0.90, "status": "open", "level": "CRITICAL", "how_to_fix": "Map errors in the logged-in flow and protect essential routes with tests and fallbacks."},
+                {"title": "Instability may increase churn", "impact": "Drops and inconsistent responses hurt retention and product confidence.", "urgency": "Act now", "confidence": 0.87, "status": "open", "level": "CRITICAL", "how_to_fix": "Increase resilience on critical routes and handle errors predictably for the user."},
+                {"title": "Exposed API may affect sessions and data", "impact": "Can compromise the logged-in experience and create immediate operational risk.", "urgency": "24h", "confidence": 0.83, "status": "open", "level": "CRITICAL", "how_to_fix": "Reinforce authentication, rate limiting, and validation on the most sensitive API routes."},
+                {"title": "Unstable dependency may cause recurring slowdowns", "impact": "Affects productivity and increases friction in daily use.", "urgency": "This week", "confidence": 0.72, "status": "open", "level": "MEDIUM", "how_to_fix": "Update dependencies with a failure history and review backend bottlenecks."},
+                {"title": "Async event without sufficient protection", "impact": "Can create silent errors and wear down support operations.", "urgency": "This week", "confidence": 0.68, "status": "open", "level": "MEDIUM", "how_to_fix": "Apply queue, controlled retry, and observability to core events."},
+                {"title": "Insecure session on secondary route resolved", "impact": "A friction and risk point for users was removed.", "urgency": "Resolved", "confidence": 0.77, "status": "resolved", "level": "LOW", "how_to_fix": "Fix verified in the logged-in area."},
             ],
             "card_actions": [
-                ("Blindar o fluxo logado para evitar quebra de uso", "demo|logged-flow", "CRITICAL", 96, 0.90),
-                ("Reduzir instabilidade que pode elevar churn", "demo|churn-instability", "CRITICAL", 92, 0.87),
-                ("Fechar exposição crítica da API", "demo|api-exposed", "CRITICAL", 88, 0.83),
-                ("Estabilizar eventos e dependências críticas", "demo|async-stability", "MEDIUM", 58, 0.72),
+                ("Harden logged-in flow to prevent usage breakage", "demo|logged-flow", "CRITICAL", 96, 0.90),
+                ("Reduce instability that may increase churn", "demo|churn-instability", "CRITICAL", 92, 0.87),
+                ("Close critical API exposure", "demo|api-exposed", "CRITICAL", 88, 0.83),
+                ("Stabilize events and critical dependencies", "demo|async-stability", "MEDIUM", 58, 0.72),
             ],
         },
         "institucional": {
-            "segment_label": "Institucional",
-            "site_name_1": "Site principal",
-            "site_name_2": "Página de contato",
-            "base_url_1": "https://institucional-demo.com",
-            "base_url_2": "https://www.institucional-demo.com",
-            "summary": "Exemplo de risco para site institucional: falhas visíveis podem afetar credibilidade, contato comercial e confiança.",
-            "impact_anchor": "Perda de confiança",
-            "immediate_action": "Veja abaixo como a plataforma destacaria riscos que afetam reputação e captação de contatos.",
+            "segment_label": "Institutional",
+            "site_name_1": "Main site",
+            "site_name_2": "Contact page",
+            "base_url_1": "https://company-demo.com",
+            "base_url_2": "https://www.company-demo.com",
+            "summary": "Sample institutional scan: visible failures may affect credibility, commercial contact, and trust.",
+            "impact_anchor": "Trust loss",
+            "immediate_action": "See below how the platform would highlight risks affecting reputation and contact capture.",
             "findings": [
-                {"title": "Formulário pode estar vulnerável a spam", "impact": "Perda de confiança e desgaste operacional em canais de contato.", "urgency": "Agir agora", "confidence": 0.89, "status": "open", "level": "CRITICAL", "how_to_fix": "Aplique validação, proteção antispam e checagem no backend do formulário."},
-                {"title": "Falhas podem afetar credibilidade", "impact": "Erros públicos reduzem confiança de visitantes, leads e parceiros.", "urgency": "Agir agora", "confidence": 0.85, "status": "open", "level": "CRITICAL", "how_to_fix": "Corrija erros visíveis e fortaleça proteção básica para evitar sinais públicos de risco."},
-                {"title": "Script externo pode comprometer páginas principais", "impact": "Pode degradar páginas institucionais e enfraquecer a percepção de profissionalismo.", "urgency": "24h", "confidence": 0.81, "status": "open", "level": "CRITICAL", "how_to_fix": "Reduza dependências externas nas páginas mais visitadas e proteja carregamento crítico."},
-                {"title": "Upload de currículo pode estar exposto", "impact": "Pode criar abuso ou envio indevido em canais secundários.", "urgency": "Esta semana", "confidence": 0.71, "status": "open", "level": "MEDIUM", "how_to_fix": "Aplique restrições de tipo, tamanho e validação forte em uploads."},
-                {"title": "Página de contato com proteção insuficiente", "impact": "Pode aumentar ruído operacional e prejudicar a comunicação real.", "urgency": "Esta semana", "confidence": 0.68, "status": "open", "level": "MEDIUM", "how_to_fix": "Adicione rate limit e bloqueios simples para abuso repetitivo."},
-                {"title": "Redirecionamento inseguro em página institucional resolvido", "impact": "Um ponto que poderia afetar confiança já foi eliminado.", "urgency": "Resolvido", "confidence": 0.76, "status": "resolved", "level": "LOW", "how_to_fix": "Correção já validada na navegação principal."},
+                {"title": "Contact form may be vulnerable to spam", "impact": "Trust loss and operational wear on contact channels.", "urgency": "Act now", "confidence": 0.89, "status": "open", "level": "CRITICAL", "how_to_fix": "Apply validation, anti-spam protection, and backend checks to the contact form."},
+                {"title": "Failures may affect credibility", "impact": "Public errors reduce trust from visitors, leads, and partners.", "urgency": "Act now", "confidence": 0.85, "status": "open", "level": "CRITICAL", "how_to_fix": "Fix visible errors and strengthen basic protection to avoid public risk signals."},
+                {"title": "Third-party script may compromise main pages", "impact": "Can degrade institutional pages and weaken the perception of professionalism.", "urgency": "24h", "confidence": 0.81, "status": "open", "level": "CRITICAL", "how_to_fix": "Reduce external dependencies on high-traffic pages and protect critical loading."},
+                {"title": "File upload may be exposed", "impact": "Can create abuse or unintended submissions on secondary channels.", "urgency": "This week", "confidence": 0.71, "status": "open", "level": "MEDIUM", "how_to_fix": "Apply file type restrictions, size limits, and strong validation on uploads."},
+                {"title": "Contact page with insufficient protection", "impact": "Can increase operational noise and hurt real communication.", "urgency": "This week", "confidence": 0.68, "status": "open", "level": "MEDIUM", "how_to_fix": "Add rate limiting and simple blocks against repetitive abuse."},
+                {"title": "Insecure redirect on institutional page resolved", "impact": "A point that could have affected trust was eliminated.", "urgency": "Resolved", "confidence": 0.76, "status": "resolved", "level": "LOW", "how_to_fix": "Fix already validated in main navigation."},
             ],
             "card_actions": [
-                ("Proteger formulários e canais de contato", "demo|contact-form", "CRITICAL", 96, 0.89),
-                ("Corrigir falhas que afetam credibilidade pública", "demo|credibility", "CRITICAL", 92, 0.85),
-                ("Reduzir risco de scripts em páginas principais", "demo|public-scripts", "CRITICAL", 88, 0.81),
-                ("Blindar páginas secundárias contra abuso", "demo|secondary-pages", "MEDIUM", 58, 0.71),
+                ("Protect contact forms and channels", "demo|contact-form", "CRITICAL", 96, 0.89),
+                ("Fix failures affecting public credibility", "demo|credibility", "CRITICAL", 92, 0.85),
+                ("Reduce script risk on main pages", "demo|public-scripts", "CRITICAL", 88, 0.81),
+                ("Harden secondary pages against abuse", "demo|secondary-pages", "MEDIUM", 58, 0.71),
             ],
         },
     }
@@ -345,13 +344,13 @@ def _build_demo_dashboard_state(site_type: str) -> dict:
                 "title": item["title"],
                 "impact": item["impact"],
                 "money_at_risk": (
-                    "Dinheiro em risco: até R$ 8.400/mês se o checkout continuar falhando."
+                    "Revenue at risk: up to $8,400/mo if checkout keeps failing."
                     if "checkout" in item["title"].lower()
-                    else "Dinheiro em risco: até R$ 5.200/mês em conversão perdida por queda de confiança."
-                    if "confiança" in item["title"].lower() or "confianca" in item["title"].lower()
-                    else "Dinheiro em risco: até R$ 4.700/mês em abandono de carrinho por sessão instável."
-                    if "sessão" in item["title"].lower() or "sessao" in item["title"].lower()
-                    else f"Dinheiro em risco: {scenario['impact_anchor']}."
+                    else "Revenue at risk: up to $5,200/mo in conversion lost from trust drop."
+                    if "trust" in item["title"].lower()
+                    else "Revenue at risk: up to $4,700/mo in cart abandonment from unstable sessions."
+                    if "session" in item["title"].lower() or "cart" in item["title"].lower()
+                    else f"Revenue at risk: {scenario['impact_anchor']}."
                 ),
                 "how_to_fix": item["how_to_fix"],
                 "urgency": item["urgency"],
@@ -394,15 +393,15 @@ def _build_demo_dashboard_state(site_type: str) -> dict:
         "demo_mode": True,
         "demo_site_type": site_type,
         "demo_segment_label": scenario["segment_label"],
-        "demo_note": f"Exemplo de análise automática para {scenario['segment_label'].lower()} — conecte seu site para dados reais.",
+        "demo_note": f"Sample automated analysis for {scenario['segment_label']} — connect your site for real data.",
         "priority_tasks": open_tasks,
         "featured_cards": demo_cards,
         "priority_total": len(open_tasks),
         "risk_overview": {
             "status": "AT_RISK",
             "status_label": "AT RISK",
-            "sales_status_short": "Vendas em risco",
-            "sales_headline": "Sim, esta loja pode estar perdendo vendas agora.",
+            "sales_status_short": "Sales at risk",
+            "sales_headline": "Yes, this store may be losing sales right now.",
             "summary": scenario["summary"],
             "active_issues": 5,
             "avg_risk_score": 68,
@@ -423,8 +422,8 @@ def _build_demo_dashboard_state(site_type: str) -> dict:
             "fix_success_rate": 72,
             "regression_count": 1,
             "estimated_loss_monthly": 18400,
-            "estimated_loss_label": f"{_format_brl(18400)}/mês",
-            "estimated_loss_detail": "Estimativa de quanto a loja pode deixar na mesa se os problemas de checkout e conversão continuarem abertos.",
+            "estimated_loss_label": "$18,400/mo",
+            "estimated_loss_detail": "Estimate of how much the store may be leaving on the table if checkout and conversion issues remain open.",
         },
     }
 
@@ -573,13 +572,13 @@ def home():
         "protected_sites": protected_sites,
         "monitored_sites": sites_count,
         "immediate_action": (
-            str(next_task.get("title") or "Ataque a correção mais urgente abaixo agora.")
+            str(next_task.get("title") or "Address the most urgent fix below now.")
             if priority_tasks and overall_status in ("CRITICAL", "AT_RISK")
-            else "Continue acompanhando para preservar a receita protegida."
+            else "Keep monitoring to preserve the protected revenue."
             if overall_status == "PROTECTED"
-            else "Conecte a loja para revelar onde você pode estar perdendo vendas."
+            else "Connect your store to reveal where you may be losing sales."
         ),
-        "immediate_action_urgency": str(next_task.get("urgency") or ("Agir agora" if overall_status in ("CRITICAL", "AT_RISK") else "Acompanhar")),
+        "immediate_action_urgency": str(next_task.get("urgency") or ("Act now" if overall_status in ("CRITICAL", "AT_RISK") else "Monitor")),
     }
     
     orders_protected = total_resolved_findings * 47
@@ -595,16 +594,16 @@ def home():
         "fix_success_rate": round(sum(float((c.get("value") or {}).get("fix_success_rate") or 0) for c in sorted_cards) / max(1, len(sorted_cards))) if sorted_cards else 0,
         "regression_count": sum(int((c.get("value") or {}).get("regression_count") or 0) for c in sorted_cards),
         "estimated_loss_monthly": global_score["total_loss_monthly"],
-        "estimated_loss_label": f"{_format_brl(global_score['total_loss_monthly'])}/mês" if global_score['total_loss_monthly'] > 0 else "Receita protegida",
+        "estimated_loss_label": f"${global_score['total_loss_monthly']:,}/mo" if global_score['total_loss_monthly'] > 0 else "Revenue protected",
         "estimated_loss_detail": (
             global_score["recovery_potential"]
             if global_score["top3_recovery"] > 0
-            else "Nenhum sinal forte de perda de receita apareceu nas leituras atuais."
+            else "No strong revenue loss signal found in current readings."
         ),
-        "projection_reliability": 82 + (min(12, total_resolved_findings // 2)), # Comercial: Confiabilidade
+        "projection_reliability": 82 + (min(12, total_resolved_findings // 2)),
         "ga_connected": any((c.get("value") or {}).get("is_real_data") for c in sorted_cards),
-        "last_sync_label": "Monitorando agora",
-        "realtime_range": "Nas últimas 2 horas",
+        "last_sync_label": "Monitoring now",
+        "realtime_range": "Last 2 hours",
     }
 
     has_real_monitoring_runs = any(str(((c.get("last_run") or {}).get("id") or "")).strip() for c in sorted_cards)

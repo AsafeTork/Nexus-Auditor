@@ -42,15 +42,24 @@ if [ "$INSTANCE_NUM" = "0" ]; then
 import sys, os, traceback
 
 print('[nexus] Python started', flush=True)
-print(f'[nexus] CWD: {os.getcwd()}', flush=True)
 print(f'[nexus] DATABASE_URL prefix: {os.getenv(\"DATABASE_URL\", \"NOT SET\")[:40]}...', flush=True)
 
 try:
-    from flask_migrate import upgrade
+    from flask_migrate import upgrade, stamp
     from app import app
     with app.app_context():
         print('[nexus] running flask db upgrade...', flush=True)
-        upgrade()
+        try:
+            upgrade()
+        except Exception as dup:
+            # Tables already exist (created by db.create_all fallback on a prior deploy)
+            # but alembic_version has no record — stamp to head so Alembic won't re-run init.
+            if 'already exists' in str(dup).lower() or 'DuplicateTable' in type(dup).__name__:
+                print(f'[nexus] tables already exist ({type(dup).__name__}) — stamping alembic to head', flush=True)
+                stamp()
+                upgrade()  # now a no-op since we are at head
+            else:
+                raise
         print('[nexus] flask db upgrade complete', flush=True)
 except Exception as e:
     print(f'[nexus] alembic error: {type(e).__name__}: {e}', flush=True)

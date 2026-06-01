@@ -37,7 +37,7 @@
     <form class="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4" method="post" action="{{ url_for('admin.admin_set_sim') }}">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <select name="sub_status" class="input text-sm">
-        <option value="">Plano real (sem simulação)</option>
+        <option value="">Real plan (no simulation)</option>
         <option value="inactive" {% if sim and sim.sub_status=='inactive' %}selected{% endif %}>inactive</option>
         <option value="trialing" {% if sim and sim.sub_status=='trialing' %}selected{% endif %}>trialing</option>
         <option value="active" {% if sim and sim.sub_status=='active' %}selected{% endif %}>active</option>
@@ -45,7 +45,7 @@
         <option value="canceled" {% if sim and sim.sub_status=='canceled' %}selected{% endif %}>canceled</option>
       </select>
       <select name="role" class="input text-sm">
-        <option value="">Role real (sem simulação)</option>
+        <option value="">Real role (no simulation)</option>
         <option value="member" {% if sim and sim.role=='member' %}selected{% endif %}>member</option>
         <option value="admin" {% if sim and sim.role=='admin' %}selected{% endif %}>admin</option>
       </select>

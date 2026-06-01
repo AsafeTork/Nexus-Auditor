@@ -232,7 +232,7 @@
     }
     suggestCfgProviderBase(true);
     const sel = document.getElementById("cfgLlmModel");
-    if(sel){ sel.innerHTML = "<option value=''>Selecione um modelo</option>"; }
+    if(sel){ sel.innerHTML = "<option value=''>Select a model</option>"; }
     const out = document.getElementById("cfgLlmValidateOut");
     if(out){
       out.textContent = p === "openai_compatible"
@@ -297,8 +297,8 @@
       const j = await res.json();
       if(out){
         out.textContent = j.ok
-          ? `Conexão OK · modelos=${j.models_count || 0} · resposta=${j.sample || ""}`
-          : `Erro · ${j.error || "validation failed"}`;
+          ? `Connected · models=${j.models_count || 0} · sample response="${j.sample || ""}"`
+          : `Error · ${j.error || "validation failed"}`;
       }
     }catch(e){
       if(out) out.textContent = "Failed to validate connection.";

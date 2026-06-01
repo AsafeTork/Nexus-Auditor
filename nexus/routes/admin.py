@@ -156,7 +156,7 @@ def admin_llm_save():
         org.llm_api_key = api_key
     org.llm_model = model
     db.session.commit()
-    flash("Configuração de IA salva para este org.", "ok")
+    flash("AI configuration saved for this org.", "ok")
     return redirect(url_for("admin.admin_home"))
 
 
@@ -317,10 +317,10 @@ def admin_audit_delete(audit_id: str):
         AuditEvent.query.filter_by(audit_run_id=audit.id).delete(synchronize_session=False)
         db.session.delete(audit)
         db.session.commit()
-        flash("Auditoria excluída.", "ok")
+        flash("Audit deleted.", "ok")
     except Exception as e:
         db.session.rollback()
-        flash(f"Falha ao excluir: {type(e).__name__}: {e}", "error")
+        flash(f"Failed to delete: {type(e).__name__}: {e}", "error")
     return redirect(url_for("admin.admin_audits"))
 
 
@@ -331,22 +331,22 @@ def admin_audit_publish_github(audit_id: str):
     audit = AuditRun.query.filter_by(id=audit_id, org_id=current_user.org_id).first_or_404()
     title = f"[AUDIT] {audit.target_domain or 'audit'} · {audit.id}"
     body = (
-        f"## Relatório de Auditoria\n\n"
+        f"## Audit Report\n\n"
         f"**Audit ID:** `{audit.id}`\n"
         f"**Status:** `{audit.status}`\n"
-        f"**Modelo:** `{audit.model}`\n"
-        f"**Gerado em:** `{audit.created_utc}`\n\n"
+        f"**Model:** `{audit.model}`\n"
+        f"**Generated at:** `{audit.created_utc}`\n\n"
         f"---\n\n"
-        f"{audit.markdown_text or '(sem markdown)'}\n\n"
+        f"{audit.markdown_text or '(no markdown)'}\n\n"
         f"---\n\n"
-        f"## Matriz CSV\n\n"
+        f"## CSV matrix\n\n"
         f"```csv\n{audit.csv_text or ''}\n```\n"
     )
     try:
         url = create_issue(title=title, body_md=body, labels=["audit"])
-        flash(f"Publicado no GitHub: {url}", "ok")
+        flash(f"Published to GitHub: {url}", "ok")
     except Exception as e:
-        flash(f"Falha ao publicar no GitHub: {type(e).__name__}: {e}", "error")
+        flash(f"Failed to publish to GitHub: {type(e).__name__}: {e}", "error")
     return redirect(url_for("admin.admin_audits"))
 
 
@@ -355,7 +355,7 @@ def admin_audit_publish_github(audit_id: str):
 @require_admin
 def admin_logs():
     """
-    Admin log geral: eventos de auditoria + execuções do UI Lab + diagnóstico.
+    Admin log: audit events, UI Lab runs, and diagnostics.
     """
     diag = _diagnostics()
     # Limits (big by default, but bounded)
@@ -954,7 +954,7 @@ def ui_lab_run():
 @login_required
 @require_admin
 def backend_lab_run():
-    goal = (request.form.get("goal") or "").strip() or "Melhorar robustez, segurança e performance do backend."
+    goal = (request.form.get("goal") or "").strip() or "Improve robustness, security, and backend performance."
     run_id = str(uuid.uuid4())
     conn = _redis_conn()
     conn.hset(
@@ -970,7 +970,7 @@ def backend_lab_run():
     conn.delete(_ui_key(current_user.org_id, run_id) + ":result")
     conn.rpush(_ui_index_key(current_user.org_id), run_id)
     enqueue_ui_lab(run_id, current_user.org_id, "backend", {"goal": goal})
-    flash("Backend Lab enfileirado. Ele vai gerar um PROMPT pronto para copiar/colar.", "ok")
+    flash("Backend Lab queued. It will generate a ready-to-paste prompt.", "ok")
     return redirect(url_for("admin.backend_lab", run=run_id))
 
 
@@ -1000,7 +1000,7 @@ def admin_set_sim():
     else:
         session.pop("sim_sub_status", None)
 
-    flash("Simulação atualizada.", "ok")
+    flash("Simulation updated.", "ok")
     return redirect(url_for("admin.admin_home"))
 
 
@@ -1010,5 +1010,5 @@ def admin_set_sim():
 def admin_clear_sim():
     session.pop("sim_role", None)
     session.pop("sim_sub_status", None)
-    flash("Simulação desativada.", "ok")
+    flash("Simulation cleared.", "ok")
     return redirect(url_for("admin.admin_home"))

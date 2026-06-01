@@ -149,20 +149,20 @@
         <div class="mt-5 p-4 bg-[var(--c-ok)]/5 border border-[var(--c-ok)]/20 rounded">
           <div class="flex items-center gap-2 mb-2">
             <i class="ph-bold ph-check-circle text-[var(--c-ok)]"></i>
-            <span class="text-xs font-bold text-[var(--c-ok)] uppercase tracking-widest">Sincronizado com GA4</span>
+            <span class="text-xs font-bold text-[var(--c-ok)] uppercase tracking-widest">Synced with GA4</span>
           </div>
           <div class="grid grid-cols-3 gap-2 mt-1">
             <div class="p-2 bg-black/20 rounded text-center">
-              <div class="text-[9px] text-muted uppercase">Sessões (24h)</div>
-              <div class="text-xs font-mono text-white">3.120</div>
+              <div class="text-[9px] text-muted uppercase">Sessions (24h)</div>
+              <div class="text-xs font-mono text-white">3,120</div>
             </div>
             <div class="p-2 bg-black/20 rounded text-center">
-              <div class="text-[9px] text-muted uppercase">Conversão</div>
+              <div class="text-[9px] text-muted uppercase">Conversion</div>
               <div class="text-xs font-mono text-white">1.85%</div>
             </div>
             <div class="p-2 bg-black/20 rounded text-center">
               <div class="text-[9px] text-muted uppercase">AOV</div>
-              <div class="text-xs font-mono text-white">R$ 162</div>
+              <div class="text-xs font-mono text-white">$162</div>
             </div>
           </div>
         </div>
@@ -185,10 +185,10 @@
 
                 {% if task.impact_data and task.impact_data.narrative %}
                 <div class="mt-2 text-[10px] text-muted opacity-80"
-                  aria-label="Estimativa probabilística: {{ task.impact_data.affected_sessions }} sessões x {{ (task.impact_data.conversion_rate * 100)|round(1) }}% conversão x Ticket R$ {{ task.impact_data.avg_order_value }}"
-                  title="Estimativa probabilística: {{ task.impact_data.affected_sessions }} sessões x {{ (task.impact_data.conversion_rate * 100)|round(1) }}% conversão x Ticket R$ {{ task.impact_data.avg_order_value }}">
+                  aria-label="Probabilistic estimate: {{ task.impact_data.affected_sessions }} sessions × {{ (task.impact_data.conversion_rate * 100)|round(1) }}% conversion × AOV ${{ task.impact_data.avg_order_value }}"
+                  title="Probabilistic estimate: {{ task.impact_data.affected_sessions }} sessions × {{ (task.impact_data.conversion_rate * 100)|round(1) }}% conversion × AOV ${{ task.impact_data.avg_order_value }}">
                   <i class="ph ph-trend-up"></i> {{ task.impact_data.loss_range }} <span
-                    class="opacity-60 ml-1">(Estimativa baseada em comportamento atual)</span>
+                    class="opacity-60 ml-1">(Estimate based on current behavior)</span>
                 </div>
                 {% endif %}
               </div>
@@ -219,7 +219,7 @@
                 <i class="ph-bold ph-magic-wand"></i> Estimated Recovery
               </div>
               <div class="text-[var(--c-ok)] font-bold text-xs">{{ task.agent_loop.after_impact }} <span
-                  class="opacity-50 font-normal">/mês</span></div>
+                  class="opacity-50 font-normal">/mo</span></div>
             </div>
             {% endif %}
 
@@ -309,7 +309,7 @@
               <div class="signal-item-title truncate">{{ it.problem or it.action_line or it.finding_key }}</div>
               <div class="signal-item-sub truncate">{{ it.impact }}</div>
               <div class="text-[11px] text-muted mt-2">
-                {{ it.financial_label or it.urgency or "Vale corrigir agora" }}
+                {{ it.financial_label or it.urgency or "Worth fixing now" }}
               </div>
             </div>
           </div>

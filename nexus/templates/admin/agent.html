@@ -13,7 +13,7 @@
     <div class="eyebrow">Agent control plane</div>
     <div class="mt-4 page-title">Show risk, next action and proof without making the buyer read raw logs.</div>
     <div class="mt-3 page-lead">
-      Esta tela foi reformatada para parecer produto vendável: status claro, prioridades acionáveis, métricas de valor e alertas de confiança por site.
+      Reformatted to surface clear status, actionable priorities, value metrics, and trust warnings per site.
     </div>
     <div class="mt-6 metric-row cols-4">
       <div class="metric-tile">
@@ -88,13 +88,13 @@
         {% if c.trust_warning %}
           <div class="mt-4 soft-panel">
             <div class="text-xs text-amber-200">
-              ⚠ Baixa cobertura: resultados podem não ser confiáveis
+              ⚠ Low coverage: results may not be reliable
             </div>
           </div>
         {% endif %}
 
         <div class="mt-5">
-          <div class="text-[11px] text-muted">O que fazer agora (Top 3)</div>
+          <div class="text-[11px] text-muted">What to do now (Top 3)</div>
           {% if c.top3 and c.top3|length > 0 %}
             <div class="mt-3 flex flex-col gap-3">
               {% for it in c.top3 %}
@@ -104,12 +104,12 @@
                       <div class="text-xs font-semibold">{{ it.problem or it.action_line or it.finding_key }}</div>
                       <div class="text-xs text-muted mt-1">{{ it.impact }}</div>
                       <div class="text-[11px] text-muted mt-2">{{ it.money_at_risk }}</div>
-                      <div class="text-[11px] text-muted mt-2"><strong>Urgência:</strong> {{ it.urgency or "Agir agora" }}</div>
-                      <div class="text-[11px] text-muted mt-2"><strong>Ação recomendada:</strong> {{ it.action_recommended or it.action_line }}</div>
+                      <div class="text-[11px] text-muted mt-2"><strong>Urgency:</strong> {{ it.urgency or "Act now" }}</div>
+                      <div class="text-[11px] text-muted mt-2"><strong>Recommended action:</strong> {{ it.action_recommended or it.action_line }}</div>
                     </div>
                     <div class="text-right">
                       <div class="mono text-xs">score={{ it.score }}</div>
-                      <div class="text-[11px] text-muted">{{ it.financial_short_label or it.financial_label or "Receita em risco" }}</div>
+                      <div class="text-[11px] text-muted">{{ it.financial_short_label or it.financial_label or "Revenue at risk" }}</div>
                       <div class="mono text-[11px] text-muted">conf={{ it.confidence if it.confidence is not none else "—" }}</div>
                     </div>
                   </div>
@@ -129,13 +129,13 @@
           {% else %}
             <div class="empty-state mt-3">
               <div class="empty-state-title">No decision priorities yet</div>
-              <div class="empty-state-copy">Quando o sistema ainda não gerou prioridades, o valor percebido cai. Rode um scan válido para alimentar este card.</div>
+              <div class="empty-state-copy">Run a valid scan to populate this card with decision priorities.</div>
             </div>
           {% endif %}
         </div>
 
         <div class="mt-6">
-          <div class="text-[11px] text-muted">Prova de valor</div>
+          <div class="text-[11px] text-muted">Proof of value</div>
           <div class="mt-3 metric-row">
             <div class="metric-tile">
               <div class="metric-label">Open</div>

@@ -30,20 +30,20 @@
       <div class="badge">Digital Letterhead</div>
       <h1 style="margin:10px 0 6px; font-size:22px;">Audit Dossier</h1>
       <div style="font-size:12px; color:#94a3b8;">
-        <span class="k">Alvo:</span> {{ site.base_url if site else audit.site_id }} ·
-        <span class="k">Domínio:</span> <span class="mono">{{ audit.target_domain }}</span> ·
-        <span class="k">Data:</span> {{ audit.created_utc }}
+        <span class="k">Target:</span> {{ site.base_url if site else audit.site_id }} ·
+        <span class="k">Domain:</span> <span class="mono">{{ audit.target_domain }}</span> ·
+        <span class="k">Date:</span> {{ audit.created_utc }}
       </div>
       <div style="margin-top:10px; font-size:12px; color:#94a3b8;">
         <span class="k">Audit ID:</span> <span class="mono">{{ audit.id }}</span> ·
         <span class="k">Status:</span> {{ audit.status }} ·
-        <span class="k">Modelo:</span> <span class="mono">{{ audit.model }}</span>
+        <span class="k">Model:</span> <span class="mono">{{ audit.model }}</span>
       </div>
     </div>
     <div class="body">
-      <h2 style="margin:0 0 10px;">Relatório (Markdown bruto)</h2>
+      <h2 style="margin:0 0 10px;">Report (Markdown)</h2>
       <pre class="mono">{{ audit.markdown_text }}</pre>
-      <h2 style="margin:18px 0 10px;">Matriz de Dados (CSV)</h2>
+      <h2 style="margin:18px 0 10px;">Data matrix (CSV)</h2>
       <pre class="mono">{{ audit.csv_text }}</pre>
     </div>
   </div>

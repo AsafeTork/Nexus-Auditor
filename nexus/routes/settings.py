@@ -56,16 +56,16 @@ def create_user():
     if role not in ("admin", "member"):
         role = "member"
     if not email or len(password) < 8:
-        flash("Informe e-mail e senha (mínimo 8).", "error")
+        flash("Email and password are required (minimum 8 characters).", "error")
         return redirect(url_for("settings.settings_home"))
     if User.query.filter_by(email=email).first():
-        flash("E-mail já existe.", "error")
+        flash("Email already exists.", "error")
         return redirect(url_for("settings.settings_home"))
     u = User(org_id=current_user.org_id, email=email, role=role)
     u.set_password(password)
     db.session.add(u)
     db.session.commit()
-    flash("Usuário criado.", "ok")
+    flash("User created.", "ok")
     return redirect(url_for("settings.settings_home"))
 
 
@@ -76,7 +76,7 @@ def make_admin(user_id: str):
     u = User.query.filter_by(id=user_id, org_id=current_user.org_id).first_or_404()
     u.role = "admin"
     db.session.commit()
-    flash("Usuário promovido a admin.", "ok")
+    flash("User promoted to admin.", "ok")
     return redirect(url_for("settings.settings_home"))
 
 
@@ -87,7 +87,7 @@ def make_member(user_id: str):
     u = User.query.filter_by(id=user_id, org_id=current_user.org_id).first_or_404()
     u.role = "member"
     db.session.commit()
-    flash("Usuário removido de admin (member).", "ok")
+    flash("Admin role removed (now member).", "ok")
     return redirect(url_for("settings.settings_home"))
 
 
