@@ -39,7 +39,10 @@ def _master_email() -> str:
     return get_master_email()
 
 
-def _diagnostics() -> Dict[str, Any]:
+_LLM_DIAG_CACHE_TTL = 600  # 10 minutes — avoid burning tokens on every page load
+
+
+def _diagnostics(force_llm: bool = False) -> Dict[str, Any]:
     """Server-side health check snapshot; never exposes raw secrets."""
     out: Dict[str, Any] = {"ts_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())}
 
@@ -51,15 +54,16 @@ def _diagnostics() -> Dict[str, Any]:
         out["db"] = {"ok": False, "error": f"{type(e).__name__}: {e}"}
 
     # Redis
+    rconn = None
     try:
         rurl = current_app.config.get("REDIS_URL", "")
-        conn = redis.from_url(rurl, socket_timeout=3, socket_connect_timeout=3)
-        pong = conn.ping()
+        rconn = redis.from_url(rurl, socket_timeout=3, socket_connect_timeout=3)
+        pong = rconn.ping()
         out["redis"] = {"ok": bool(pong), "url": rurl.split("@")[-1] if rurl else ""}
     except Exception as e:
         out["redis"] = {"ok": False, "error": f"{type(e).__name__}: {e}"}
 
-    # LLM sanity (provider-aware)
+    # LLM sanity — cached in Redis to avoid consuming tokens on every page load
     org = Organization.query.filter_by(id=current_user.org_id).first() if getattr(current_user, "org_id", None) else None
     provider = normalize_provider(getattr(org, "llm_provider", "") if org else "", getattr(org, "llm_base_url_v1", "") if org else "")
     base_url = (
@@ -81,25 +85,52 @@ def _diagnostics() -> Dict[str, Any]:
         "model": model,
         "api_key_mask": mask_secret(api_key, 6),
     }
-    try:
-        if not effective_base or not model:
-            raise RuntimeError("LLM provider/base_url/model not configured.")
-        diag = validate_provider(
-            provider=provider,
-            base_url_v1=effective_base,
-            api_key=api_key,
-            model=model,
-            timeout_s=max(12, min(30, int(os.getenv("LLM_TIMEOUT_S", "20")))),
-        )
-        out["llm"]["ok"] = bool(diag.get("ok"))
-        out["llm"]["sample"] = str(diag.get("sample") or "")[:120]
-        out["llm"]["models_count"] = int(diag.get("models_count") or 0)
-        out["llm"]["model_found"] = bool(diag.get("model_found")) if "model_found" in diag else None
-        if not out["llm"]["ok"] and diag.get("error"):
-            out["llm"]["error"] = str(diag.get("error"))
-    except Exception as e:
-        out["llm"]["ok"] = False
-        out["llm"]["error"] = f"{type(e).__name__}: {e}"
+
+    # Cache key based on config so a settings change immediately invalidates it
+    import hashlib as _hl
+    _cfg_hash = _hl.md5(f"{provider}|{effective_base}|{model}".encode()).hexdigest()[:12]
+    _cache_key = f"diag:llm:{_cfg_hash}"
+    cached_llm: Dict[str, Any] | None = None
+    if rconn and not force_llm:
+        try:
+            raw = rconn.get(_cache_key)
+            if raw:
+                cached_llm = json.loads(raw)
+        except Exception:
+            pass
+
+    if cached_llm is not None:
+        out["llm"].update(cached_llm)
+        out["llm"]["cached"] = True
+    else:
+        try:
+            if not effective_base or not model:
+                raise RuntimeError("LLM provider/base_url/model not configured.")
+            diag = validate_provider(
+                provider=provider,
+                base_url_v1=effective_base,
+                api_key=api_key,
+                model=model,
+                timeout_s=max(12, min(30, int(os.getenv("LLM_TIMEOUT_S", "20")))),
+            )
+            llm_result: Dict[str, Any] = {
+                "ok": bool(diag.get("ok")),
+                "sample": str(diag.get("sample") or "")[:120],
+                "models_count": int(diag.get("models_count") or 0),
+            }
+            if "model_found" in diag:
+                llm_result["model_found"] = bool(diag.get("model_found"))
+            if not llm_result["ok"] and diag.get("error"):
+                llm_result["error"] = str(diag.get("error"))
+            out["llm"].update(llm_result)
+            if rconn:
+                try:
+                    rconn.set(_cache_key, json.dumps(llm_result), ex=_LLM_DIAG_CACHE_TTL)
+                except Exception:
+                    pass
+        except Exception as e:
+            out["llm"]["ok"] = False
+            out["llm"]["error"] = f"{type(e).__name__}: {e}"
 
     return out
 
@@ -207,7 +238,18 @@ def admin_llm_save():
 @login_required
 @require_admin
 def diagnostics_json():
-    return jsonify(_diagnostics())
+    force = request.args.get("force", "0") in ("1", "true")
+    return jsonify(_diagnostics(force_llm=force))
+
+
+@bp.post("/admin/llm-check/refresh")
+@login_required
+@require_admin
+def admin_llm_check_refresh():
+    """Force a fresh LLM health check (bypasses the 10-min cache)."""
+    _diagnostics(force_llm=True)
+    flash("LLM health check refreshed.", "ok")
+    return redirect(request.referrer or url_for("admin.admin_home"))
 
 
 def _build_overview_rows(org_id: str):

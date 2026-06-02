@@ -6,7 +6,10 @@
   <div class="hero-meta">
     <span class="meta-chip">DB <strong>{{ "OK" if diag.db.ok else "ERROR" }}</strong></span>
     <span class="meta-chip">Redis <strong>{{ "OK" if diag.redis.ok else "ERROR" }}</strong></span>
-    <span class="meta-chip">LLM <strong>{{ "OK" if diag.llm.ok else "ERROR" }}</strong></span>
+    <span class="meta-chip">
+      LLM <strong>{{ "OK" if diag.llm.ok else "ERROR" }}</strong>
+      {% if diag.llm.cached %}<span class="opacity-50 text-[10px]"> (cached)</span>{% endif %}
+    </span>
   </div>
 {% endblock %}
 {% block content %}
@@ -17,6 +20,10 @@
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v6h6M20 20v-6h-6M20 8a8 8 0 0 0-14.9-3M4 16a8 8 0 0 0 14.9 3"/>
       </svg>
     </button>
+    <form method="post" action="{{ url_for('admin.admin_llm_check_refresh') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button class="btn-secondary text-xs" title="Force a fresh LLM health check (uses ~1 token)">Check LLM</button>
+    </form>
     <a class="btn-secondary" href="{{ url_for('admin.admin_logs') }}">Logs</a>
     <a class="btn-secondary" href="{{ url_for('admin.admin_audits') }}">Audits</a>
   </div>
