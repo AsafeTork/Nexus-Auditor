@@ -23,6 +23,38 @@ csrf = CSRFProtect()
 limiter = Limiter(key_func=get_remote_address, default_limits=[])
 
 
+def _start_inline_worker(app: Flask) -> None:
+    """
+    Start a background RQ worker daemon thread inside the web process.
+    Needed on Render free tier: the separate worker service may sleep and never wake up
+    because it receives no HTTP traffic. This thread wakes up with the web service and
+    immediately starts consuming queued jobs from Redis.
+    """
+    import threading
+
+    def _run() -> None:
+        import time as _t
+        _t.sleep(4)  # Let the app finish initializing first
+        try:
+            import redis as _redis
+            from rq import Worker as _Worker, Queue as _RQueue
+            _conn = _redis.from_url(
+                app.config["REDIS_URL"],
+                socket_timeout=10,
+                socket_connect_timeout=10,
+            )
+            _worker = _Worker(
+                [_RQueue("audits", connection=_conn), _RQueue("ui", connection=_conn)],
+                connection=_conn,
+            )
+            _worker.work(burst=False)
+        except Exception:
+            pass  # Never crash the web process over a worker failure
+
+    t = threading.Thread(target=_run, name="rq-inline-worker", daemon=True)
+    t.start()
+
+
 def create_app() -> Flask:
     """
     Flask app factory.
@@ -173,6 +205,11 @@ def create_app() -> Flask:
     from .cli import register_cli
 
     register_cli(app)
+
+    # Inline RQ worker — fallback for Render free tier where the worker service may be sleeping.
+    # RQ uses atomic Redis ops so running two workers concurrently is always safe (no duplicates).
+    if os.getenv("INLINE_WORKER", "").strip() == "1":
+        _start_inline_worker(app)
 
     # Serve favicon without triggering the error handler.
     @app.get("/favicon.ico")

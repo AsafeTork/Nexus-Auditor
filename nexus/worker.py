@@ -5,8 +5,7 @@ import time
 from urllib.parse import urlparse
 
 import redis
-from rq import Worker, Queue, Connection
-from rq.exceptions import NoSuchJobError
+from rq import Worker, Queue
 
 from . import create_app, db
 from .models import AuditEvent, AuditRun, Site, Organization

@@ -62,6 +62,10 @@ services:
         value: HIGH
       - key: DASH_CACHE_TTL_S
         value: "60"
+      - key: INLINE_WORKER
+        value: "1"
+      - key: WEB_CONCURRENCY
+        value: "1"
     startCommand: bash bin/start_web.sh
 
   # ── Background Worker ──────────────────────────────────────────
