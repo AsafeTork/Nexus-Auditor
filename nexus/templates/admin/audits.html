@@ -36,24 +36,32 @@
                 <div class="body-text mono truncate">{{ s.base_url if s else a.site_id }}</div>
               </div>
               <div class="text-right shrink-0">
-                <div class="body-text">{{ a.status }}</div>
+                <div class="body-text {% if a.status == 'error' %}text-[var(--c-err)]{% elif a.status == 'queued' %}text-[var(--c-warn,#d97706)]{% elif a.status == 'done' %}text-[var(--c-ok)]{% endif %}">{{ a.status }}</div>
                 <div class="text-[11px] text-muted">{{ a.created_utc }}</div>
               </div>
             </div>
           </a>
-          <details class="relative" aria-haspopup="menu">
-            <summary class="list-none cursor-pointer btn-secondary icon-btn" aria-label="Audit options" aria-haspopup="menu">⋯</summary>
-            <div class="absolute right-0 mt-2 w-44 menu z-10" role="menu">
-              <form method="post" action="{{ url_for('admin.admin_audit_publish_github', audit_id=a.id) }}">
+          <div class="flex items-center gap-2 shrink-0">
+            {% if a.status in ('queued', 'error') %}
+              <form method="post" action="{{ url_for('admin.admin_audit_force_run', audit_id=a.id) }}">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <button class="w-full text-left btn-secondary" role="menuitem">Publish to Git</button>
+                <button class="btn-secondary text-xs" title="Re-enqueue this audit job">Re-run</button>
               </form>
-              <form method="post" action="{{ url_for('admin.admin_audit_delete', audit_id=a.id) }}" onsubmit="return confirm('Delete this audit?');">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <button class="w-full text-left btn-danger" role="menuitem">Delete</button>
-              </form>
-            </div>
-          </details>
+            {% endif %}
+            <details class="relative" aria-haspopup="menu">
+              <summary class="list-none cursor-pointer btn-secondary icon-btn" aria-label="Audit options" aria-haspopup="menu">⋯</summary>
+              <div class="absolute right-0 mt-2 w-44 menu z-10" role="menu">
+                <form method="post" action="{{ url_for('admin.admin_audit_publish_github', audit_id=a.id) }}">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <button class="w-full text-left btn-secondary" role="menuitem">Publish to Git</button>
+                </form>
+                <form method="post" action="{{ url_for('admin.admin_audit_delete', audit_id=a.id) }}" onsubmit="return confirm('Delete this audit?');">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <button class="w-full text-left btn-danger" role="menuitem">Delete</button>
+                </form>
+              </div>
+            </details>
+          </div>
         </div>
       </div>
     {% else %}

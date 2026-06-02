@@ -15,7 +15,7 @@ from sqlalchemy import text, func
 from .. import csrf, db
 from ..models import AuditEvent, AuditRun, Organization, Site, Subscription, User, is_org_admin
 from ..security import require_admin
-from ..services.queueing import enqueue_ui_lab
+from ..services.queueing import enqueue_audit, enqueue_ui_lab
 from ..services.github import create_issue
 from ..services.audit_engine import list_models
 from ..services.control_plane import build_agent_cards
@@ -130,6 +130,17 @@ def admin_home():
     except Exception:
         pass
 
+    # Queue depth — tells if the RQ worker is consuming jobs
+    queued_audit_count = AuditRun.query.filter_by(org_id=current_user.org_id, status="queued").count()
+    queue_depth_audits = -1  # -1 = could not check
+    try:
+        from rq import Queue as RQueue
+        rurl = current_app.config.get("REDIS_URL", "")
+        rconn = redis.from_url(rurl, socket_timeout=2)
+        queue_depth_audits = len(RQueue("audits", connection=rconn))
+    except Exception:
+        pass
+
     # Revenue summary (global for master admin, org-only otherwise)
     is_global = _is_master_admin() or _allow_global_admin_view()
     _plan_prices = {"free": 0, "starter": 49, "pro": 149, "enterprise": 399, "growth": 399}
@@ -168,6 +179,8 @@ def admin_home():
         audit_error_count=audit_error_count,
         open_findings=open_findings,
         revenue=revenue,
+        queued_audit_count=queued_audit_count,
+        queue_depth_audits=queue_depth_audits,
     )
 
 
@@ -355,6 +368,26 @@ def admin_audit_delete(audit_id: str):
     except Exception as e:
         db.session.rollback()
         flash(f"Failed to delete: {type(e).__name__}: {e}", "error")
+    return redirect(url_for("admin.admin_audits"))
+
+
+@bp.post("/admin/audit/<audit_id>/force-run")
+@login_required
+@require_admin
+def admin_audit_force_run(audit_id: str):
+    """Re-enqueue a stuck queued audit back into the RQ queue."""
+    audit = AuditRun.query.filter_by(id=audit_id, org_id=current_user.org_id).first_or_404()
+    if audit.status not in ("queued", "error"):
+        flash("Audit must be in queued or error state to force-run.", "error")
+        return redirect(url_for("admin.admin_audits"))
+    audit.status = "queued"
+    audit.logs = ""
+    db.session.commit()
+    try:
+        enqueue_audit(audit.id)
+        flash(f"Audit re-enqueued. If it stays queued, the worker service may be down — check Render dashboard.", "ok")
+    except Exception as e:
+        flash(f"Failed to enqueue: {e}", "error")
     return redirect(url_for("admin.admin_audits"))
 
 
