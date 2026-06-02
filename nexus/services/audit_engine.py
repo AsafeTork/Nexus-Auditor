@@ -459,7 +459,7 @@ def stream_llm_events(
                 yield ("CSV_ROW", ln.strip("\r"))
         return
 
-    retry_statuses = {429, 502, 503, 504}
+    retry_statuses = {502, 503, 504}  # 429 = rate-limited; retrying makes it worse, fail immediately
     backoffs = [2, 4, 8]
     last_exc: Exception | None = None
     r = None

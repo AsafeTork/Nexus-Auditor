@@ -556,7 +556,14 @@ def run_audit_job(audit_id: str) -> None:
                 consecutive_llm_failures = 0
                 continue
             except Exception as e:
-                log(layer, "WARN", f"Streaming falhou, fallback non-stream: {type(e).__name__}: {e}")
+                err_str = f"{type(e).__name__}: {e}"
+                # 429 = provider rate limit; no point trying more layers, abort now
+                if "429" in err_str:
+                    log(layer, "ERROR", f"Provider rate limit (429). Troque o provider em Settings e rode novamente. {err_str}")
+                    audit.status = "error"
+                    flush(force=True)
+                    return
+                log(layer, "WARN", f"Streaming falhou, fallback non-stream: {err_str}")
 
             try:
                 content = call_llm_non_stream(
@@ -605,7 +612,13 @@ def run_audit_job(audit_id: str) -> None:
                                 rows.append(row)
                 consecutive_llm_failures = 0
             except Exception as e:
-                log(layer, "ERROR", f"Falha no provedor LLM: {type(e).__name__}: {e}")
+                err_str = f"{type(e).__name__}: {e}"
+                if "429" in err_str:
+                    log(layer, "ERROR", f"Provider rate limit (429). Troque o provider em Settings e rode novamente. {err_str}")
+                    audit.status = "error"
+                    flush(force=True)
+                    return
+                log(layer, "ERROR", f"Falha no provedor LLM: {err_str}")
                 llm_failed_any = True
                 consecutive_llm_failures += 1
                 if consecutive_llm_failures >= max_consecutive_llm_failures:

@@ -335,22 +335,51 @@ def admin_audit_detail(audit_id: str):
     return render_template("admin/audit_detail.html", audit=audit, site=site, events=events)
 
 
+def _delete_audit_safe(audit_id: str) -> None:
+    """Delete one audit and all child rows that have FK references to it."""
+    # monitoring_runs references audit_runs via audit_run_id (FK)
+    db.session.execute(text("DELETE FROM monitoring_runs WHERE audit_run_id = :aid"), {"aid": audit_id})
+    AuditEvent.query.filter_by(audit_run_id=audit_id).delete(synchronize_session=False)
+    AuditRun.query.filter_by(id=audit_id).delete(synchronize_session=False)
+
+
 @bp.post("/admin/audit/<audit_id>/delete")
 @login_required
 @require_admin
 def admin_audit_delete(audit_id: str):
-    """
-    Delete an audit and its events (org-scoped).
-    """
     audit = AuditRun.query.filter_by(id=audit_id, org_id=current_user.org_id).first_or_404()
     try:
-        AuditEvent.query.filter_by(audit_run_id=audit.id).delete(synchronize_session=False)
-        db.session.delete(audit)
+        _delete_audit_safe(audit.id)
         db.session.commit()
         flash("Audit deleted.", "ok")
     except Exception as e:
         db.session.rollback()
         flash(f"Failed to delete: {type(e).__name__}: {e}", "error")
+    return redirect(url_for("admin.admin_audits"))
+
+
+@bp.post("/admin/audits/bulk-delete")
+@login_required
+@require_admin
+def admin_audits_bulk_delete():
+    """Delete all audits matching a status for this org."""
+    status_filter = (request.form.get("status") or "").strip().lower()
+    valid = {"error", "running", "queued", "done", "all"}
+    if status_filter not in valid:
+        flash("Invalid status filter.", "error")
+        return redirect(url_for("admin.admin_audits"))
+    try:
+        q = AuditRun.query.filter_by(org_id=current_user.org_id)
+        if status_filter != "all":
+            q = q.filter_by(status=status_filter)
+        targets = [a.id for a in q.all()]
+        for aid in targets:
+            _delete_audit_safe(aid)
+        db.session.commit()
+        flash(f"Deleted {len(targets)} audit(s) with status '{status_filter}'.", "ok")
+    except Exception as e:
+        db.session.rollback()
+        flash(f"Bulk delete failed: {type(e).__name__}: {e}", "error")
     return redirect(url_for("admin.admin_audits"))
 
 
