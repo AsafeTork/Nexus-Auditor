@@ -83,20 +83,20 @@ def run_ui_lab_job(run_id: str, org_id: str, mode: str, payload: dict) -> None:
                             continue
                         targets.append(os.path.join(r, fn))
                 targets = sorted(set(targets))
-                append_log(f"[ui-lab] lendo templates ({len(targets)} arquivos)…")
+                append_log(f"[ui-lab] reading templates ({len(targets)} files)…")
 
                 # Keep per-file size bounded and also bound the whole context to avoid LLM failures.
                 max_each = int(os.getenv("UI_LAB_MAX_CHARS_EACH", "12000"))
                 max_total = int(os.getenv("UI_LAB_MAX_CONTEXT_CHARS", "180000"))
                 blob = read_text_files([p for p in targets if os.path.exists(p)], max_chars_each=max_each)
                 if len(blob) > max_total:
-                    blob = blob[:max_total] + "\n\n/* ... contexto truncado por tamanho ... */\n"
-                    append_log(f"[ui-lab] contexto truncado para {max_total} chars")
+                    blob = blob[:max_total] + "\n\n/* ... context truncated ... */\n"
+                    append_log(f"[ui-lab] context truncated to {max_total} chars")
                 context = blob
 
                 # Optional: also scan all org sites (domains) and attach HTML + screenshots metadata.
                 sites = Site.query.filter_by(org_id=org_id).all()
-                append_log(f"[ui-lab] coletando sites do org ({len(sites)})…")
+                append_log(f"[ui-lab] collecting org sites ({len(sites)})…")
                 if sites:
                     import requests
 
@@ -158,17 +158,17 @@ def run_ui_lab_job(run_id: str, org_id: str, mode: str, payload: dict) -> None:
                 import requests
 
                 url = str(payload.get("url") or "").strip()
-                append_log(f"[ui-lab] baixando HTML: {url}")
+                append_log(f"[ui-lab] fetching HTML: {url}")
                 # Reuse audit SSRF guard: validates target is public http(s)
                 ff = fetch_url_html(url)
                 html = ff.html or ""
                 if len(html) > 20000:
-                    html = html[:20000] + "\n<!-- ... truncado ... -->"
+                    html = html[:20000] + "\n<!-- ... truncated ... -->"
                 context = f"URL: {url}\n\nHTML:\n{html}"
             elif mode == "screenshot":
                 meta = payload.get("meta") or {}
                 notes = str(payload.get("notes") or "")
-                context = f"Screenshot meta: {meta}\nObservações: {notes}\n"
+                context = f"Screenshot meta: {meta}\nNotes: {notes}\n"
             elif mode == "backend":
                 # Backend prompt generator: read backend source files (Python).
                 root = os.path.abspath(os.path.dirname(__file__))
@@ -181,25 +181,25 @@ def run_ui_lab_job(run_id: str, org_id: str, mode: str, payload: dict) -> None:
                             continue
                         targets.append(os.path.join(r, fn))
                 targets = sorted(set(targets))
-                append_log(f"[backend-lab] lendo backend ({len(targets)} arquivos)…")
+                append_log(f"[backend-lab] reading backend ({len(targets)} files)…")
                 max_each = int(os.getenv("BACKEND_LAB_MAX_CHARS_EACH", "12000"))
                 max_total = int(os.getenv("BACKEND_LAB_MAX_CONTEXT_CHARS", "220000"))
                 blob = read_text_files([p for p in targets if os.path.exists(p)], max_chars_each=max_each)
                 if len(blob) > max_total:
-                    blob = blob[:max_total] + "\n\n/* ... contexto truncado por tamanho ... */\n"
-                    append_log(f"[backend-lab] contexto truncado para {max_total} chars")
+                    blob = blob[:max_total] + "\n\n/* ... context truncated ... */\n"
+                    append_log(f"[backend-lab] context truncated to {max_total} chars")
                 context = blob
             else:
-                context = f"Modo desconhecido: {mode}\nPayload: {payload}"
+                context = f"Unknown mode: {mode}\nPayload: {payload}"
         except Exception as e:
-            append_log(f"[ui-lab] erro ao montar contexto: {type(e).__name__}: {e}")
+            append_log(f"[ui-lab] error building context: {type(e).__name__}: {e}")
             try:
                 conn.hset(key, mapping={"status": "error", "error": f"{type(e).__name__}: {e}"})
             except Exception:
                 pass
             return
 
-        goal = str(payload.get("goal") or "").strip() or "Deixar a UI mais premium, clara, consistente e com foco."
+        goal = str(payload.get("goal") or "").strip() or "Make the UI more premium, clear, and consistent."
 
         # Call LLM (streaming -> UI updates while generating)
         try:
@@ -220,45 +220,45 @@ def run_ui_lab_job(run_id: str, org_id: str, mode: str, payload: dict) -> None:
                 or (getattr(org, "llm_api_key", "") if org else "")
                 or app.config.get("LLM_API_KEY", "")
             ).strip()
-            append_log(f"[ui-lab] chamando LLM (stream)… model={model}")
+            append_log(f"[ui-lab] calling LLM (stream)… model={model}")
 
             acc = ""
             last_flush = time.time()
             # v2: output a single PROMPT to feed back into SOLO (not a long report).
             if mode == "backend":
                 system_prompt = (
-                    "Você é um Staff Backend Engineer. "
-                    "Sua saída NÃO é um relatório para humanos lerem. "
-                    "Sua saída deve ser um ÚNICO PROMPT pronto para colar no SOLO, para ele implementar mudanças no backend. "
-                    "Priorize: segurança, confiabilidade, performance, observabilidade (logs/metrics), "
-                    "tratamento de erros, consistência de dados, jobs/filas, timeouts e testes. "
-                    "Não invente arquivos que não existem. "
-                    "Formato obrigatório:\n"
-                    "1) TÍTULO: \"PROMPT PARA SOLO (BACKEND)\"\n"
-                    "2) CONTEXTO (2-3 linhas)\n"
-                    "3) OBJETIVO (bullet)\n"
-                    "4) REGRAS (bullet)\n"
-                    "5) PLANO DE ALTERAÇÕES POR ARQUIVO (checklist, com paths reais)\n"
-                    "6) TRECHOS DE CÓDIGO (somente quando necessário, curtos)\n"
-                    "7) COMO VALIDAR (comandos e cenários)\n"
-                    "Seja direto e acionável."
+                    "You are a Staff Backend Engineer. "
+                    "Your output is NOT a report for humans to read. "
+                    "Your output must be a SINGLE PROMPT ready to paste into SOLO for it to implement backend changes. "
+                    "Prioritize: security, reliability, performance, observability (logs/metrics), "
+                    "error handling, data consistency, jobs/queues, timeouts, and tests. "
+                    "Do not invent files that do not exist. "
+                    "Required format:\n"
+                    "1) TITLE: \"PROMPT FOR SOLO (BACKEND)\"\n"
+                    "2) CONTEXT (2-3 lines)\n"
+                    "3) GOAL (bullets)\n"
+                    "4) RULES (bullets)\n"
+                    "5) CHANGE PLAN BY FILE (checklist with real paths)\n"
+                    "6) CODE SNIPPETS (only when necessary, kept short)\n"
+                    "7) HOW TO VALIDATE (commands and scenarios)\n"
+                    "Be direct and actionable."
                 )
             else:
                 system_prompt = (
-                    "Você é um Product Designer + Frontend Engineer senior. "
-                    "Sua saída NÃO é um relatório para humanos lerem. "
-                    "Sua saída deve ser um ÚNICO PROMPT pronto para colar no SOLO, para ele implementar mudanças no código. "
-                    "Requisitos: (1) foco/hierarquia/ritmo vertical, (2) espaçamento consistente, (3) responsivo mobile+desktop, "
-                    "(4) acessibilidade (aria/keyboard/focus/contraste), (5) não inventar arquivos que não existem. "
-                    "Formato obrigatório:\n"
-                    "1) TÍTULO: \"PROMPT PARA SOLO\"\n"
-                    "2) CONTEXTO (2-3 linhas)\n"
-                    "3) OBJETIVO (bullet)\n"
-                    "4) REGRAS (bullet)\n"
-                    "5) PLANO DE ALTERAÇÕES POR ARQUIVO (checklist, com paths reais)\n"
-                    "6) TRECHOS DE CÓDIGO (somente quando necessário, curtos)\n"
-                    "7) COMO VALIDAR (passos rápidos)\n"
-                    "Seja direto e acionável."
+                    "You are a senior Product Designer + Frontend Engineer. "
+                    "Your output is NOT a report for humans to read. "
+                    "Your output must be a SINGLE PROMPT ready to paste into SOLO for it to implement code changes. "
+                    "Requirements: (1) focus/hierarchy/vertical rhythm, (2) consistent spacing, (3) responsive mobile+desktop, "
+                    "(4) accessibility (aria/keyboard/focus/contrast), (5) do not invent files that do not exist. "
+                    "Required format:\n"
+                    "1) TITLE: \"PROMPT FOR SOLO\"\n"
+                    "2) CONTEXT (2-3 lines)\n"
+                    "3) GOAL (bullets)\n"
+                    "4) RULES (bullets)\n"
+                    "5) CHANGE PLAN BY FILE (checklist with real paths)\n"
+                    "6) CODE SNIPPETS (only when necessary, kept short)\n"
+                    "7) HOW TO VALIDATE (quick steps)\n"
+                    "Be direct and actionable."
                 )
 
             for delta in stream_llm_text(
@@ -267,7 +267,7 @@ def run_ui_lab_job(run_id: str, org_id: str, mode: str, payload: dict) -> None:
                 model=model,
                 temperature=0.2,
                 system_prompt=system_prompt,
-                user_prompt=f"Objetivo: {goal}\n\nContexto:\n{context}\n",
+                user_prompt=f"Goal: {goal}\n\nContext:\n{context}\n",
                 timeout_s=240,
             ):
                 acc += delta
@@ -276,12 +276,12 @@ def run_ui_lab_job(run_id: str, org_id: str, mode: str, payload: dict) -> None:
                     last_flush = time.time()
 
             if not acc.strip():
-                raise RuntimeError("Resposta vazia do LLM.")
+                raise RuntimeError("Empty response from LLM.")
             conn.set(key + ":result", acc, ex=60 * 60 * 24 * 7)
             conn.hset(key, mapping={"status": "done"})
             append_log("[ui-lab] done")
         except Exception as e:
-            append_log(f"[ui-lab] erro LLM: {type(e).__name__}: {e}")
+            append_log(f"[ui-lab] LLM error: {type(e).__name__}: {e}")
             try:
                 conn.hset(key, mapping={"status": "error", "error": f"{type(e).__name__}: {e}"})
             except Exception:
@@ -392,7 +392,7 @@ def run_audit_job(audit_id: str) -> None:
             audit.target_domain = host
             flush(force=True)
         except Exception as e:
-            log("fetch", "ERROR", f"Falha ao baixar HTML: {type(e).__name__}: {e}")
+            log("fetch", "ERROR", f"Failed to fetch HTML: {type(e).__name__}: {e}")
             audit.status = "error"
             flush(force=True)
             return
@@ -416,10 +416,10 @@ def run_audit_job(audit_id: str) -> None:
         layers = MICRO_LAYERS
         if mode == "fast":
             layers = [MICRO_LAYERS[0], MICRO_LAYERS[2], MICRO_LAYERS[6], MICRO_LAYERS[9]]  # 1,3,7,10
-            log("system", "INFO", "Modo FAST ativo: executando camadas 1,3,7,10 para acelerar.")
+            log("system", "INFO", "FAST mode: running layers 1, 3, 7, 10.")
 
         for i, layer in enumerate(layers, start=1):
-            log(layer, "INFO", f"Iniciando {layer} ({i}/{len(layers)})...")
+            log(layer, "INFO", f"Starting {layer} ({i}/{len(layers)})...")
             md(f"## {layer}")
 
 
@@ -429,7 +429,7 @@ def run_audit_job(audit_id: str) -> None:
             # Reflection mode: non-stream draft + refinement pass (do not expose chain-of-thought; only final output)
             if reflect:
                 try:
-                    log(layer, "INFO", "Chamando modelo (non-stream + reflexão)…")
+                    log(layer, "INFO", "Calling model (non-stream + reflection)…")
                     draft = call_llm_non_stream(
                         base_url_v1=base_url_v1,
                         api_key=api_key,
@@ -440,20 +440,20 @@ def run_audit_job(audit_id: str) -> None:
                         timeout_s=140,
                     )
                     reviewer_prompt = (
-                        "Você é um revisor senior. Objetivo: melhorar qualidade SEM inventar fatos.\n"
-                        "Regras:\n"
-                        "- Remova duplicatas e itens genéricos.\n"
-                        "- Se um item não tiver prova literal, APAGUE do CSV.\n"
-                        "- Use faixas conservadoras ou 'N/A' em prejuízo se não houver base.\n"
-                        "- NÃO escreva cadeia de raciocínio passo a passo. Gere apenas um resumo curto do porquê.\n"
-                        "- Inclua um bloco colapsável no relatório:\n"
-                        "  <details><summary>Raciocínio (resumo)</summary>\n"
-                        "  - 2 a 5 bullets explicando rapidamente por que os achados importam, citando a prova.\n"
+                        "You are a senior reviewer. Goal: improve quality WITHOUT inventing facts.\n"
+                        "Rules:\n"
+                        "- Remove duplicates and generic items.\n"
+                        "- If an item has no literal proof, DELETE it from the CSV.\n"
+                        "- Use conservative ranges or 'N/A' for financial impact if there is no basis.\n"
+                        "- Do NOT write step-by-step chain-of-thought. Generate only a short summary of why.\n"
+                        "- Include a collapsible block in the report:\n"
+                        "  <details><summary>Reasoning (summary)</summary>\n"
+                        "  - 2 to 5 bullets quickly explaining why the findings matter, citing evidence.\n"
                         "  </details>\n"
-                        "- Mantenha o mesmo formato estrito: ---REPORT--- ... ---CSV--- ...\n"
-                        "\nPROMPT ORIGINAL (contexto):\n"
+                        "- Keep the same strict format: ---REPORT--- ... ---CSV--- ...\n"
+                        "\nORIGINAL PROMPT (context):\n"
                         + prompt
-                        + "\n\nDRAFT A REVISAR:\n"
+                        + "\n\nDRAFT TO REVIEW:\n"
                         + (draft or "")
                     )
                     final = call_llm_non_stream(
@@ -467,7 +467,7 @@ def run_audit_job(audit_id: str) -> None:
                     )
                     content = final or draft or ""
                 except Exception as e:
-                    log(layer, "WARN", f"Reflexão falhou, fallback non-stream simples: {type(e).__name__}: {e}")
+                    log(layer, "WARN", f"Reflection failed, falling back to non-stream: {type(e).__name__}: {e}")
                     try:
                         content = call_llm_non_stream(
                             base_url_v1=base_url_v1,
@@ -480,18 +480,18 @@ def run_audit_job(audit_id: str) -> None:
                         )
                     except Exception as e2:
                         # Treat as an essential LLM failure (avoid "running forever" / false success).
-                        log(layer, "ERROR", f"Falha no provedor LLM (fallback): {type(e2).__name__}: {e2}")
+                        log(layer, "ERROR", f"LLM provider error (fallback): {type(e2).__name__}: {e2}")
                         llm_failed_any = True
                         consecutive_llm_failures += 1
                         audit.status = "error"
                         break
 
                 if not content.strip():
-                    log(layer, "ERROR", "Resposta vazia do provedor LLM.")
+                    log(layer, "ERROR", "Empty response from LLM provider.")
                     llm_failed_any = True
                     consecutive_llm_failures += 1
                     if consecutive_llm_failures >= max_consecutive_llm_failures:
-                        log("system", "ERROR", f"Abortando auditoria: provedor LLM falhou repetidamente (>={max_consecutive_llm_failures}).")
+                        log("system", "ERROR", f"Aborting audit: LLM provider failed repeatedly (>={max_consecutive_llm_failures}).")
                         audit.status = "error"
                         break
                     continue
@@ -528,7 +528,7 @@ def run_audit_job(audit_id: str) -> None:
 
             # Default: prefer streaming so the audit page updates in real time.
             try:
-                log(layer, "INFO", "Chamando modelo (stream)…")
+                log(layer, "INFO", "Calling model (stream)…")
                 for kind, text in stream_llm_events(
                     base_url_v1=base_url_v1,
                     api_key=api_key,
@@ -563,7 +563,7 @@ def run_audit_job(audit_id: str) -> None:
                     audit.status = "error"
                     flush(force=True)
                     return
-                log(layer, "WARN", f"Streaming falhou, fallback non-stream: {err_str}")
+                log(layer, "WARN", f"Streaming failed, falling back to non-stream: {err_str}")
 
             try:
                 content = call_llm_non_stream(
@@ -576,10 +576,10 @@ def run_audit_job(audit_id: str) -> None:
                     timeout_s=120,
                 )
                 if not content.strip():
-                    log(layer, "ERROR", "Resposta vazia do provedor LLM.")
+                    log(layer, "ERROR", "Empty response from LLM provider.")
                     consecutive_llm_failures += 1
                     if consecutive_llm_failures >= max_consecutive_llm_failures:
-                        log("system", "ERROR", f"Abortando auditoria: provedor LLM falhou repetidamente (>={max_consecutive_llm_failures}).")
+                        log("system", "ERROR", f"Aborting audit: LLM provider failed repeatedly (>={max_consecutive_llm_failures}).")
                         audit.status = "error"
                         break
                     continue
@@ -618,11 +618,11 @@ def run_audit_job(audit_id: str) -> None:
                     audit.status = "error"
                     flush(force=True)
                     return
-                log(layer, "ERROR", f"Falha no provedor LLM: {err_str}")
+                log(layer, "ERROR", f"LLM provider error: {err_str}")
                 llm_failed_any = True
                 consecutive_llm_failures += 1
                 if consecutive_llm_failures >= max_consecutive_llm_failures:
-                    log("system", "ERROR", f"Abortando auditoria: provedor LLM falhou repetidamente (>={max_consecutive_llm_failures}).")
+                    log("system", "ERROR", f"Aborting audit: LLM provider failed repeatedly (>={max_consecutive_llm_failures}).")
                     audit.status = "error"
                     break
                 continue
@@ -633,7 +633,7 @@ def run_audit_job(audit_id: str) -> None:
         # Do NOT mark as done (avoids false confidence).
         if audit.status != "error" and llm_failed_any:
             audit.status = "error"
-            log("system", "ERROR", "Auditoria incompleta: falha do provedor LLM. Status definido como error.")
+            log("system", "ERROR", "Audit incomplete: LLM provider failed. Status set to error.")
 
         audit.status = "done" if audit.status != "error" else "error"
 
@@ -653,7 +653,7 @@ def run_audit_job(audit_id: str) -> None:
                 bench = get_or_refresh_attack_benchmarks(conn)
                 if bench and (bench.get("citations") or []):
                     md("## Market benchmarks (web research)")
-                    md("- Fontes encontradas via CatchAll (Newscatcher).")
+                    md("- Sources found via CatchAll (Newscatcher).")
                     for c in bench.get("citations") or []:
                         title = (c.get("title") or "").strip() or "Source"
                         link = (c.get("link") or "").strip()
@@ -663,17 +663,17 @@ def run_audit_job(audit_id: str) -> None:
                         else:
                             md(f"- [{title}]({link})")
                     md("")
-                    md("<details><summary>Raciocínio (resumo)</summary>")
-                    md("- O total estimado acima é a soma das faixas USD dos achados com evidência técnica nesta auditoria.")
-                    md("- As fontes acima servem como benchmark de mercado (custos reais reportados/publicados).")
-                    md("- Se o benchmark indicar ordens de grandeza maiores/menores, ajuste as faixas por escopo (dados, receita, downtime, compliance).")
+                    md("<details><summary>Reasoning (summary)</summary>")
+                    md("- The estimated total above is the sum of USD ranges for findings with technical evidence in this audit.")
+                    md("- The sources above serve as market benchmarks (real reported/published costs).")
+                    md("- If the benchmark indicates orders of magnitude higher/lower, adjust the ranges by scope (data, revenue, downtime, compliance).")
                     md("</details>")
                     md("")
                     flush(force=True)
                 else:
                     md("## Market benchmarks (web research)")
-                    md("- Pesquisa iniciada via CatchAll (Newscatcher). **Pode levar ~10–15 minutos** para ficar pronta.")
-                    md("- Rode outra auditoria depois ou clique no ícone de atualizar para puxar do cache assim que concluir.")
+                    md("- Research started via CatchAll (Newscatcher). **May take ~10–15 minutes** to complete.")
+                    md("- Run another audit later or click the refresh icon to pull from cache once ready.")
                     md("")
                     flush(force=True)
         except Exception:

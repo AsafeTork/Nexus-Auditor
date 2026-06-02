@@ -491,7 +491,7 @@ def stream_llm_events(
             last_exc = e
             break
     if r is None:
-        raise last_exc or RuntimeError("Falha ao conectar ao provedor LLM.")
+        raise last_exc or RuntimeError("Failed to connect to LLM provider.")
 
     buf = ""
     mode = "pre"
@@ -501,7 +501,7 @@ def stream_llm_events(
 
     for raw in r.iter_lines(decode_unicode=True, chunk_size=2048):
         if (time.time() - last) >= LLM_HEARTBEAT_S:
-            yield ("HEARTBEAT", "[Heartbeat] Aguardando modelo...")
+            yield ("HEARTBEAT", "[Heartbeat] Waiting for model...")
             last = time.time()
         if not raw:
             continue
