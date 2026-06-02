@@ -4,7 +4,7 @@
 {% set page_max_w = "max-w-7xl" %}
 {% block page_actions %}
   <a class="btn-primary" href="/dossier/{{ audit.id }}" target="_blank">Open dossier</a>
-  <a class="btn-secondary" href="{{ url_for('dashboard.priorities') }}">Open priorities</a>
+  <a class="btn-secondary" href="{{ url_for('dashboard.priorities') }}">Action Plan</a>
 {% endblock %}
 {% block page_context %}
   <div class="hero-meta">
@@ -15,19 +15,14 @@
 {% endblock %}
 {% block content %}
 <div class="flex flex-col gap-6">
-<div class="glass-card">
-  <div class="eyebrow">Run visibility</div>
-  <div class="mt-4 page-title">A run should explain its state, not force the user to interpret logs.</div>
-  <div class="mt-3 page-lead">
-    Based on current UX guidance, this screen now emphasizes system status, plain-language next steps and visible outputs so the user stays confident while the audit progresses.
-  </div>
-  <div class="mt-6 metric-row cols-4">
+<div class="card">
+  <div class="metric-row cols-4">
     <div class="metric-tile">
-      <div class="metric-label">Current status</div>
+      <div class="metric-label">Status</div>
       <div class="metric-value text-2xl" id="heroStatusBig">{{ audit.status }}</div>
     </div>
     <div class="metric-tile">
-      <div class="metric-label">Rows with evidence</div>
+      <div class="metric-label">Findings</div>
       <div class="metric-value text-2xl" id="kpiRowsTop">—</div>
     </div>
     <div class="metric-tile">
@@ -35,7 +30,7 @@
       <div class="metric-value text-2xl mono">{{ audit.model or "—" }}</div>
     </div>
     <div class="metric-tile">
-      <div class="metric-label">Client output</div>
+      <div class="metric-label">Report</div>
       <div class="metric-value text-2xl">Dossier</div>
     </div>
   </div>
@@ -82,32 +77,25 @@
 
   <div class="mt-6 grid grid-cols-1 gap-6">
     <!-- Exec summary -->
-    <section id="tab-exec" class="letterhead" role="tabpanel" aria-labelledby="tabBtn-exec">
-      <div class="card">
-        <div class="section-label">Overview</div>
-        <div class="section-title mt-2">Executive summary</div>
-        <div class="body-text mt-1">High-level outcome and what to do next.</div>
-      </div>
-      <div class="mt-6 grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div class="card card-hover">
-          <div class="text-[11px] text-muted">Achados (linhas CSV)</div>
-          <div class="kpi-value text-emerald-300" id="kpiRows">—</div>
-          <div class="text-[11px] text-muted">Only items with evidence land in the CSV.</div>
+    <section id=”tab-exec” class=”letterhead” role=”tabpanel” aria-labelledby=”tabBtn-exec”>
+      <div class=”mt-2 grid grid-cols-1 md:grid-cols-3 gap-6”>
+        <div class=”card card-hover”>
+          <div class=”text-[11px] text-muted”>Findings</div>
+          <div class=”kpi-value text-emerald-300” id=”kpiRows”>—</div>
+          <div class=”text-[11px] text-muted”>Items with evidence in the CSV.</div>
         </div>
-        <div class="card card-hover">
-          <div class="text-[11px] text-muted">Estado</div>
-          <div class="kpi-value" id="kpiStatus">—</div>
-          <div class="text-[11px] text-muted">Queued/executed via worker.</div>
+        <div class=”card card-hover”>
+          <div class=”text-[11px] text-muted”>Status</div>
+          <div class=”kpi-value” id=”kpiStatus”>—</div>
+          <div class=”text-[11px] text-muted”>Current run state.</div>
         </div>
-        <div class="card card-hover">
-          <div class="text-[11px] text-muted">Dossier</div>
-          <div class="kpi-value text-brand-2">Ready</div>
-          <div class="text-[11px] text-muted">Client-facing “letter” format.</div>
+        <div class=”card card-hover”>
+          <div class=”text-[11px] text-muted”>Dossier</div>
+          <div class=”kpi-value text-brand-2”>
+            <a href=”/dossier/{{ audit.id }}” target=”_blank” class=”hover:underline”>Open</a>
+          </div>
+          <div class=”text-[11px] text-muted”>Client-facing report.</div>
         </div>
-      </div>
-      <div class="card bg-surface2 border border-app">
-        <div class="section-label">Next step</div>
-        <div class="body-text mt-2">Tip: package “Audit + Dossier + Call” as a premium bundle.</div>
       </div>
     </section>
 
@@ -124,7 +112,7 @@
 
       <!-- Clean mode: raw data hidden by default -->
       <details class="card">
-        <summary class="cursor-pointer text-xs font-extrabold">Dados brutos (CSV/Logs) — abrir</summary>
+        <summary class="cursor-pointer text-xs font-extrabold">Raw data (CSV / Logs)</summary>
         <div class="mt-6 grid grid-cols-1 gap-6">
           <div>
             <div class="text-[11px] text-muted">CSV</div>

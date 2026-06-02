@@ -1,6 +1,5 @@
 {% extends "layout.html" %}
 {% set title = "Dashboard" %}
-{% set subtitle = "Discover in seconds if your store is losing sales, how much it could cost, and what to fix now." %}
 {% set page_max_w = "max-w-7xl" %}
 {% block page_actions %}
 {% if setup_step < 3 %}
@@ -16,6 +15,7 @@
 {% endblock %}
 {% block page_context %}{% endblock %}
 {% block hero_kpis %}
+{% if not demo_mode %}
 <div class="mt-5 metric-row cols-3">
   <div class="metric-tile">
     <div class="metric-label">Am I losing sales?</div>
@@ -33,9 +33,12 @@
     <div class="metric-foot">{{ risk_overview.immediate_action }}</div>
   </div>
 </div>
+{% endif %}
 {% endblock %}
 {% block content %}
 {% include "dashboard/_onboarding.html" %}
+
+{% if not demo_mode %}
 <div class="flex flex-col gap-8">
   {% set setup_sites_ready = (kpi.sites or 0) > 0 %}
   {% set setup_audit_ready = (kpi.audits or 0) > 0 %}
@@ -47,14 +50,8 @@
       <div class="min-w-0">
         <div class="section-label">SALES LOSS</div>
         <div class="section-title mt-2">{{ risk_overview.sales_headline }}</div>
-        <div class="body-text mt-2">
-          {{ risk_overview.summary }}
-        </div>
+        <div class="body-text mt-2">{{ risk_overview.summary }}</div>
         <div class="mt-4 risk-topline">
-          {% if demo_mode %}
-          <span class="badge badge-run">DEMO DATA</span>
-          <span class="trust-item">{{ demo_segment_label }}</span>
-          {% endif %}
           {% if risk_overview.status == "CRITICAL" %}
           <span class="risk-status-badge risk-status-critical">Immediate loss</span>
           {% elif risk_overview.status == "AT_RISK" %}
@@ -66,9 +63,6 @@
           {% endif %}
           <span class="trust-item">Fix now: {{ risk_overview.immediate_action }}</span>
         </div>
-        {% if demo_mode %}
-        <div class="mt-3 body-text text-warning">{{ demo_note }}</div>
-        {% endif %}
         <div class="mt-5">
           <div class="flex items-center justify-between gap-4 text-[11px] text-muted">
             <span>Lower sales impact</span>
@@ -85,10 +79,8 @@
       <div class="trust-strip">
         <span class="trust-item">Issues affecting sales {{ risk_overview.active_issues }}</span>
         <span class="trust-item">Revenue at risk {{ proof_metrics.estimated_loss_label }}</span>
-        <span class="trust-item tracking-wide"><span class="text-white">{{ proof_metrics.orders_protected }}</span>
-          orders saved</span>
-        <span class="trust-item tracking-wide"><span class="text-[var(--c-ok)]">{{ proof_metrics.revenue_recovered_label
-            }}</span> revenue retained</span>
+        <span class="trust-item tracking-wide"><span class="text-white">{{ proof_metrics.orders_protected }}</span> orders saved</span>
+        <span class="trust-item tracking-wide"><span class="text-[var(--c-ok)]">{{ proof_metrics.revenue_recovered_label }}</span> revenue retained</span>
       </div>
     </div>
 
@@ -119,13 +111,10 @@
         </div>
         <div class="mt-5 soft-panel">
           <div class="section-title">Recovery signal</div>
-          <div class="body-text mt-2">Sales pressure dropped <strong>{{ proof_metrics.risk_drop_pct }}%</strong>
-            based on the history of resolved items.</div>
+          <div class="body-text mt-2">Sales pressure dropped <strong>{{ proof_metrics.risk_drop_pct }}%</strong> based on the history of resolved items.</div>
           <div class="mt-4 trust-strip">
-            <span class="trust-item"><i class="ph ph-check-circle"></i> Fix rate {{ proof_metrics.fix_success_rate
-              }}%</span>
-            <span class="trust-item"><i class="ph ph-shield-check"></i> Reliability {{
-              proof_metrics.projection_reliability }}%</span>
+            <span class="trust-item"><i class="ph ph-check-circle"></i> Fix rate {{ proof_metrics.fix_success_rate }}%</span>
+            <span class="trust-item"><i class="ph ph-shield-check"></i> Reliability {{ proof_metrics.projection_reliability }}%</span>
             <span class="trust-item"><i class="ph ph-activity"></i> {{ proof_metrics.last_sync_label }}</span>
           </div>
         </div>
@@ -169,24 +158,19 @@
 
       <div class="soft-panel">
         <div class="section-title">What to fix now</div>
-        <div class="body-text mt-2">Start with the items below to protect checkout, conversion, trust, and revenue.
-        </div>
         <div class="signal-list mt-5">
           {% for task in priority_tasks %}
-          <div
-            class="priority-card {% if task.level == 'CRITICAL' %}priority-card-critical{% elif task.level == 'HIGH' %}priority-card-high{% else %}priority-card-medium{% endif %}">
+          <div class="priority-card {% if task.level == 'CRITICAL' %}priority-card-critical{% elif task.level == 'HIGH' %}priority-card-high{% else %}priority-card-medium{% endif %}">
             <div class="flex items-start justify-between gap-4">
               <div class="signal-item-copy">
                 <div class="priority-title-strong">{{ task.title }}</div>
                 <div class="signal-item-sub mt-1">{{ task.impact }}</div>
                 <div class="text-[11px] text-muted mt-2">{{ task.site_name }}</div>
-
                 {% if task.impact_data and task.impact_data.narrative %}
                 <div class="mt-2 text-xs text-muted opacity-80"
                   aria-label="Probabilistic estimate: {{ task.impact_data.affected_sessions }} sessions × {{ (task.impact_data.conversion_rate * 100)|round(1) }}% conversion × AOV ${{ task.impact_data.avg_order_value }}"
                   title="Probabilistic estimate: {{ task.impact_data.affected_sessions }} sessions × {{ (task.impact_data.conversion_rate * 100)|round(1) }}% conversion × AOV ${{ task.impact_data.avg_order_value }}">
-                  <i class="ph ph-trend-up"></i> {{ task.impact_data.loss_range }} <span
-                    class="opacity-60 ml-1">(Estimate based on current behavior)</span>
+                  <i class="ph ph-trend-up"></i> {{ task.impact_data.loss_range }} <span class="opacity-60 ml-1">(Estimate based on current behavior)</span>
                 </div>
                 {% endif %}
               </div>
@@ -198,18 +182,13 @@
                 {% else %}
                 <span class="badge badge-ok">{{ task.financial_short_label or task.financial_label or "Conversion watch" }}</span>
                 {% endif %}
-                <span
-                  class="urgency-chip {% if task.level == 'CRITICAL' %}urgency-chip-critical{% elif task.level == 'HIGH' %}urgency-chip-high{% else %}urgency-chip-medium{% endif %}">{{
-                  task.urgency }}</span>
+                <span class="urgency-chip {% if task.level == 'CRITICAL' %}urgency-chip-critical{% elif task.level == 'HIGH' %}urgency-chip-high{% else %}urgency-chip-medium{% endif %}">{{ task.urgency }}</span>
                 {% if task.confidence is defined and task.confidence > 0.80 %}
                 <span class="trust-item">Verified Risk</span>
                 {% endif %}
               </div>
             </div>
-            <div class="mt-4 body-text">
-              <strong>How to fix:</strong> {{ task.how_to_fix }}
-            </div>
-
+            <div class="mt-4 body-text"><strong>How to fix:</strong> {{ task.how_to_fix }}</div>
             {% if task.agent_loop and task.agent_loop.after_impact %}
             <div class="recovery-estimate-panel">
               <div class="text-xs uppercase tracking-widest font-bold flex items-center gap-2" style="color:var(--c-ok)">
@@ -218,7 +197,6 @@
               <div class="font-bold text-xs" style="color:var(--c-ok)">{{ task.agent_loop.after_impact }} <span class="opacity-50 font-normal">/mo</span></div>
             </div>
             {% endif %}
-
             <div class="mt-3 text-[11px] text-muted flex items-center justify-between">
               <span>{{ task.money_at_risk }}</span>
               {% if task.agent_loop and task.agent_loop.baseline_impact %}
@@ -252,21 +230,16 @@
     <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-6">
       <div class="min-w-0">
         <div class="section-label">Where to act first</div>
-        <div class="section-title mt-2">Where your sales may be most exposed right now</div>
-        <div class="body-text mt-2">
-          This area shows where losses could happen first, so you can target the highest commercial impact.
-        </div>
+        <div class="section-title mt-2">Sites at risk</div>
       </div>
       <div class="trust-strip">
         <span class="trust-item">Sites with priorities {{ priority_total }}</span>
         <span class="trust-item">Visible issues {{ featured_cards|length }}</span>
       </div>
     </div>
-
     <div class="mt-6 grid grid-cols-1 lg:grid-cols-3 gap-4">
       {% for c in featured_cards %}
-      <div
-        class="site-risk-card {% if c.overall.status == 'CRITICAL' %}site-risk-card-critical{% elif c.overall.status == 'AT_RISK' %}site-risk-card-atrisk{% elif c.overall.status == 'PROTECTED' %}site-risk-card-protected{% endif %}">
+      <div class="site-risk-card {% if c.overall.status == 'CRITICAL' %}site-risk-card-critical{% elif c.overall.status == 'AT_RISK' %}site-risk-card-atrisk{% elif c.overall.status == 'PROTECTED' %}site-risk-card-protected{% endif %}">
         <div class="flex items-start justify-between gap-4">
           <div class="min-w-0">
             <div class="section-title truncate">{{ c.site.name }}</div>
@@ -292,8 +265,7 @@
           <div class="metric-tile">
             <div class="metric-label">Commercial status</div>
             <div class="metric-value">
-              {{ "Immediate loss" if c.overall.status == "CRITICAL" else ("Sales at risk" if c.overall.status ==
-              "AT_RISK" else ("Revenue protected" if c.overall.status == "PROTECTED" else "No data")) }}
+              {{ "Immediate loss" if c.overall.status == "CRITICAL" else ("Sales at risk" if c.overall.status == "AT_RISK" else ("Revenue protected" if c.overall.status == "PROTECTED" else "No data")) }}
             </div>
           </div>
         </div>
@@ -304,9 +276,7 @@
             <div class="signal-item-copy">
               <div class="signal-item-title truncate">{{ it.problem or it.action_line or it.finding_key }}</div>
               <div class="signal-item-sub truncate">{{ it.impact }}</div>
-              <div class="text-[11px] text-muted mt-2">
-                {{ it.financial_label or it.urgency or "Worth fixing now" }}
-              </div>
+              <div class="text-[11px] text-muted mt-2">{{ it.financial_label or it.urgency or "Worth fixing now" }}</div>
             </div>
           </div>
           {% endfor %}
@@ -336,15 +306,13 @@
         <div>
           <div class="section-label">Operational base</div>
           <div class="section-title mt-2">Setup, configuration and execution</div>
-          <div class="body-text">These items stay available below the risk panel so they don't distract from the main problem.</div>
         </div>
         <span class="btn-secondary">Expand operational base</span>
       </summary>
 
       <div class="mt-6 value-grid cols-2">
         <div class="form-panel" id="createSite">
-          <div class="section-title">Add your store URL</div>
-          <div class="body-text mt-2">Only the URL is required. The name is optional and will be filled in automatically.</div>
+          <div class="section-title">Add a store URL</div>
           <form class="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4" method="post"
             action="{{ url_for('audit.create_site') }}">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -390,10 +358,6 @@
             <div class="min-w-0">
               <div class="section-title truncate">{{ s.name }}</div>
               <div class="body-text mono truncate">{{ s.base_url }}</div>
-              <div class="mt-2 trust-strip">
-                <span class="trust-item">URL ready</span>
-                <span class="trust-item">Can generate risk and priorities</span>
-              </div>
             </div>
             <div class="flex flex-col md:flex-row items-stretch md:items-center gap-4">
               <form method="post" action="{{ url_for('audit.start_audit') }}"
@@ -401,12 +365,10 @@
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <input type="hidden" name="site_id" value="{{ s.id }}" />
                 <div class="flex gap-4">
-                  <button aria-label="Run full audit" name="mode" value="full"
-                    class="auditStartBtn btn-primary">
+                  <button aria-label="Run full audit" name="mode" value="full" class="auditStartBtn btn-primary">
                     <span class="btnText">Run</span>
                   </button>
-                  <button aria-label="Run quick audit" name="mode" value="fast"
-                    class="btn-secondary">Quick</button>
+                  <button aria-label="Run quick audit" name="mode" value="fast" class="btn-secondary">Quick</button>
                 </div>
               </form>
               {% if current_user.is_admin %}
@@ -429,14 +391,11 @@
     </details>
   </section>
 
-  <!-- Audits -->
   <section class="card" id="audits">
     <div class="flex flex-col md:flex-row md:items-end md:justify-between gap-6">
       <div>
         <div class="section-label">History</div>
         <div class="section-title mt-2">Audits</div>
-        <div class="body-text">Recent runs and status. Use this area as operational proof that the product is alive,
-          producing outputs and recovering from failures quickly.</div>
       </div>
       <div class="flex items-center gap-4">
         <select id="auditFilter" class="input text-xs">
@@ -449,7 +408,6 @@
         <button type="button" class="btn-secondary" onclick="applyAuditFilter()">Filter</button>
       </div>
     </div>
-
     <div class="mt-6 hidden md:block table-wrap">
       <table class="table">
         <thead>
@@ -494,7 +452,6 @@
         </tbody>
       </table>
     </div>
-
     <div class="mt-6 md:hidden flex flex-col gap-4" id="auditCards">
       {% for a in audits %}
       <div class="bg-surface2 rounded-xl p-4 border border-app" data-status="{{ a.status }}">
@@ -535,8 +492,166 @@
   {% endif %}
 </div>
 
+{% else %}
+{# demo_mode: no real scan data yet — show only what the user can act on #}
+<div class="flex flex-col gap-6">
+
+  <section class="card" id="sites">
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+      <div>
+        <div class="section-label">Your stores</div>
+        {% if sites %}
+        <div class="section-title mt-1">Run a scan to see your first results</div>
+        {% else %}
+        <div class="section-title mt-1">Add a store to get started</div>
+        {% endif %}
+      </div>
+      {% if sites %}
+      <a class="btn-secondary text-xs shrink-0" href="{{ url_for('settings.settings_home') }}">Settings</a>
+      {% endif %}
+    </div>
+
+    <div class="mt-6 flex flex-col gap-4">
+      {% for s in sites %}
+      <div class="soft-panel">
+        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div class="min-w-0">
+            <div class="section-title truncate">{{ s.name }}</div>
+            <div class="mono text-xs text-muted truncate">{{ s.base_url }}</div>
+          </div>
+          <div class="flex flex-wrap gap-3 shrink-0">
+            <form method="post" action="{{ url_for('audit.start_audit') }}" class="flex gap-3">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <input type="hidden" name="site_id" value="{{ s.id }}" />
+              <button name="mode" value="full" class="auditStartBtn btn-primary">
+                <span class="btnText">Run scan</span>
+              </button>
+              <button name="mode" value="fast" class="btn-secondary">Quick</button>
+            </form>
+            {% if current_user.is_admin %}
+            <form method="post" action="{{ url_for('audit.delete_site', site_id=s.id) }}"
+              onsubmit="return confirm('Delete this site and all audits?');">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button class="btn-danger">Delete</button>
+            </form>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+      {% else %}
+      <div class="form-panel" id="createSite">
+        <div class="section-title">Add your first store</div>
+        <form class="mt-5 grid grid-cols-1 md:grid-cols-3 gap-4" method="post"
+          action="{{ url_for('audit.create_site') }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <input name="base_url" placeholder="https://your-store.com" class="input md:col-span-2 text-sm" required />
+          <button class="btn-primary">Add site</button>
+        </form>
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+
+  {% if audits %}
+  <section class="card" id="audits">
+    <div class="flex items-center justify-between gap-4">
+      <div>
+        <div class="section-label">History</div>
+        <div class="section-title mt-1">Recent scans</div>
+      </div>
+      <div class="flex items-center gap-3">
+        <select id="auditFilter" class="input text-xs">
+          <option value="all">All</option>
+          <option value="queued">Queued</option>
+          <option value="running">Running</option>
+          <option value="done">Done</option>
+          <option value="error">Error</option>
+        </select>
+        <button type="button" class="btn-secondary" onclick="applyAuditFilter()">Filter</button>
+      </div>
+    </div>
+    <div class="mt-6 hidden md:block table-wrap">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Target</th>
+            <th>Status</th>
+            <th>Created</th>
+            <th class="text-right">Action</th>
+          </tr>
+        </thead>
+        <tbody id="auditTbody">
+          {% for a in audits %}
+          <tr data-status="{{ a.status }}">
+            <td class="min-w-[220px]">
+              <div class="mono text-xs">{{ a.target_domain or a.id }}</div>
+              <div class="text-[11px] text-muted">{{ a.id }}</div>
+            </td>
+            <td class="min-w-[140px]">
+              {% if a.status == 'done' %}
+              <span class="badge badge-ok"><span class="dot" style="background:#34d399"></span>DONE</span>
+              {% elif a.status == 'error' %}
+              <span class="badge badge-err"><span class="dot" style="background:#fb7185"></span>ERROR</span>
+              {% elif a.status == 'running' %}
+              <span class="badge badge-run"><span class="dot" style="background:#4F46E5"></span>RUNNING</span>
+              {% else %}
+              <span class="badge badge-muted"><span class="dot" style="background:#94a3b8"></span>QUEUED</span>
+              {% endif %}
+            </td>
+            <td class="min-w-[180px]">
+              <div class="text-[11px] text-muted">{{ a.created_utc }}</div>
+              <div class="text-[11px] text-muted">model={{ a.model }}</div>
+            </td>
+            <td class="text-right min-w-[140px]">
+              <a class="btn-secondary" href="{{ url_for('audit.view_audit', audit_id=a.id) }}">Open</a>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <div class="mt-6 md:hidden flex flex-col gap-4" id="auditCards">
+      {% for a in audits %}
+      <div class="bg-surface2 rounded-xl p-4 border border-app" data-status="{{ a.status }}">
+        <div class="flex items-start justify-between gap-6">
+          <div class="min-w-0">
+            <div class="mono text-xs truncate">{{ a.target_domain or a.id }}</div>
+            <div class="text-[11px] text-muted truncate">{{ a.created_utc }}</div>
+          </div>
+          <div class="shrink-0">
+            {% if a.status == 'done' %}
+            <span class="badge badge-ok"><span class="dot" style="background:#34d399"></span>DONE</span>
+            {% elif a.status == 'error' %}
+            <span class="badge badge-err"><span class="dot" style="background:#fb7185"></span>ERROR</span>
+            {% elif a.status == 'running' %}
+            <span class="badge badge-run"><span class="dot" style="background:#4F46E5"></span>RUNNING</span>
+            {% else %}
+            <span class="badge badge-muted"><span class="dot" style="background:#94a3b8"></span>QUEUED</span>
+            {% endif %}
+          </div>
+        </div>
+        <div class="mt-4">
+          <a class="btn-primary" href="{{ url_for('audit.view_audit', audit_id=a.id) }}">Open</a>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+  {% endif %}
+
+  {% if request.args.get('billing') == 'required' %}
+  <div class="card flash-err flex items-center gap-3 text-sm">
+    <span class="font-semibold">Upgrade required</span>
+    <span class="text-muted">—</span>
+    Full audit requires an active plan.
+    <a class="ml-auto btn-primary" href="{{ url_for('settings.settings_home') }}#billing">Manage plan</a>
+  </div>
+  {% endif %}
+
+</div>
+{% endif %}
+
 <script>
-  // Auto refresh every 60s (keeps the dashboard live). You can also click the refresh icon.
   setInterval(() => { try { location.reload(); } catch (e) { } }, 180000);
 
   function spinnerSvg() {
@@ -556,7 +671,6 @@
     });
   });
 
-  // Audit filter (client-side)
   window.applyAuditFilter = function () {
     const v = (document.getElementById("auditFilter")?.value || "all").toLowerCase();
     const rows = document.querySelectorAll("#auditTbody tr[data-status]");

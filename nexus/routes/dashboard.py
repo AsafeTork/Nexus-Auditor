@@ -603,20 +603,7 @@ def home():
     has_real_priorities = any((c.get("top3") or []) for c in sorted_cards)
     demo_mode = not (has_real_monitoring_runs and has_real_findings and has_real_priorities)
 
-    if demo_mode:
-        detected_demo_site_type = _detect_demo_site_type(sites, audits)
-        demo = _build_demo_dashboard_state(detected_demo_site_type)
-        priority_tasks = demo["priority_tasks"]
-        featured_cards = demo["featured_cards"]
-        priority_total = int(demo["priority_total"])
-        risk_overview = demo["risk_overview"]
-        proof_metrics = demo["proof_metrics"]
-        demo_note = demo["demo_note"]
-        demo_segment_label = demo["demo_segment_label"]
-    else:
-        priority_total = len(visible_priorities)
-        demo_note = ""
-        demo_segment_label = ""
+    priority_total = len(visible_priorities) if not demo_mode else 0
 
     if not provider_ready:
         setup_step = 0
@@ -645,8 +632,6 @@ def home():
             "ready": provider_ready,
         },
         demo_mode=demo_mode,
-        demo_note=demo_note,
-        demo_segment_label=demo_segment_label,
         priority_tasks=priority_tasks,
         risk_overview=risk_overview,
         proof_metrics=proof_metrics,

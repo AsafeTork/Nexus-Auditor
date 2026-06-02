@@ -55,7 +55,7 @@
                 <div class="text-[11px] text-muted mt-2"><strong>Recommended action:</strong> {{ it.action_recommended or it.action_line }}</div>
 
                 {% if it.impact_data %}
-                <div class="mt-3 flex items-center gap-3 text-[10px] text-muted opacity-80 border-t border-[var(--c-border-subtle)] pt-2 w-max">
+                <div class="mt-3 flex items-center gap-3 text-[11px] text-muted opacity-80 border-t border-[var(--c-border-subtle)] pt-2 w-max">
                   <span class="flex items-center gap-1"><i class="ph ph-users"></i> {{ it.impact_data.affected_sessions }} sessions affected</span>
                   <span class="flex items-center gap-1"><i class="ph ph-shopping-cart"></i> CR {{ (it.impact_data.conversion_rate * 100)|round(1) }}%</span>
                   <span class="flex items-center gap-1"><i class="ph ph-currency-circle-dollar"></i> AOV ${{ it.impact_data.avg_order_value }}</span>
@@ -133,8 +133,8 @@
     {% else %}
     <section class="card">
       <div class="empty-state">
-        <div class="empty-state-title">No sites yet</div>
-        <div class="empty-state-copy">Add a site from the dashboard to unlock the action plan.</div>
+        <div class="empty-state-title">No action items yet</div>
+        <div class="empty-state-copy">Run a scan from the dashboard to generate priorities and see what to fix first.</div>
       </div>
     </section>
     {% endfor %}
