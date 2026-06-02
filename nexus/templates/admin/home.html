@@ -104,7 +104,7 @@
   {% endif %}
 
   <!-- Simulator -->
-  <div class="mt-6 card card-focus">
+  <div class="mt-6 card">
     <div class="flex items-start justify-between gap-6">
       <div>
         <div class="text-sm font-semibold">Simulation</div>
@@ -135,23 +135,6 @@
     {% if sim and (sim.role or sim.sub_status) %}
       <div class="mt-2 text-xs text-brand-2">Simulation active: role={{ sim.role or "—" }} · plan={{ sim.sub_status or "—" }}</div>
     {% endif %}
-  </div>
-
-  <!-- LLM Defaults -->
-  <div class="mt-6 card">
-    <div class="flex items-start justify-between gap-6">
-      <div>
-        <div class="text-sm font-semibold">AI defaults (org)</div>
-        <div class="text-xs text-muted">Provider config moved to Settings.</div>
-      </div>
-      <a class="btn-secondary" href="{{ url_for('settings.settings_home') }}#provider">Open Settings</a>
-    </div>
-    <div class="mt-6 text-xs text-muted">
-      Use <span class="mono">Settings → Provider config</span> to change provider, API key and model.
-    </div>
-  <div class="mt-3 text-xs text-muted">
-    Note: web research (CatchAll) can take <span class="font-semibold">10–15 minutes</span> to be ready. Use refresh to re-check cached results.
-  </div>
   </div>
 
   <div class="mt-6 grid grid-cols-1 md:grid-cols-3 gap-6">

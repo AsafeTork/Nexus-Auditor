@@ -2,239 +2,320 @@
 {% set title = "Audit" %}
 {% set subtitle = (site.base_url if site else audit.site_id) %}
 {% set page_max_w = "max-w-7xl" %}
+
 {% block page_actions %}
-  <a class="btn-primary" href="/dossier/{{ audit.id }}" target="_blank">Open dossier</a>
+  <a class="btn-primary" href="/dossier/{{ audit.id }}" target="_blank">Dossier</a>
   <a class="btn-secondary" href="{{ url_for('dashboard.priorities') }}">Action Plan</a>
 {% endblock %}
+
 {% block page_context %}
   <div class="hero-meta">
     <span class="meta-chip">Status <strong id="heroStatus">{{ audit.status }}</strong></span>
-    <span class="meta-chip">Last updated <strong class="mono">{{ audit.updated_utc }}</strong></span>
+    <span class="meta-chip">Updated <strong class="mono">{{ audit.updated_utc }}</strong></span>
     <span class="meta-chip">Model <strong class="mono">{{ audit.model }}</strong></span>
+    {% set err_count = events | selectattr('level','equalto','ERROR') | list | length %}
+    {% if err_count > 0 %}
+    <span class="meta-chip" style="border-color:rgba(239,68,68,.30)">
+      Errors <strong class="text-[var(--c-err)]">{{ err_count }}</strong>
+    </span>
+    {% endif %}
   </div>
 {% endblock %}
+
 {% block content %}
 <div class="flex flex-col gap-6">
-<div class="card">
-  <div class="metric-row cols-4">
-    <div class="metric-tile">
-      <div class="metric-label">Status</div>
-      <div class="metric-value text-2xl" id="heroStatusBig">{{ audit.status }}</div>
-    </div>
-    <div class="metric-tile">
-      <div class="metric-label">Findings</div>
-      <div class="metric-value text-2xl" id="kpiRowsTop">—</div>
-    </div>
-    <div class="metric-tile">
-      <div class="metric-label">Model</div>
-      <div class="metric-value text-2xl mono">{{ audit.model or "—" }}</div>
-    </div>
-    <div class="metric-tile">
-      <div class="metric-label">Report</div>
-      <div class="metric-value text-2xl">Dossier</div>
+
+  {# ── KPI bar ── #}
+  <div class="card">
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div class="metric-tile">
+        <div class="metric-label">Status</div>
+        <div class="metric-value text-2xl" id="heroStatusBig">{{ audit.status }}</div>
+      </div>
+      <div class="metric-tile">
+        <div class="metric-label">Findings</div>
+        <div class="metric-value text-2xl" id="kpiRowsTop">—</div>
+      </div>
+      <div class="metric-tile">
+        <div class="metric-label">Model</div>
+        <div class="metric-value text-lg mono truncate">{{ audit.model or "—" }}</div>
+      </div>
+      <div class="metric-tile">
+        <div class="metric-label">Report</div>
+        <div class="metric-value text-lg">
+          <a href="/dossier/{{ audit.id }}" target="_blank" class="text-brand-2 hover:underline">Dossier →</a>
+        </div>
+      </div>
     </div>
   </div>
-</div>
 
-<div class="card card-focus">
-  <div class="flex items-start justify-between gap-6">
-    <div>
-      <div class="text-[11px] text-muted">Audit ID: <span class="mono">{{ audit.id }}</span> · Status: <span id="statusBadge">{{ audit.status }}</span></div>
+  {# ── Main card ── #}
+  <div class="card card-focus">
+    <div class="flex items-start justify-between gap-6">
+      <div class="text-[11px] text-muted">
+        Audit ID: <span class="mono">{{ audit.id }}</span>
+        · Status: <span id="statusBadge">{{ audit.status }}</span>
+      </div>
+      <div class="flex flex-wrap items-center gap-3 justify-end">
+        <button class="btn-secondary icon-btn" aria-label="Download Markdown" onclick="downloadMD()" title="Download report (.md)">
+          <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v10m0 0 4-4m-4 4-4-4M5 21h14"/>
+          </svg>
+        </button>
+        <button class="btn-secondary icon-btn" aria-label="Download CSV" onclick="downloadCSV()" title="Download findings (.csv)">
+          <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 16v1a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-1M7 10l5 5 5-5M12 15V3"/>
+          </svg>
+        </button>
+      </div>
     </div>
-    <div class="flex flex-wrap items-center gap-4 justify-end">
-      <button class="btn-secondary icon-btn" aria-label="Download Markdown report" onclick="downloadMD()">
-        <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v10m0 0 4-4m-4 4-4-4M5 21h14"/>
-        </svg>
+
+    {# Status banners #}
+    <div class="mt-5 value-grid cols-2">
+      <div class="soft-panel soft-panel-strong">
+        <div class="section-label">System message</div>
+        <div class="section-title mt-2" id="runStateTitle">Audit status: {{ audit.status }}</div>
+        <div class="body-text mt-2" id="runStateCopy">The page updates automatically as logs, analysis and CSV rows arrive.</div>
+      </div>
+      <div class="soft-panel">
+        <div class="section-label">Next best action</div>
+        <div class="section-title mt-2" id="nextActionTitle">Wait for findings</div>
+        <div class="body-text mt-2" id="nextActionCopy">Once the run completes, review the executive summary first, then open the dossier for the client-facing version.</div>
+      </div>
+    </div>
+
+    {# Tab bar #}
+    <div class="mt-6 flex flex-wrap gap-2" role="tablist" aria-label="Audit tabs">
+      <button class="tabBtn text-xs font-semibold" data-tab="exec" role="tab" id="tabBtn-exec">
+        Executive summary
       </button>
-      <button class="btn-secondary icon-btn" aria-label="Download CSV matrix" onclick="downloadCSV()">
-        <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v10m0 0 4-4m-4 4-4-4M5 21h14"/>
-        </svg>
+      <button class="tabBtn text-xs font-semibold" data-tab="tech" role="tab" id="tabBtn-tech">
+        Technical audit
+      </button>
+      <button class="tabBtn text-xs font-semibold" data-tab="logs" role="tab" id="tabBtn-logs">
+        Logs
+        {% set err_count = events | selectattr('level','equalto','ERROR') | list | length %}
+        {% if err_count > 0 %}
+        <span class="ml-1.5 inline-flex items-center justify-center bg-rose-500 text-white rounded-full w-4 h-4 text-[10px] font-bold">{{ err_count }}</span>
+        {% endif %}
+      </button>
+      <button class="tabBtn text-xs font-semibold" data-tab="data" role="tab" id="tabBtn-data">
+        Raw data
       </button>
     </div>
-  </div>
 
-  <div class="mt-5 value-grid cols-2">
-    <div class="soft-panel soft-panel-strong">
-      <div class="section-label">System message</div>
-      <div class="section-title mt-2" id="runStateTitle">Audit status: {{ audit.status }}</div>
-      <div class="body-text mt-2" id="runStateCopy">The system will keep this page updated as new logs, markdown and CSV rows arrive.</div>
-    </div>
-    <div class="soft-panel">
-      <div class="section-label">Next best action</div>
-      <div class="section-title mt-2" id="nextActionTitle">Wait for findings</div>
-      <div class="body-text mt-2" id="nextActionCopy">Once the run completes, review the executive summary first and then open the dossier for a client-facing version.</div>
-    </div>
-  </div>
+    <div class="mt-6 flex flex-col gap-6">
 
-  <!-- Tabs -->
-  <div class="mt-4 flex flex-wrap gap-4" role="tablist" aria-label="Audit tabs">
-    <button class="tabBtn text-xs font-semibold bg-surface2 border border-app text-muted" data-tab="exec" role="tab" aria-selected="false" tabindex="-1" id="tabBtn-exec">Executive summary</button>
-    <button class="tabBtn text-xs font-semibold bg-surface2 border border-app text-muted" data-tab="tech" role="tab" aria-selected="false" tabindex="-1" id="tabBtn-tech">Technical audit</button>
-    <button class="tabBtn text-xs font-semibold bg-surface2 border border-app text-muted" data-tab="data" role="tab" aria-selected="false" tabindex="-1" id="tabBtn-data">Raw data</button>
-  </div>
-
-  <div class="mt-6 grid grid-cols-1 gap-6">
-    <!-- Exec summary -->
-    <section id=”tab-exec” class=”letterhead” role=”tabpanel” aria-labelledby=”tabBtn-exec”>
-      <div class=”mt-2 grid grid-cols-1 md:grid-cols-3 gap-6”>
-        <div class=”card card-hover”>
-          <div class=”text-[11px] text-muted”>Findings</div>
-          <div class=”kpi-value text-emerald-300” id=”kpiRows”>—</div>
-          <div class=”text-[11px] text-muted”>Items with evidence in the CSV.</div>
-        </div>
-        <div class=”card card-hover”>
-          <div class=”text-[11px] text-muted”>Status</div>
-          <div class=”kpi-value” id=”kpiStatus”>—</div>
-          <div class=”text-[11px] text-muted”>Current run state.</div>
-        </div>
-        <div class=”card card-hover”>
-          <div class=”text-[11px] text-muted”>Dossier</div>
-          <div class=”kpi-value text-brand-2”>
-            <a href=”/dossier/{{ audit.id }}” target=”_blank” class=”hover:underline”>Open</a>
+      {# ── Tab: Executive summary ── #}
+      <section id="tab-exec" class="letterhead hidden" role="tabpanel" aria-labelledby="tabBtn-exec">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div class="card card-hover">
+            <div class="text-[11px] text-muted">Findings</div>
+            <div class="kpi-value text-emerald-300" id="kpiRows">—</div>
+            <div class="text-[11px] text-muted mt-2">Items with evidence in the CSV.</div>
           </div>
-          <div class=”text-[11px] text-muted”>Client-facing report.</div>
-        </div>
-      </div>
-    </section>
-
-    <!-- Technical report -->
-    <section id="tab-tech" class="letterhead hidden" role="tabpanel" aria-labelledby="tabBtn-tech">
-      <div class="card">
-        <div class="section-label">Details</div>
-        <div class="section-title mt-2">Technical audit</div>
-        <div class="body-text mt-1">Evidence-based findings and remediation plan.</div>
-      </div>
-      <div class="card bg-surface2 border border-app p-4 h-[52vh] md:h-[60vh] lg:h-[62vh] overflow-auto">
-        <div id="md" class="md-render"></div>
-      </div>
-
-      <!-- Clean mode: raw data hidden by default -->
-      <details class="card">
-        <summary class="cursor-pointer text-xs font-extrabold">Raw data (CSV / Logs)</summary>
-        <div class="mt-6 grid grid-cols-1 gap-6">
-          <div>
-            <div class="text-[11px] text-muted">CSV</div>
-            <textarea id="csvInline" class="mono mt-4 w-full h-48 md:h-56 input text-xs" readonly></textarea>
+          <div class="card card-hover">
+            <div class="text-[11px] text-muted">Status</div>
+            <div class="kpi-value" id="kpiStatus">—</div>
+            <div class="text-[11px] text-muted mt-2">Current run state.</div>
           </div>
-          <div>
-            <div class="text-[11px] text-muted">Logs</div>
-            <textarea id="logsInline" class="mono mt-4 w-full h-48 md:h-56 input text-xs" readonly></textarea>
+          <div class="card card-hover">
+            <div class="text-[11px] text-muted">Dossier</div>
+            <div class="kpi-value text-brand-2">
+              <a href="/dossier/{{ audit.id }}" target="_blank" class="hover:underline">Open</a>
+            </div>
+            <div class="text-[11px] text-muted mt-2">Client-facing report.</div>
           </div>
         </div>
-      </details>
-    </section>
+      </section>
 
-    <!-- Raw data (still available as separate tab) -->
-    <section id="tab-data" class="letterhead hidden" role="tabpanel" aria-labelledby="tabBtn-data">
-      <div class="card">
-        <div class="section-label">History</div>
-        <div class="section-title mt-2">Raw data</div>
-        <div class="body-text mt-1">CSV matrix and system logs for this run.</div>
-      </div>
-      <div class="mt-6 grid grid-cols-1 gap-6">
+      {# ── Tab: Technical audit (markdown) ── #}
+      <section id="tab-tech" class="letterhead hidden" role="tabpanel" aria-labelledby="tabBtn-tech">
         <div class="card">
-          <div class="text-[11px] text-muted">CSV</div>
-          <textarea id="csv" class="mono mt-4 w-full h-48 md:h-56 input text-xs" readonly></textarea>
+          <div class="section-label">Evidence-based findings</div>
+          <div class="section-title mt-1">Technical audit</div>
+          <div class="body-text mt-1">Full remediation plan with proof for each issue.</div>
         </div>
+        <div class="card bg-surface2 border border-app p-5 h-[52vh] md:h-[60vh] overflow-auto">
+          <div id="md" class="md-render"></div>
+        </div>
+        <details class="card">
+          <summary class="cursor-pointer text-xs font-extrabold">Raw CSV / Logs (debug)</summary>
+          <div class="mt-5 grid grid-cols-1 gap-4">
+            <div>
+              <div class="text-[11px] text-muted mb-2">CSV</div>
+              <textarea id="csvInline" class="mono w-full h-44 input text-xs" readonly></textarea>
+            </div>
+            <div>
+              <div class="text-[11px] text-muted mb-2">Logs</div>
+              <textarea id="logsInline" class="mono w-full h-44 input text-xs" readonly></textarea>
+            </div>
+          </div>
+        </details>
+      </section>
+
+      {# ── Tab: Logs (structured events) ── #}
+      <section id="tab-logs" class="letterhead hidden" role="tabpanel" aria-labelledby="tabBtn-logs">
+        <div class="flex items-center justify-between gap-4">
+          <div>
+            <div class="section-label">Execution log</div>
+            <div class="section-title mt-1">
+              Structured events
+              <span id="logVisible" class="text-muted ml-2 text-sm font-normal">({{ events|length }})</span>
+            </div>
+          </div>
+          <div class="flex gap-2">
+            <button onclick="filterLogs('all')" id="logFilterAll"
+              class="tabBtn text-xs font-semibold border border-brand bg-brand-weak text-brand-2">All</button>
+            <button onclick="filterLogs('error')" id="logFilterErr"
+              class="tabBtn text-xs font-semibold border border-app bg-surface2 text-muted">
+              Errors only
+              {% set err_count = events | selectattr('level','equalto','ERROR') | list | length %}
+              {% if err_count > 0 %}
+              <span class="ml-1 inline-flex items-center justify-center bg-rose-500 text-white rounded-full w-4 h-4 text-[10px] font-bold">{{ err_count }}</span>
+              {% endif %}
+            </button>
+          </div>
+        </div>
+
+        <div class="card bg-surface2 border border-app p-4 h-[52vh] md:h-[60vh] overflow-auto font-mono text-xs flex flex-col gap-px" id="logContainer">
+          {% for e in events %}
+          <div class="logline flex gap-3 py-0.5 px-1.5 rounded-sm"
+               data-level="{{ e.level }}"
+               style="{% if e.level == 'ERROR' %}color:var(--c-err);background:rgba(251,113,133,.06){% elif e.level == 'WARN' %}color:#d97706{% else %}color:#94a3b8{% endif %}">
+            <span class="shrink-0 opacity-40 select-none tabular-nums w-[8ch]">
+              {% if e.ts_ms %}{{ "%07d" | format(e.ts_ms // 1000) }}{% endif %}
+            </span>
+            <span class="shrink-0 w-[5ch] font-bold {% if e.level == 'ERROR' %}text-rose-400{% elif e.level == 'WARN' %}text-amber-400{% else %}text-slate-500{% endif %}">{{ e.level[:4] }}</span>
+            <span class="break-all {% if e.level == 'ERROR' %}text-rose-300{% elif e.level == 'WARN' %}text-amber-300{% else %}text-slate-300{% endif %}">{{ e.message }}</span>
+          </div>
+          {% else %}
+          <div class="text-muted text-center py-8 text-sm">
+            {% if audit.status in ('queued', 'running') %}
+            Waiting for log events...
+            {% else %}
+            No structured log events recorded for this run.
+            {% endif %}
+          </div>
+          {% endfor %}
+        </div>
+
+        <div class="flex items-center justify-between gap-4 text-[11px] text-muted">
+          <span id="logFooter">{{ events|length }} events total</span>
+          <button onclick="copyLogs()" class="btn-secondary text-xs">Copy visible</button>
+        </div>
+      </section>
+
+      {# ── Tab: Raw data ── #}
+      <section id="tab-data" class="letterhead hidden" role="tabpanel" aria-labelledby="tabBtn-data">
         <div class="card">
-          <div class="text-[11px] text-muted">Logs</div>
-          <textarea id="logs" class="mono mt-4 w-full h-48 md:h-56 input text-xs" readonly></textarea>
+          <div class="section-label">Debug output</div>
+          <div class="section-title mt-1">Raw data</div>
+          <div class="body-text mt-1">CSV matrix and raw system logs. Useful for debugging or exporting findings.</div>
         </div>
-      </div>
-      <div class="mt-2 text-[11px] text-muted">
-        CSV columns: Category; Failure; Proof; Explanation; Loss; Solution; Priority; Complexity
-      </div>
-    </section>
+        <div class="grid grid-cols-1 gap-4">
+          <div class="card">
+            <div class="text-[11px] text-muted mb-2">CSV — findings matrix</div>
+            <textarea id="csv" class="mono w-full h-52 input text-xs" readonly></textarea>
+            <div class="mt-2 text-[11px] text-muted">Columns: Category; Failure; Proof; Explanation; Loss; Solution; Priority; Complexity</div>
+          </div>
+          <div class="card">
+            <div class="text-[11px] text-muted mb-2">Logs — raw text stream</div>
+            <textarea id="logs" class="mono w-full h-52 input text-xs" readonly></textarea>
+          </div>
+        </div>
+      </section>
+
+    </div>
   </div>
-</div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 <script>
   const AUDIT_ID = "{{ audit.id }}";
-  let LOGS="", MD="", CSV="";
+  let LOGS = "", MD = "", CSV = "";
+
   function describeStatus(status){
     const s = String(status || "").toLowerCase();
-    if(s === "queued"){
-      return {
-        title: "Audit queued",
-        copy: "The run is waiting for the worker. This is a valid system state, not a silent failure.",
-        nextTitle: "Keep this page open",
-        nextCopy: "You can stay here while logs and findings begin to appear."
-      };
-    }
-    if(s === "running"){
-      return {
-        title: "Audit running",
-        copy: "The system is actively collecting evidence and generating the report.",
-        nextTitle: "Watch the executive summary first",
-        nextCopy: "Use the executive view for fast understanding, then expand into technical details only if needed."
-      };
-    }
-    if(s === "done"){
-      return {
-        title: "Audit complete",
-        copy: "The run finished successfully and the output is ready to review or share.",
-        nextTitle: "Open the dossier",
-        nextCopy: "Use the dossier for a cleaner, client-facing presentation of the result."
-      };
-    }
-    if(s === "error"){
-      return {
-        title: "Audit failed",
-        copy: "The run finished with an error. The logs below should help you recognize the issue and recover quickly.",
-        nextTitle: "Check provider and logs",
-        nextCopy: "If the provider is the cause, go to Settings, validate the key and model, then launch a fresh run."
-      };
-    }
+    if(s === "queued") return {
+      title: "Audit queued",
+      copy: "The run is waiting for a worker. This is a normal state, not a failure.",
+      nextTitle: "Keep this page open",
+      nextCopy: "Logs and findings will appear here as soon as the worker picks up the job."
+    };
+    if(s === "running") return {
+      title: "Audit running",
+      copy: "The system is actively collecting evidence and generating findings.",
+      nextTitle: "Watch the executive summary",
+      nextCopy: "Check the executive view for a fast overview, then explore technical details when ready."
+    };
+    if(s === "done") return {
+      title: "Audit complete",
+      copy: "The run finished successfully. All findings are ready to review or share.",
+      nextTitle: "Open the dossier",
+      nextCopy: "Use the dossier for the clean, client-ready version of this report."
+    };
+    if(s === "error") return {
+      title: "Audit failed",
+      copy: "The run finished with an error. Check the Logs tab to understand what happened.",
+      nextTitle: "Check logs and provider",
+      nextCopy: "Go to Settings to verify your API key and model, then start a new scan."
+    };
     return {
       title: "Audit status",
-      copy: "This page keeps the current state visible so the user never has to guess what is happening.",
+      copy: "This page stays updated so you never have to guess the current state.",
       nextTitle: "Follow the visible next step",
       nextCopy: "Use the status and summary cards to decide whether to wait, review, or reconfigure."
     };
   }
 
   function filePrefix(){
-    const host = "{{ audit.target_domain or 'ALVO' }}".toUpperCase().replace(/^WWW\./,'');
+    const host = "{{ audit.target_domain or 'AUDIT' }}".toUpperCase().replace(/^WWW\./, "");
     const iso = new Date().toISOString().replace(/[-:]/g,"").replace(/\..*/,"Z");
-    return "AUDIT_REPORT_" + host + "_" + iso;
+    return "XENTINEL_" + host + "_" + iso;
   }
   function downloadMD(){
     const blob = new Blob([MD||""], {type:"text/markdown;charset=utf-8"});
-    const url = URL.createObjectURL(blob);
-    const a=document.createElement("a");
-    a.href=url; a.download=filePrefix()+".md";
+    const a = Object.assign(document.createElement("a"), {href:URL.createObjectURL(blob), download:filePrefix()+".md"});
     document.body.appendChild(a); a.click(); document.body.removeChild(a);
-    URL.revokeObjectURL(url);
   }
   function downloadCSV(){
-    const blob = new Blob(["\ufeff", CSV||""], {type:"text/csv;charset=utf-8"});
-    const url = URL.createObjectURL(blob);
-    const a=document.createElement("a");
-    a.href=url; a.download=filePrefix()+".csv";
+    const blob = new Blob(["﻿", CSV||""], {type:"text/csv;charset=utf-8"});
+    const a = Object.assign(document.createElement("a"), {href:URL.createObjectURL(blob), download:filePrefix()+".csv"});
     document.body.appendChild(a); a.click(); document.body.removeChild(a);
-    URL.revokeObjectURL(url);
   }
 
   function applyLine(line){
-    if(line.startsWith("LOG:")){ LOGS += line.slice(4) + "\n"; document.getElementById("logs").value = LOGS; return; }
-    if(line.startsWith("DATA:")){ MD += line.slice(5) + "\n"; document.getElementById("md").innerHTML = marked.parse(MD); return; }
-    if(line.startsWith("CSV_ROW:")){ CSV += line.slice(8) + "\n"; document.getElementById("csv").value = CSV; return; }
+    if(line.startsWith("LOG:")){
+      LOGS += line.slice(4) + "\n";
+      document.getElementById("logs").value = LOGS;
+      try{ document.getElementById("logsInline").value = LOGS; }catch(e){}
+      return;
+    }
+    if(line.startsWith("DATA:")){
+      MD += line.slice(5) + "\n";
+      document.getElementById("md").innerHTML = marked.parse(MD);
+      return;
+    }
+    if(line.startsWith("CSV_ROW:")){
+      CSV += line.slice(8) + "\n";
+      document.getElementById("csv").value = CSV;
+      try{ document.getElementById("csvInline").value = CSV; }catch(e){}
+      return;
+    }
   }
 
+  // Tab switching
+  const ALL_TABS = ["exec", "tech", "logs", "data"];
   function setTab(name){
-    const tabs = ["exec","tech","data","logs"];
-    for(const t of tabs){
-      const el = document.getElementById("tab-"+t);
+    ALL_TABS.forEach(t => {
+      const el = document.getElementById("tab-" + t);
       if(el) el.classList.toggle("hidden", t !== name);
-    }
-    const btns = document.querySelectorAll(".tabBtn");
-    btns.forEach(b => {
-      const on = b.getAttribute("data-tab") === name;
-      b.className = "tabBtn text-xs font-semibold border " + (on ? "border-brand bg-brand-weak text-brand-2" : "border-app bg-surface2 text-muted");
+    });
+    document.querySelectorAll(".tabBtn[data-tab]").forEach(b => {
+      const on = b.dataset.tab === name;
+      b.className = "tabBtn text-xs font-semibold border " +
+        (on ? "border-brand bg-brand-weak text-brand-2" : "border-app bg-surface2 text-muted");
       b.setAttribute("aria-selected", on ? "true" : "false");
       b.setAttribute("tabindex", on ? "0" : "-1");
     });
@@ -242,14 +323,11 @@
   function onTabKeydown(e){
     const keys = ["ArrowLeft","ArrowRight","Home","End","Enter"," "];
     if(!keys.includes(e.key)) return;
-    const btns = Array.from(document.querySelectorAll(".tabBtn"));
-    const cur = e.currentTarget;
-    const idx = btns.indexOf(cur);
+    const btns = Array.from(document.querySelectorAll(".tabBtn[data-tab]"));
+    const idx = btns.indexOf(e.currentTarget);
     if(idx < 0) return;
     if(e.key === "Enter" || e.key === " "){
-      e.preventDefault();
-      setTab(cur.getAttribute("data-tab"));
-      return;
+      e.preventDefault(); setTab(e.currentTarget.dataset.tab); return;
     }
     let next = idx;
     if(e.key === "ArrowLeft") next = (idx - 1 + btns.length) % btns.length;
@@ -258,23 +336,50 @@
     if(e.key === "End") next = btns.length - 1;
     e.preventDefault();
     btns[next].focus();
-    setTab(btns[next].getAttribute("data-tab"));
+    setTab(btns[next].dataset.tab);
   }
-  document.querySelectorAll(".tabBtn").forEach(b => {
-    b.addEventListener("click", () => setTab(b.getAttribute("data-tab")));
+  document.querySelectorAll(".tabBtn[data-tab]").forEach(b => {
+    b.addEventListener("click", () => setTab(b.dataset.tab));
     b.addEventListener("keydown", onTabKeydown);
   });
-  setTab("exec");
 
+  // Log filter
+  function filterLogs(mode){
+    const lines = document.querySelectorAll("#logContainer .logline");
+    let visible = 0;
+    lines.forEach(el => {
+      const level = el.dataset.level || "";
+      const show = mode === "all" || (mode === "error" && level === "ERROR");
+      el.style.display = show ? "" : "none";
+      if(show) visible++;
+    });
+    const allBtn = document.getElementById("logFilterAll");
+    const errBtn = document.getElementById("logFilterErr");
+    if(allBtn) allBtn.className = "tabBtn text-xs font-semibold border " + (mode === "all" ? "border-brand bg-brand-weak text-brand-2" : "border-app bg-surface2 text-muted");
+    if(errBtn) errBtn.className = "tabBtn text-xs font-semibold border " + (mode === "error" ? "border-brand bg-brand-weak text-brand-2" : "border-app bg-surface2 text-muted");
+    const footer = document.getElementById("logVisible");
+    if(footer) footer.textContent = "(" + visible + ")";
+    const foot = document.getElementById("logFooter");
+    if(foot) foot.textContent = visible + " events shown";
+  }
+  function copyLogs(){
+    const lines = Array.from(document.querySelectorAll("#logContainer .logline"))
+      .filter(el => el.style.display !== "none")
+      .map(el => el.textContent.replace(/\s+/g, " ").trim())
+      .join("\n");
+    navigator.clipboard.writeText(lines).catch(()=>{});
+  }
+
+  // KPI refresh
   function refreshKpis(status){
     try{
-      const rows = (CSV||"").trim().split(/\n/).filter(x => x.trim()).length - 1; // minus header
-      document.getElementById("kpiRows").textContent = String(Math.max(0, rows));
-      document.getElementById("kpiRowsTop").textContent = String(Math.max(0, rows));
-      document.getElementById("kpiStatus").textContent = String(status || "—");
-      document.getElementById("statusBadge").textContent = String(status || "—");
-      try{ document.getElementById("heroStatus").textContent = String(status || "—"); }catch(e){}
-      try{ document.getElementById("heroStatusBig").textContent = String(status || "—"); }catch(e){}
+      const rows = Math.max(0, (CSV||"").trim().split(/\n/).filter(x=>x.trim()).length - 1);
+      document.getElementById("kpiRows").textContent = String(rows);
+      document.getElementById("kpiRowsTop").textContent = String(rows);
+      document.getElementById("kpiStatus").textContent = String(status||"—");
+      document.getElementById("statusBadge").textContent = String(status||"—");
+      try{ document.getElementById("heroStatus").textContent = String(status||"—"); }catch(e){}
+      try{ document.getElementById("heroStatusBig").textContent = String(status||"—"); }catch(e){}
       const desc = describeStatus(status);
       try{ document.getElementById("runStateTitle").textContent = desc.title; }catch(e){}
       try{ document.getElementById("runStateCopy").textContent = desc.copy; }catch(e){}
@@ -284,35 +389,45 @@
   }
 
   async function connect(){
-    const r = await fetch(`/audit/run/${AUDIT_ID}/progress`);
+    const r = await fetch("/audit/run/" + AUDIT_ID + "/progress");
     const j = await r.json();
-    LOGS = j.logs || ""; MD = j.markdown_text || ""; CSV = j.csv_text || "";
+    LOGS = j.logs||""; MD = j.markdown_text||""; CSV = j.csv_text||"";
     document.getElementById("logs").value = LOGS;
     document.getElementById("csv").value = CSV;
     document.getElementById("md").innerHTML = marked.parse(MD);
-    // clean-mode mirrors
     try{ document.getElementById("logsInline").value = LOGS; }catch(e){}
     try{ document.getElementById("csvInline").value = CSV; }catch(e){}
     refreshKpis(j.status);
-    const resp = await fetch(`/audit/run/${AUDIT_ID}/stream?from_log=${LOGS.length}&from_md=${MD.length}&from_csv=${CSV.length}`);
+
+    // Auto-switch to Logs tab if error status
+    if(j.status === "error") setTab("logs");
+
+    const resp = await fetch("/audit/run/" + AUDIT_ID + "/stream?from_log=" + LOGS.length + "&from_md=" + MD.length + "&from_csv=" + CSV.length);
     const reader = resp.body.getReader();
     const dec = new TextDecoder("utf-8");
-    let buf="";
+    let buf = "";
     while(true){
-      const {value,done} = await reader.read();
+      const {value, done} = await reader.read();
       if(done) break;
       buf += dec.decode(value, {stream:true});
       const lines = buf.split(/\n/);
       buf = lines.pop();
       for(const ln of lines){ if(ln.trim()) applyLine(ln.replace(/\r/g,"")); }
-      try{ document.getElementById("logsInline").value = LOGS; }catch(e){}
-      try{ document.getElementById("csvInline").value = CSV; }catch(e){}
       refreshKpis("running");
     }
-    // final refresh
-    const r2 = await fetch(`/audit/run/${AUDIT_ID}/progress`);
+    const r2 = await fetch("/audit/run/" + AUDIT_ID + "/progress");
     const j2 = await r2.json();
     refreshKpis(j2.status);
+    // If audit errored during stream, switch to logs tab
+    if(j2.status === "error") setTab("logs");
+  }
+
+  // Initialize: show exec by default; if audit already errored at page load, show logs
+  const initialStatus = "{{ audit.status }}";
+  if(initialStatus === "error") {
+    setTab("logs");
+  } else {
+    setTab("exec");
   }
   connect();
 </script>

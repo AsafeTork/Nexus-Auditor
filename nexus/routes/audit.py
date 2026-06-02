@@ -162,7 +162,8 @@ def start_audit():
 def view_audit(audit_id: str):
     audit = AuditRun.query.filter_by(id=audit_id, org_id=current_user.org_id).first_or_404()
     site = Site.query.filter_by(id=audit.site_id, org_id=current_user.org_id).first()
-    return render_template("audit/view.html", audit=audit, site=site)
+    events = AuditEvent.query.filter_by(audit_run_id=audit_id).order_by(AuditEvent.ts_ms).all()
+    return render_template("audit/view.html", audit=audit, site=site, events=events)
 
 
 @bp.get("/run/<audit_id>/progress")
