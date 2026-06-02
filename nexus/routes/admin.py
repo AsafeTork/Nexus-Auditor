@@ -115,6 +115,42 @@ def admin_home():
         "sub_status": session.get("sim_sub_status") or "",
     }
     org = Organization.query.filter_by(id=current_user.org_id).first()
+
+    site_count = Site.query.filter_by(org_id=current_user.org_id).count()
+    user_count = User.query.filter_by(org_id=current_user.org_id).count()
+    audit_total = AuditRun.query.filter_by(org_id=current_user.org_id).count()
+    audit_error_count = AuditRun.query.filter_by(org_id=current_user.org_id, status="error").count()
+    open_findings = 0
+    try:
+        r = db.session.execute(
+            text("SELECT COUNT(*) FROM monitoring_findings WHERE org_id = :oid AND state IN ('NEW','PERSISTING','REOPENED')"),
+            {"oid": current_user.org_id},
+        ).scalar()
+        open_findings = int(r or 0)
+    except Exception:
+        pass
+
+    # Revenue summary (global for master admin, org-only otherwise)
+    is_global = _is_master_admin() or _allow_global_admin_view()
+    _plan_prices = {"free": 0, "starter": 49, "pro": 149, "enterprise": 399, "growth": 399}
+    revenue = {"mrr": 0, "active": 0, "trialing": 0, "past_due": 0, "is_global": is_global}
+    try:
+        all_subs = (
+            Subscription.query.all()
+            if is_global
+            else Subscription.query.filter_by(org_id=current_user.org_id).all()
+        )
+        active_s = [s for s in all_subs if s.status == "active"]
+        revenue = {
+            "mrr": sum(_plan_prices.get(str(s.plan_tier or "free").lower(), 0) for s in active_s),
+            "active": len(active_s),
+            "trialing": sum(1 for s in all_subs if s.status == "trialing"),
+            "past_due": sum(1 for s in all_subs if s.status == "past_due"),
+            "is_global": is_global,
+        }
+    except Exception:
+        pass
+
     return render_template(
         "admin/home.html",
         diag=diag,
@@ -126,6 +162,12 @@ def admin_home():
             "api_key_mask": mask_secret((getattr(org, "llm_api_key", "") or "").strip(), 6),
             "model": (getattr(org, "llm_model", "") or "").strip(),
         },
+        site_count=site_count,
+        user_count=user_count,
+        audit_total=audit_total,
+        audit_error_count=audit_error_count,
+        open_findings=open_findings,
+        revenue=revenue,
     )
 
 
@@ -1002,3 +1044,175 @@ def admin_clear_sim():
     session.pop("sim_sub_status", None)
     flash("Simulation cleared.", "ok")
     return redirect(url_for("admin.admin_home"))
+
+
+@bp.get("/admin/briefing")
+@login_required
+@require_admin
+def admin_briefing():
+    """Product state briefing — copy-pasteable report for a dev or AI agent."""
+    now_utc = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+    org = Organization.query.filter_by(id=current_user.org_id).first()
+    sub = None
+    try:
+        from ..models import Subscription
+        sub = Subscription.query.filter_by(org_id=current_user.org_id).first()
+    except Exception:
+        pass
+    sites = Site.query.filter_by(org_id=current_user.org_id).order_by(Site.created_utc.desc()).all()
+    audits_recent = AuditRun.query.filter_by(org_id=current_user.org_id).order_by(AuditRun.created_utc.desc()).limit(5).all()
+    audit_total = AuditRun.query.filter_by(org_id=current_user.org_id).count()
+    users = User.query.filter_by(org_id=current_user.org_id).all()
+    admin_count = sum(1 for u in users if str(getattr(u, "role", "") or "").lower() == "admin")
+
+    open_findings = 0
+    resolved_findings = 0
+    last_monitoring_run = None
+    try:
+        r = db.session.execute(
+            text("""SELECT
+                    SUM(CASE WHEN state='RESOLVED' THEN 1 ELSE 0 END) AS res,
+                    SUM(CASE WHEN state IN ('NEW','PERSISTING','REOPENED') THEN 1 ELSE 0 END) AS opn
+                  FROM monitoring_findings WHERE org_id = :oid"""),
+            {"oid": current_user.org_id},
+        ).mappings().first()
+        if r:
+            open_findings = int(r.get("opn") or 0)
+            resolved_findings = int(r.get("res") or 0)
+    except Exception:
+        pass
+    try:
+        rr = db.session.execute(
+            text("SELECT created_utc, status FROM monitoring_runs WHERE org_id = :oid ORDER BY created_utc DESC LIMIT 1"),
+            {"oid": current_user.org_id},
+        ).mappings().first()
+        if rr:
+            last_monitoring_run = {"created_utc": str(rr.get("created_utc") or ""), "status": str(rr.get("status") or "")}
+    except Exception:
+        pass
+
+    diag = _diagnostics()
+
+    recent_errors: list[dict] = []
+    try:
+        cutoff_ms = int(time.time() * 1000) - 24 * 60 * 60 * 1000
+        audit_ids = [a.id for a in AuditRun.query.filter_by(org_id=current_user.org_id).limit(100).all()]
+        if audit_ids:
+            msg_col = func.lower(AuditEvent.message)
+            msg_hit = (
+                msg_col.like("%error%") | msg_col.like("%exception%")
+                | msg_col.like("%traceback%") | msg_col.like("%timeout%")
+            )
+            err_rows = (
+                db.session.query(AuditEvent)
+                .filter(AuditEvent.audit_run_id.in_(audit_ids))
+                .filter(AuditEvent.ts_ms >= cutoff_ms)
+                .filter(func.upper(AuditEvent.level).in_(["ERROR", "ERR", "CRITICAL"]) | msg_hit)
+                .order_by(AuditEvent.id.desc())
+                .limit(5)
+                .all()
+            )
+            recent_errors = [{"level": str(e.level or ""), "message": str(e.message or "")[:300]} for e in err_rows]
+    except Exception:
+        pass
+
+    # Build copy-pasteable text
+    lines: list[str] = []
+    lines += [
+        "XENTINEL — PRODUCT STATE BRIEFING",
+        f"Generated: {now_utc}",
+        "",
+        "## SYSTEM HEALTH",
+        f"DB: {'OK' if diag['db']['ok'] else 'ERROR — ' + str(diag['db'].get('error', ''))}",
+        f"Redis: {'OK' if diag['redis']['ok'] else 'ERROR — ' + str(diag['redis'].get('error', ''))}",
+        f"LLM: {'OK' if diag['llm']['ok'] else 'ERROR — ' + str(diag['llm'].get('error', ''))}",
+        f"  Provider: {diag['llm'].get('provider') or '—'}",
+        f"  Model:    {diag['llm'].get('model') or '—'}",
+        "",
+        "## PRODUCT",
+        "Name: Xentinel",
+        "Stack: Python / Flask · Jinja2 templates · SQLAlchemy · PostgreSQL · Redis + RQ",
+        "Billing: Stripe",
+        f"Org: {org.name if org else '—'}",
+        f"Subscription: {(str(sub.status) + ' · ' + str(sub.plan_tier)) if sub else 'inactive'}",
+        "",
+        "## DATA STATE",
+        f"Sites: {len(sites)}",
+    ]
+    for s in sites:
+        lines.append(f"  • {s.name}  ({s.base_url})")
+    lines.append(f"Audits: {audit_total} total")
+    if audits_recent:
+        lines.append("  Recent:")
+        for a in audits_recent:
+            domain = a.target_domain or a.site_id or "?"
+            date = (a.created_utc or "")[:10]
+            lines.append(f"    • {domain} — {a.status} — {date}")
+    total_f = open_findings + resolved_findings
+    fix_str = f" · {round(resolved_findings / total_f * 100)}% fix rate" if total_f > 0 else ""
+    lines.append(f"Monitoring findings: {open_findings} open · {resolved_findings} resolved{fix_str}")
+    if last_monitoring_run:
+        lines.append(f"Last monitoring run: {(last_monitoring_run['created_utc'] or '')[:10]} · {last_monitoring_run['status']}")
+    else:
+        lines.append("Last monitoring run: never")
+    lines.append(f"Users: {len(users)}  ({admin_count} admin · {len(users) - admin_count} member)")
+    lines += [
+        "",
+        "## FEATURES IMPLEMENTED",
+        "✓ Auth — login / register / logout / Flask-Login",
+        "✓ Multi-org architecture (org_id scoping on all models)",
+        "✓ Multi-site management (add / delete / list)",
+        "✓ AI audit engine — on-demand scans → Markdown report + CSV matrix",
+        "✓ Revenue impact scoring per finding (estimated monthly loss)",
+        "✓ Action Plan — top-3 priorities ranked by revenue impact",
+        "✓ Dossier — client-facing report  (/dossier/<audit_id>)",
+        "✓ Continuous monitoring pipeline — MonitoringJob / MonitoringRun / MonitoringFinding",
+        "✓ Dashboard — KPI tiles, risk panel, site cards, audit history",
+        "✓ Stripe billing — checkout, webhook, subscription gating",
+        "✓ Admin console — diagnostics, simulation, latest audits",
+        "✓ Admin logs — error events, failed audits, run tail view",
+        "✓ Admin users — create / delete / role / subscription management",
+        "✓ Admin overview — site-by-site metrics table",
+        "✓ Admin agent — control plane cards (priorities, safety gate, proof-of-value)",
+        "✓ UI Lab — AI generates a UI improvement prompt ready to execute",
+        "✓ Backend Lab — AI generates a backend improvement prompt ready to execute",
+        "✓ CSRF protection on all state-changing forms",
+        "",
+        "## DEV / AGENT REFERENCE",
+        "Routes:     nexus/routes/<name>.py           (Flask Blueprint  @bp.get / @bp.post)",
+        "Templates:  nexus/templates/<section>/<page>.html  (Jinja2 + Tailwind custom CSS)",
+        "Models:     nexus/models.py                  (SQLAlchemy ORM)",
+        "  Key models: AuditRun · Site · User · Organization · Subscription",
+        "  Monitoring: MonitoringJob · MonitoringRun · MonitoringFinding  (raw SQL, table may not exist)",
+        "Services:   nexus/services/<name>.py          (business logic, LLM calls)",
+        "Background: nexus/services/queueing.py + RQ worker  (NOT Celery)",
+        "LLM:        nexus/services/llm_providers.py   (provider-agnostic, config per-org in DB)",
+        "",
+        "Rules for any new code:",
+        "  • Scope all DB queries by org_id:  .filter_by(org_id=current_user.org_id)",
+        "  • Admin routes need @require_admin from nexus/security.py",
+        "  • LLM provider/key/model live in the orgs table, NOT in .env directly",
+        "  • Background tasks use RQ enqueue_* helpers in nexus/services/queueing.py",
+        "  • HTML uses Tailwind + custom CSS vars (--c-ok, --c-err, --c-accent, etc.)",
+        "",
+        "## ISSUES (last 24h)",
+    ]
+    if recent_errors:
+        for e in recent_errors:
+            lines.append(f"  [{e['level']}] {e['message'][:200]}")
+    else:
+        lines.append("  None detected.")
+
+    briefing_text = "\n".join(lines)
+
+    return render_template(
+        "admin/briefing.html",
+        diag=diag,
+        briefing_text=briefing_text,
+        recent_errors=recent_errors,
+        site_count=len(sites),
+        audit_total=audit_total,
+        user_count=len(users),
+        open_findings=open_findings,
+        now_utc=now_utc,
+    )

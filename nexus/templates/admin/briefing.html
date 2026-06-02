@@ -1,0 +1,77 @@
+{% extends "layout.html" %}
+{% set title = "Product Briefing" %}
+{% set subtitle = "Copy and paste to a dev chat or AI agent" %}
+{% set page_max_w = "max-w-5xl" %}
+
+{% block page_actions %}
+<button id="copyBtn" class="btn-primary" onclick="copyBriefing()">Copy briefing</button>
+<a class="btn-secondary" href="{{ url_for('admin.admin_home') }}">Console</a>
+{% endblock %}
+
+{% block content %}
+<div class="flex flex-col gap-4">
+
+  <div class="card">
+    <div class="metric-row cols-4">
+      <div class="metric-tile">
+        <div class="metric-label">DB</div>
+        <div class="metric-value text-2xl {% if diag.db.ok %}text-[var(--c-ok)]{% else %}text-[var(--c-err)]{% endif %}">
+          {{ "OK" if diag.db.ok else "ERR" }}
+        </div>
+      </div>
+      <div class="metric-tile">
+        <div class="metric-label">Redis</div>
+        <div class="metric-value text-2xl {% if diag.redis.ok %}text-[var(--c-ok)]{% else %}text-[var(--c-err)]{% endif %}">
+          {{ "OK" if diag.redis.ok else "ERR" }}
+        </div>
+      </div>
+      <div class="metric-tile">
+        <div class="metric-label">LLM</div>
+        <div class="metric-value text-2xl {% if diag.llm.ok %}text-[var(--c-ok)]{% else %}text-[var(--c-err)]{% endif %}">
+          {{ "OK" if diag.llm.ok else "ERR" }}
+        </div>
+        <div class="metric-foot mono">{{ diag.llm.provider or "—" }}</div>
+      </div>
+      <div class="metric-tile">
+        <div class="metric-label">Issues 24h</div>
+        <div class="metric-value text-2xl {% if recent_errors %}text-[var(--c-err)]{% endif %}">
+          {{ recent_errors|length }}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="flex items-start justify-between gap-4 mb-4">
+      <div>
+        <div class="section-label">Ready to share</div>
+        <div class="section-title mt-1">Product state report</div>
+        <div class="body-text mt-1">Paste this directly into a developer chat or AI agent. It contains everything needed to understand and extend this codebase.</div>
+      </div>
+      <button id="copyBtn2" class="btn-primary shrink-0" onclick="copyBriefing()">Copy</button>
+    </div>
+    <pre id="briefingText" class="font-mono text-[11px] text-muted leading-relaxed bg-surface2 rounded-xl p-4 border border-app overflow-auto max-h-[65vh] whitespace-pre">{{ briefing_text | e }}</pre>
+  </div>
+
+</div>
+<script>
+function copyBriefing(){
+  const text = document.getElementById("briefingText").textContent;
+  const btns = [document.getElementById("copyBtn"), document.getElementById("copyBtn2")];
+  navigator.clipboard.writeText(text).then(()=>{
+    btns.forEach(b => { if(b) b.textContent = "Copied!"; });
+    setTimeout(()=>{ btns.forEach(b => { if(b) b.textContent = "Copy"; }); }, 2000);
+  }).catch(()=>{
+    const ta = document.createElement("textarea");
+    ta.value = text;
+    ta.style.cssText = "position:fixed;opacity:0";
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand("copy");
+    document.body.removeChild(ta);
+    btns.forEach(b => { if(b) b.textContent = "Copied!"; });
+    setTimeout(()=>{ btns.forEach(b => { if(b) b.textContent = "Copy"; }); }, 2000);
+  });
+}
+</script>
+{% endblock %}

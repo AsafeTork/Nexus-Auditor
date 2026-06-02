@@ -19,7 +19,63 @@
     </button>
     <a class="btn-secondary" href="{{ url_for('admin.admin_logs') }}">Logs</a>
     <a class="btn-secondary" href="{{ url_for('admin.admin_audits') }}">Audits</a>
-    <a class="btn-secondary" href="{{ url_for('admin.ui_lab') }}">UI Lab</a>
+  </div>
+
+  <div class="mt-4 grid grid-cols-2 md:grid-cols-5 gap-3">
+    <a href="{{ url_for('admin.admin_overview') }}" class="card card-hover text-center py-3 px-2">
+      <div class="text-[11px] text-muted">Sites</div>
+      <div class="text-2xl font-extrabold">{{ site_count }}</div>
+    </a>
+    <a href="{{ url_for('admin.admin_audits') }}" class="card card-hover text-center py-3 px-2">
+      <div class="text-[11px] text-muted">Audits</div>
+      <div class="text-2xl font-extrabold">{{ audit_total }}</div>
+      {% if audit_error_count > 0 %}
+        <div class="text-[10px] text-[var(--c-err)]">{{ audit_error_count }} errors</div>
+      {% endif %}
+    </a>
+    <a href="{{ url_for('admin.admin_users') }}" class="card card-hover text-center py-3 px-2">
+      <div class="text-[11px] text-muted">Users</div>
+      <div class="text-2xl font-extrabold">{{ user_count }}</div>
+    </a>
+    <a href="{{ url_for('admin.admin_agent') }}" class="card card-hover text-center py-3 px-2">
+      <div class="text-[11px] text-muted">Open findings</div>
+      <div class="text-2xl font-extrabold {% if open_findings > 0 %}text-[var(--c-err)]{% endif %}">{{ open_findings }}</div>
+    </a>
+    <a href="{{ url_for('admin.admin_briefing') }}" class="card card-hover text-center py-3 px-2" style="border-color:var(--c-accent);background:var(--c-brand-weak)">
+      <div class="text-[11px] text-brand-2">Briefing</div>
+      <div class="text-2xl font-extrabold text-brand-2">→</div>
+      <div class="text-[10px] text-muted">Dev report</div>
+    </a>
+  </div>
+
+  <!-- Revenue -->
+  <div class="mt-4 card">
+    <div class="flex items-center justify-between mb-3">
+      <div class="section-label">Revenue</div>
+      {% if revenue.is_global %}<span class="text-[11px] text-muted">All customers</span>{% endif %}
+    </div>
+    <div class="metric-row cols-4">
+      <div class="metric-tile">
+        <div class="metric-label">Est. MRR</div>
+        <div class="metric-value text-2xl {% if revenue.mrr > 0 %}text-[var(--c-ok)]{% endif %}">${{ revenue.mrr }}</div>
+        <div class="metric-foot">Active plans</div>
+      </div>
+      <div class="metric-tile">
+        <div class="metric-label">Active</div>
+        <div class="metric-value text-2xl">{{ revenue.active }}</div>
+        <div class="metric-foot">Paying customers</div>
+      </div>
+      <div class="metric-tile">
+        <div class="metric-label">Trialing</div>
+        <div class="metric-value text-2xl">{{ revenue.trialing }}</div>
+        <div class="metric-foot">Free trial</div>
+      </div>
+      <div class="metric-tile">
+        <div class="metric-label">Past due</div>
+        <div class="metric-value text-2xl {% if revenue.past_due > 0 %}text-[var(--c-err)]{% endif %}">{{ revenue.past_due }}</div>
+        <div class="metric-foot">Needs attention</div>
+      </div>
+    </div>
   </div>
 
   <!-- Simulator -->
