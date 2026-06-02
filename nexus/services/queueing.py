@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 
 import redis
-from rq import Queue, Retry
+from rq import Queue
 
 
 def _redis_conn():
@@ -27,7 +27,6 @@ def enqueue_audit(audit_id: str) -> str:
         ttl=int(os.getenv("AUDIT_JOB_TTL_S", "3600")),  # drop if stuck in queue too long
         result_ttl=0,
         failure_ttl=int(os.getenv("AUDIT_JOB_FAILURE_TTL_S", "86400")),
-        retry=Retry(max=1, interval=[30]),
     )
     return job.id
 
@@ -47,6 +46,5 @@ def enqueue_ui_lab(run_id: str, org_id: str, mode: str, payload: dict) -> str:
         ttl=int(os.getenv("UI_JOB_TTL_S", "1800")),
         result_ttl=int(os.getenv("UI_JOB_RESULT_TTL_S", str(60 * 60 * 24 * 7))),
         failure_ttl=int(os.getenv("UI_JOB_FAILURE_TTL_S", "86400")),
-        retry=Retry(max=1, interval=[30]),
     )
     return job.id

@@ -40,6 +40,7 @@ def run_ui_lab_job(run_id: str, org_id: str, mode: str, payload: dict) -> None:
     """
     Execute UI Lab review in background and store status/logs/result in Redis.
     """
+    os.environ["_RQ_WORKER_CHILD"] = "1"
     app = create_app()
     with app.app_context():
         conn = redis.from_url(app.config["REDIS_URL"])
@@ -291,6 +292,7 @@ def run_audit_job(audit_id: str) -> None:
     """
     Execute a full audit run and persist outputs to DB.
     """
+    os.environ["_RQ_WORKER_CHILD"] = "1"
     app = create_app()
     with app.app_context():
         audit = AuditRun.query.filter_by(id=audit_id).first()
@@ -298,7 +300,15 @@ def run_audit_job(audit_id: str) -> None:
             return
         audit.status = "running"
         audit.updated_utc = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
-        db.session.commit()
+        try:
+            db.session.commit()
+        except Exception:
+            try:
+                db.session.rollback()
+                audit.status = "running"
+                db.session.commit()
+            except Exception:
+                pass
 
         # PERFORMANCE: avoid committing per line (very slow on hosted DB).
         log_buf: list[str] = []
@@ -466,7 +476,13 @@ def run_audit_job(audit_id: str) -> None:
                     )
                     content = final or draft or ""
                 except Exception as e:
-                    log(layer, "WARN", f"Reflection failed, falling back to non-stream: {type(e).__name__}: {e}")
+                    err_str_r = f"{type(e).__name__}: {e}"
+                    if "401" in err_str_r or "Unauthorized" in err_str_r.lower():
+                        log(layer, "ERROR", f"Authentication failed (401). Go to Settings → Provider and update your API key. {err_str_r}")
+                        audit.status = "error"
+                        flush(force=True)
+                        return
+                    log(layer, "WARN", f"Reflection failed, falling back to non-stream: {err_str_r}")
                     try:
                         content = call_llm_non_stream(
                             base_url_v1=base_url_v1,
@@ -478,8 +494,13 @@ def run_audit_job(audit_id: str) -> None:
                             timeout_s=120,
                         )
                     except Exception as e2:
-                        # Treat as an essential LLM failure (avoid "running forever" / false success).
-                        log(layer, "ERROR", f"LLM provider error (fallback): {type(e2).__name__}: {e2}")
+                        err_str_r2 = f"{type(e2).__name__}: {e2}"
+                        if "401" in err_str_r2 or "Unauthorized" in err_str_r2.lower():
+                            log(layer, "ERROR", f"Authentication failed (401). Go to Settings → Provider and update your API key. {err_str_r2}")
+                            audit.status = "error"
+                            flush(force=True)
+                            return
+                        log(layer, "ERROR", f"LLM provider error (fallback): {err_str_r2}")
                         llm_failed_any = True
                         consecutive_llm_failures += 1
                         audit.status = "error"
@@ -562,6 +583,12 @@ def run_audit_job(audit_id: str) -> None:
                     audit.status = "error"
                     flush(force=True)
                     return
+                # 401 = invalid API key; retrying layers won't help
+                if "401" in err_str or "Unauthorized" in err_str.lower():
+                    log(layer, "ERROR", f"Authentication failed (401). Go to Settings → Provider and update your API key, then start a new audit. {err_str}")
+                    audit.status = "error"
+                    flush(force=True)
+                    return
                 log(layer, "WARN", f"Streaming failed, falling back to non-stream: {err_str}")
 
             try:
@@ -614,6 +641,11 @@ def run_audit_job(audit_id: str) -> None:
                 err_str = f"{type(e).__name__}: {e}"
                 if "429" in err_str:
                     log(layer, "ERROR", f"Provider rate limit (429). Switch to a different provider in Settings and run a new audit. {err_str}")
+                    audit.status = "error"
+                    flush(force=True)
+                    return
+                if "401" in err_str or "Unauthorized" in err_str.lower():
+                    log(layer, "ERROR", f"Authentication failed (401). Go to Settings → Provider and update your API key, then start a new audit. {err_str}")
                     audit.status = "error"
                     flush(force=True)
                     return

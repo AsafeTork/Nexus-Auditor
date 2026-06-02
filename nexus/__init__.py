@@ -207,8 +207,9 @@ def create_app() -> Flask:
     register_cli(app)
 
     # Inline RQ worker — fallback for Render free tier where the worker service may be sleeping.
-    # RQ uses atomic Redis ops so running two workers concurrently is always safe (no duplicates).
-    if os.getenv("INLINE_WORKER", "").strip() == "1":
+    # Guard: skip if we're already inside a worker job context (run_audit_job calls create_app()
+    # too, which would otherwise spawn recursive workers inside forked child processes).
+    if os.getenv("INLINE_WORKER", "").strip() == "1" and not os.getenv("_RQ_WORKER_CHILD", ""):
         _start_inline_worker(app)
 
     # Serve favicon without triggering the error handler.
