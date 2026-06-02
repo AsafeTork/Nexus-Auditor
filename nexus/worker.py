@@ -559,7 +559,7 @@ def run_audit_job(audit_id: str) -> None:
                 err_str = f"{type(e).__name__}: {e}"
                 # 429 = provider rate limit; no point trying more layers, abort now
                 if "429" in err_str:
-                    log(layer, "ERROR", f"Provider rate limit (429). Troque o provider em Settings e rode novamente. {err_str}")
+                    log(layer, "ERROR", f"Provider rate limit (429). Switch to a different provider in Settings and run a new audit. {err_str}")
                     audit.status = "error"
                     flush(force=True)
                     return
@@ -614,7 +614,7 @@ def run_audit_job(audit_id: str) -> None:
             except Exception as e:
                 err_str = f"{type(e).__name__}: {e}"
                 if "429" in err_str:
-                    log(layer, "ERROR", f"Provider rate limit (429). Troque o provider em Settings e rode novamente. {err_str}")
+                    log(layer, "ERROR", f"Provider rate limit (429). Switch to a different provider in Settings and run a new audit. {err_str}")
                     audit.status = "error"
                     flush(force=True)
                     return
