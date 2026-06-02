@@ -9,7 +9,7 @@ from flask_login import login_required, current_user
 from flask import session
 
 from .. import db
-from ..models import AuditEvent, AuditRun, LearningStat, MonitoringFinding, MonitoringJob, MonitoringRun, Organization, Site, Subscription, is_subscription_active
+from ..models import AuditEvent, AuditRun, LearningStat, MonitoringFinding, MonitoringJob, MonitoringRun, Organization, Site, SiteContext, SitePolicy, Subscription, is_subscription_active
 from ..security import require_admin
 from ..services.queueing import enqueue_audit
 
@@ -41,18 +41,25 @@ def delete_site(site_id: str):
     """
     site = Site.query.filter_by(id=site_id, org_id=current_user.org_id).first_or_404()
     try:
+        # 1. Children of monitoring_jobs (must go before jobs are deleted)
         job_ids = [j.id for j in MonitoringJob.query.filter_by(site_id=site.id).with_entities(MonitoringJob.id).all()]
         if job_ids:
             LearningStat.query.filter(LearningStat.job_id.in_(job_ids)).delete(synchronize_session=False)
             MonitoringFinding.query.filter(MonitoringFinding.job_id.in_(job_ids)).delete(synchronize_session=False)
             MonitoringRun.query.filter(MonitoringRun.job_id.in_(job_ids)).delete(synchronize_session=False)
 
+        # 2. Audit children (events before runs)
         audit_ids = [a.id for a in AuditRun.query.filter_by(site_id=site.id).with_entities(AuditRun.id).all()]
         if audit_ids:
             AuditEvent.query.filter(AuditEvent.audit_run_id.in_(audit_ids)).delete(synchronize_session=False)
             AuditRun.query.filter(AuditRun.id.in_(audit_ids)).delete(synchronize_session=False)
 
+        # 3. Remaining site-level rows with direct site_id FK
         MonitoringJob.query.filter_by(site_id=site.id).delete(synchronize_session=False)
+        SiteContext.query.filter_by(site_id=site.id).delete(synchronize_session=False)
+        SitePolicy.query.filter_by(site_id=site.id).delete(synchronize_session=False)
+
+        # 4. Finally delete the site row
         db.session.delete(site)
         db.session.commit()
     except Exception:
